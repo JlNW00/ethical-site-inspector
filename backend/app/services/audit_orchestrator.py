@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session, selectinload
 from app.detectors.rule_engine import build_rule_findings
 from app.models import Audit, AuditEvent, Finding
 from app.schemas.audit import AuditCreateRequest
+from app.schemas.runtime import RuleFindingDraft
 from app.services.provider_registry import (
     get_browser_provider,
     get_classifier_provider,
@@ -119,6 +120,7 @@ class AuditOrchestrator:
         drafts = []
         for observation in run_result.observations:
             drafts.extend(build_rule_findings(observation))
+        drafts = self._merge_drafts(drafts)
 
         self.emit_event(
             audit_id,
@@ -222,6 +224,8 @@ class AuditOrchestrator:
 
     @staticmethod
     def _build_metrics(summary: dict, observations: list, finding_models: list[Finding]) -> dict:
+        site_host = observations[0].evidence.metadata.get("site_host") if observations else None
+        evidence_origin_label = summary.get("evidence_origin_label", "Captured from site")
         persona_buckets: dict[str, dict[str, Any]] = defaultdict(
             lambda: {
                 "steps": [],
@@ -229,32 +233,41 @@ class AuditOrchestrator:
                 "finding_count": 0,
                 "friction_index": 0,
                 "notable_patterns": Counter(),
+                "example": None,
             }
         )
-        scenario_buckets: dict[str, dict[str, Any]] = defaultdict(lambda: {"finding_count": 0, "patterns": Counter()})
+        scenario_buckets: dict[str, dict[str, Any]] = defaultdict(
+            lambda: {"finding_count": 0, "patterns": Counter(), "example": None}
+        )
 
         for observation in observations:
-            prices = [float(item["value"]) for item in observation.evidence.price_points if isinstance(item.get("value"), (float, int))]
-            price_delta = prices[-1] - prices[0] if len(prices) >= 2 else 0.0
-            persona_buckets[observation.persona]["steps"].append(observation.evidence.step_count)
+            metadata = observation.evidence.metadata
+            if not metadata.get("scenario_state_found"):
+                continue
+            action_count = int(metadata.get("action_count", 0))
+            price_delta = float(metadata.get("observed_price_delta", 0.0) or 0.0)
+            persona_buckets[observation.persona]["steps"].append(action_count)
             persona_buckets[observation.persona]["price_delta"] += price_delta
-            persona_buckets[observation.persona]["friction_index"] += len(observation.evidence.friction_indicators)
+            persona_buckets[observation.persona]["friction_index"] += action_count
 
         for finding in finding_models:
             persona_buckets[finding.persona]["finding_count"] += 1
             persona_buckets[finding.persona]["notable_patterns"][finding.pattern_family] += 1
+            persona_buckets[finding.persona]["example"] = persona_buckets[finding.persona]["example"] or finding.evidence_excerpt
             scenario_buckets[finding.scenario]["finding_count"] += 1
             scenario_buckets[finding.scenario]["patterns"][finding.pattern_family] += 1
+            scenario_buckets[finding.scenario]["example"] = scenario_buckets[finding.scenario]["example"] or finding.evidence_excerpt
 
         persona_comparison = []
         for persona, bucket in persona_buckets.items():
             average_steps = sum(bucket["steps"]) / max(1, len(bucket["steps"]))
             notable_patterns = [pattern for pattern, _ in bucket["notable_patterns"].most_common(3)]
-            headline = {
-                "privacy_sensitive": "Privacy-first users encounter more pressure around consent and data persistence.",
-                "cost_sensitive": "Price-conscious users see stronger fee surprises and discount-linked persuasion.",
-                "exit_intent": "Exit-intent behavior triggers extra retention friction and emotionally loaded copy.",
+            fallback = {
+                "privacy_sensitive": "Privacy-first users followed a more cautious review path before committing.",
+                "cost_sensitive": "Price-conscious users followed the most offer-driven checkout path.",
+                "exit_intent": "Exit-intent behavior triggered the deepest review and policy path.",
             }[persona]
+            headline = AuditOrchestrator._headline_from_example(bucket["example"], fallback)
             persona_comparison.append(
                 {
                     "persona": persona,
@@ -272,11 +285,12 @@ class AuditOrchestrator:
             finding_count = bucket["finding_count"]
             risk_level = "critical" if finding_count >= 5 else "high" if finding_count >= 3 else "medium"
             dominant_patterns = [pattern for pattern, _ in bucket["patterns"].most_common(3)]
-            headline = {
-                "cookie_consent": "Consent surfaces emphasize acceptance and obscure the lowest-friction refusal path.",
-                "checkout_flow": "Checkout introduces persuasion and cost changes after commitment begins.",
-                "cancellation_flow": "Cancellation adds detours and retention pressure before users can exit cleanly.",
+            fallback = {
+                "cookie_consent": "The consent journey captured a trust-impacting choice imbalance.",
+                "checkout_flow": "The checkout journey required additional offer, detail, or reserve steps after intent was established.",
+                "cancellation_flow": "The cancellation journey captured friction before a clean exit path.",
             }.get(scenario, "Journey shows trust-impacting friction.")
+            headline = AuditOrchestrator._headline_from_example(bucket["example"], fallback)
             scenario_breakdown.append(
                 {
                     "scenario": scenario,
@@ -289,6 +303,8 @@ class AuditOrchestrator:
 
         return {
             "provider_summary": summary,
+            "site_host": site_host,
+            "evidence_origin_label": evidence_origin_label,
             "persona_comparison": sorted(persona_comparison, key=lambda item: item["finding_count"], reverse=True),
             "scenario_breakdown": sorted(scenario_breakdown, key=lambda item: item["finding_count"], reverse=True),
             "finding_count": len(finding_models),
@@ -315,10 +331,81 @@ class AuditOrchestrator:
     def _build_summary(findings: list[Finding], metrics: dict) -> str:
         if not findings:
             return "No major trust risks were detected in the audited journeys."
-        dominant = Counter(finding.pattern_family for finding in findings).most_common(2)
-        patterns = ", ".join(pattern.replace("_", " ") for pattern, _ in dominant)
+        top_finding = max(findings, key=lambda finding: (finding.trust_impact, finding.confidence))
         riskiest_scenario = next(iter(metrics.get("scenario_breakdown", [])), {}).get("scenario", "the audited flows")
+        site_host = metrics.get("site_host") or "the audited site"
+        evidence_origin_label = metrics.get("evidence_origin_label", "Captured from site")
         return (
-            f"Highest trust risk concentrates in {riskiest_scenario.replace('_', ' ')}, "
-            f"driven primarily by {patterns}. Persona comparisons show materially different levels of friction and persuasion."
+            f"{evidence_origin_label} evidence on {site_host} showed the clearest trust risk in "
+            f"{riskiest_scenario.replace('_', ' ')}. The strongest observed signal was "
+            f"\"{top_finding.evidence_excerpt[:160]}\", and persona comparisons still showed materially different friction across the run."
         )
+
+    @staticmethod
+    def _merge_drafts(drafts: list[RuleFindingDraft]) -> list[RuleFindingDraft]:
+        merged: dict[tuple[str, str, str], RuleFindingDraft] = {}
+        for draft in drafts:
+            key = (draft.scenario, draft.persona, draft.pattern_family)
+            existing = merged.get(key)
+            if not existing:
+                merged[key] = draft
+                continue
+
+            existing.severity = AuditOrchestrator._max_severity(existing.severity, draft.severity)
+            existing.trust_impact = max(existing.trust_impact, draft.trust_impact)
+            if len(draft.evidence_excerpt) > len(existing.evidence_excerpt):
+                existing.evidence_excerpt = draft.evidence_excerpt
+            if len(draft.rule_reason) > len(existing.rule_reason):
+                existing.rule_reason = draft.rule_reason
+            existing.evidence_payload["supporting_evidence"] = AuditOrchestrator._merge_unique_strings(
+                existing.evidence_payload.get("supporting_evidence", []),
+                draft.evidence_payload.get("supporting_evidence", []),
+            )
+            existing.evidence_payload["matched_buttons"] = AuditOrchestrator._merge_unique_strings(
+                existing.evidence_payload.get("matched_buttons", []),
+                draft.evidence_payload.get("matched_buttons", []),
+            )
+            existing.evidence_payload["matched_prices"] = AuditOrchestrator._merge_unique_prices(
+                existing.evidence_payload.get("matched_prices", []),
+                draft.evidence_payload.get("matched_prices", []),
+            )
+        return list(merged.values())
+
+    @staticmethod
+    def _headline_from_example(example: str | None, fallback: str) -> str:
+        if not example:
+            return fallback
+        clean = " ".join(example.split()).strip()[:120]
+        return f'{fallback} Example captured evidence: "{clean}".'
+
+    @staticmethod
+    def _max_severity(first: str, second: str) -> str:
+        severity_rank = {"low": 1, "medium": 2, "high": 3, "critical": 4}
+        return first if severity_rank.get(first, 1) >= severity_rank.get(second, 1) else second
+
+    @staticmethod
+    def _merge_unique_strings(first: list[str], second: list[str], limit: int = 6) -> list[str]:
+        result: list[str] = []
+        seen: set[str] = set()
+        for item in first + second:
+            if not item or item in seen:
+                continue
+            seen.add(item)
+            result.append(item)
+            if len(result) >= limit:
+                break
+        return result
+
+    @staticmethod
+    def _merge_unique_prices(first: list[dict], second: list[dict], limit: int = 4) -> list[dict]:
+        result: list[dict] = []
+        seen: set[tuple[str, float]] = set()
+        for item in first + second:
+            key = (str(item.get("label", "")), float(item.get("value", 0)))
+            if key in seen:
+                continue
+            seen.add(key)
+            result.append(item)
+            if len(result) >= limit:
+                break
+        return result

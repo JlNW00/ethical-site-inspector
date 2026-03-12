@@ -61,6 +61,27 @@
       max-width: 760px;
       color: rgba(255, 255, 255, 0.82);
     }
+    .hero .muted {
+      color: rgba(255, 255, 255, 0.72);
+    }
+    .hero-meta-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin-top: 22px;
+    }
+    .meta-chip {
+      padding: 14px 16px;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+    .meta-chip strong {
+      display: block;
+      margin-top: 6px;
+      font-size: 16px;
+      color: white;
+    }
     .score-card {
       padding: 24px;
       border-radius: 24px;
@@ -82,6 +103,24 @@
       background: rgba(255,255,255,0.14);
       text-transform: capitalize;
       font-size: 14px;
+    }
+    .score-caption {
+      margin: 14px 0 10px;
+      color: rgba(255, 255, 255, 0.82);
+      line-height: 1.45;
+    }
+    .score-scale {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 16px;
+    }
+    .score-scale span {
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.1);
+      font-size: 12px;
+      color: rgba(255,255,255,0.85);
     }
     .section {
       margin-top: 28px;
@@ -150,6 +189,14 @@
       background: #dbe5f2;
     }
     .muted { color: var(--muted); }
+    .mini-list {
+      margin: 10px 0 0;
+      padding-left: 18px;
+      color: var(--muted);
+    }
+    .mini-list li + li {
+      margin-top: 6px;
+    }
     .finding-card + .finding-card {
       margin-top: 18px;
     }
@@ -167,21 +214,46 @@
 <body>
   <div class="shell">
     <section class="hero">
-      <div class="eyebrow">EthicalSiteInspector Trust Audit</div>
+      <div class="eyebrow">EthicalSiteInspector Live Trust Audit</div>
       <div class="hero-grid">
         <div>
-          <h1>{{ audit.target_url }}</h1>
-          <p>{{ audit.summary }}</p>
+          <h1>Trust Audit Report</h1>
+          <p>{{ metrics.finding_count }} evidence-backed findings were generated across {{ audit.selected_scenarios | length }} scenarios and {{ audit.selected_personas | length }} personas. {{ report_meta.risk_summary }}</p>
+          <div class="hero-meta-grid">
+            <div class="meta-chip">
+              <div class="eyebrow" style="opacity: 0.72; letter-spacing: 0.12em;">Target</div>
+              <strong>{{ report_meta.target_host }}</strong>
+              <div class="muted">{{ audit.target_url }}</div>
+            </div>
+            <div class="meta-chip">
+              <div class="eyebrow" style="opacity: 0.72; letter-spacing: 0.12em;">Generated</div>
+              <strong>{{ report_meta.generated_at }}</strong>
+              <div class="muted">{{ metrics.evidence_origin_label }}</div>
+            </div>
+            <div class="meta-chip">
+              <div class="eyebrow" style="opacity: 0.72; letter-spacing: 0.12em;">Coverage</div>
+              <strong>{{ audit.selected_scenarios | length }} scenarios / {{ audit.selected_personas | length }} personas</strong>
+              <div class="muted">{{ audit.selected_scenarios | join(", ") }}</div>
+            </div>
+          </div>
           <div class="pill-row" style="margin-top: 18px;">
             <span class="pill">{{ audit.mode }} mode</span>
             <span class="pill">{{ metrics.finding_count }} findings</span>
             <span class="pill">{{ metrics.observation_count }} journey observations</span>
+            <span class="pill">{{ metrics.evidence_origin_label }}</span>
           </div>
         </div>
         <div class="score-card">
-          <div class="muted">Trust score</div>
-          <div class="score">{{ audit.trust_score or "n/a" }}</div>
+          <div class="muted">Trust Score</div>
+          <div class="score">{{ report_meta.score_display }}</div>
           <div class="risk-badge">{{ audit.risk_level }} risk</div>
+          <p class="score-caption">{{ report_meta.risk_summary }}</p>
+          <div class="muted">Higher score = more trustworthy observed journeys. Lower score = more repeated pressure or friction.</div>
+          <div class="score-scale">
+            {% for item in report_meta.score_scale %}
+            <span>{{ item.label }} {{ item.range }}</span>
+            {% endfor %}
+          </div>
         </div>
       </div>
     </section>
@@ -204,6 +276,11 @@
           <strong>Decision-ready</strong>
           <div>Evidence-backed HTML artifact generated for stakeholder review.</div>
         </div>
+        <div class="stat-card">
+          <div class="muted">Evidence provenance</div>
+          <strong>{{ metrics.evidence_origin_label }}</strong>
+          <div>{{ metrics.site_host or audit.target_url }}</div>
+        </div>
       </div>
     </section>
 
@@ -213,10 +290,13 @@
         {% for persona in metrics.persona_comparison %}
         <div class="compare-card">
           <div class="pill-row">
-            <span class="pill">{{ persona.persona }}</span>
+            <span class="pill">{{ persona.persona.replace("_", " ").title() }}</span>
             <span class="pill">{{ persona.finding_count }} findings</span>
           </div>
           <p class="scenario-title">{{ persona.headline }}</p>
+          {% if report_meta.persona_paths.get(persona.persona) %}
+          <p class="muted"><strong>Observed path:</strong> {{ report_meta.persona_paths.get(persona.persona) }}</p>
+          {% endif %}
           <p class="muted">Average steps: {{ persona.average_steps }} | Friction index: {{ persona.friction_index }} | Price delta: ${{ persona.price_delta }}</p>
           <p class="muted">Dominant patterns: {{ persona.notable_patterns | join(", ") if persona.notable_patterns else "none" }}</p>
         </div>
@@ -230,7 +310,7 @@
         {% for scenario in metrics.scenario_breakdown %}
         <div class="scenario-card">
           <div class="pill-row">
-            <span class="pill">{{ scenario.scenario }}</span>
+            <span class="pill">{{ scenario.scenario.replace("_", " ").title() }}</span>
             <span class="pill severity-{{ scenario.risk_level }}">{{ scenario.risk_level }} risk</span>
           </div>
           <p class="scenario-title">{{ scenario.headline }}</p>
@@ -251,14 +331,44 @@
         <article class="finding-card">
           <div class="pill-row">
             <span class="pill severity-{{ finding.severity }}">{{ finding.severity }}</span>
-            <span class="pill">{{ finding.pattern_family }}</span>
+            <span class="pill">{{ finding.pattern_family.replace("_", " ").title() }}</span>
             <span class="pill">{{ "%.0f"|format(finding.confidence * 100) }}% confidence</span>
+            <span class="pill">{{ finding.evidence_payload.get("source_label", "Evidence") }}</span>
           </div>
           <h4 class="finding-title">{{ finding.title }}</h4>
+          <p class="muted">
+            {{ finding.evidence_payload.get("page_title") or finding.evidence_payload.get("site_host") }}
+            {% if finding.evidence_payload.get("page_url") %}
+            | {{ finding.evidence_payload.get("page_url") }}
+            {% endif %}
+          </p>
           <p>{{ finding.explanation }}</p>
-          <p><strong>Evidence:</strong> {{ finding.evidence_excerpt }}</p>
+          {% if report_meta.finding_paths.get(finding.id) %}
+          <p><strong>Observed path:</strong> {{ report_meta.finding_paths.get(finding.id) }}</p>
+          {% endif %}
+          <p><strong>{{ report_meta.finding_labels.get(finding.id, "Observed evidence") }}:</strong> {{ report_meta.finding_excerpts.get(finding.id, finding.evidence_excerpt) }}</p>
           <p><strong>Why it matters:</strong> {{ finding.rule_reason }}</p>
           <p><strong>Remediation:</strong> {{ finding.remediation }}</p>
+          {% set matched_buttons = finding.evidence_payload.get("matched_buttons", []) %}
+          {% set matched_prices = finding.evidence_payload.get("matched_prices", []) %}
+          {% set supporting = finding.evidence_payload.get("supporting_evidence", []) %}
+          {% if matched_buttons or matched_prices or supporting %}
+          <ul class="mini-list">
+            {% if matched_buttons %}
+            <li><strong>Observed controls:</strong> {{ matched_buttons | join(", ") }}</li>
+            {% endif %}
+            {% if matched_prices %}
+            <li><strong>Observed prices:</strong>
+              {% for price in matched_prices %}
+                {{ price.get("raw", price.get("value")) }} in {{ price.get("label", "")[:90] }}{% if not loop.last %}; {% endif %}
+              {% endfor %}
+            </li>
+            {% endif %}
+            {% if supporting %}
+            <li><strong>Supporting evidence:</strong> {{ supporting[:3] | join(" | ") }}</li>
+            {% endif %}
+          </ul>
+          {% endif %}
           {% set screenshots = finding.evidence_payload.get("screenshot_urls", []) %}
           {% if screenshots %}
           <div class="evidence-grid">

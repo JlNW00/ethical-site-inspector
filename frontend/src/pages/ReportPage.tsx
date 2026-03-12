@@ -8,6 +8,78 @@ import { Layout } from "../components/Layout";
 import { ProgressMeter } from "../components/ProgressMeter";
 import { titleize } from "../lib/format";
 
+function targetHost(targetUrl?: string, fallback?: string) {
+  if (fallback) {
+    return fallback;
+  }
+  if (!targetUrl) {
+    return "Unknown target";
+  }
+  try {
+    return new URL(targetUrl).host;
+  } catch {
+    return targetUrl;
+  }
+}
+
+function formatTimestamp(value?: string | null) {
+  if (!value) {
+    return "Unknown";
+  }
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? value
+    : new Intl.DateTimeFormat("en-US", {
+        month: "short",
+        day: "2-digit",
+        year: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      }).format(date);
+}
+
+function riskSummary(riskLevel?: string | null) {
+  switch (riskLevel) {
+    case "low":
+      return "Low risk: trust signals stayed stable across the audited journeys.";
+    case "moderate":
+      return "Moderate risk: some trust friction was observed, but it was not dominant.";
+    case "high":
+      return "High risk: trust friction was repeatedly observed in the audited journeys.";
+    case "critical":
+      return "Critical risk: the audited journeys repeatedly added friction before commitment or exit.";
+    default:
+      return "Risk level reflects how consistently friction or pressure appeared in the audited paths.";
+  }
+}
+
+function trimText(value: string, limit = 80) {
+  return value.length <= limit ? value : `${value.slice(0, limit - 1).trimEnd()}…`;
+}
+
+function extractQuoted(value: string) {
+  const parts = value.split('"');
+  return parts.length >= 3 ? parts[1] : value;
+}
+
+function prettyAction(action: string) {
+  const clean = action.replace(/\s+/g, " ").trim();
+  const quoted = extractQuoted(clean);
+  if (clean.startsWith('Selected offer "') && quoted) {
+    if (!/\d/.test(quoted) && quoted.split(" ").length <= 4) {
+      return `Selected destination ${quoted}`;
+    }
+    return `Selected offer ${trimText(quoted, 68)}`;
+  }
+  if (clean.startsWith('Opened hotel detail "') && quoted) {
+    return `Opened hotel ${trimText(quoted, 68)}`;
+  }
+  if (clean.startsWith('Interacted with checkout control "') && quoted) {
+    return quoted;
+  }
+  return trimText(clean, 80);
+}
+
 export function ReportPage() {
   const { auditId } = useParams<{ auditId: string }>();
   const [audit, setAudit] = useState<Audit | null>(null);
@@ -48,7 +120,27 @@ export function ReportPage() {
     }, {});
   }, [findings]);
 
+  const personaPaths = useMemo(() => {
+    return findings.reduce<Record<string, string>>((accumulator, finding) => {
+      if (accumulator[finding.persona]) {
+        return accumulator;
+      }
+      const interactedControls =
+        (finding.evidence_payload as { interacted_controls?: string[] }).interacted_controls ?? [];
+      if (!interactedControls.length) {
+        return accumulator;
+      }
+      accumulator[finding.persona] = interactedControls.slice(0, 4).map(prettyAction).join(" -> ");
+      return accumulator;
+    }, {});
+  }, [findings]);
+
   const trustProgress = audit?.trust_score ?? 0;
+  const scoreDisplay = audit?.trust_score != null ? `${Math.round(audit.trust_score)} / 100` : "-- / 100";
+  const hostLabel = targetHost(audit?.target_url, audit?.metrics.site_host);
+  const heroOverview = audit
+    ? `${findings.length} evidence-backed findings were generated across ${audit.selected_scenarios.length} scenarios and ${audit.selected_personas.length} personas. ${riskSummary(audit.risk_level)}`
+    : "A decision-ready trust report combining persona journeys, captured evidence, and remediation guidance.";
 
   return (
     <Layout
@@ -61,17 +153,23 @@ export function ReportPage() {
       <section className="hero-panel">
         <div>
           <div className="brand-kicker">Trust-risk report</div>
-          <h1>{audit?.target_url ?? "Loading report..."}</h1>
-          <p className="hero-copy">
-            A decision-ready trust report combining rule-based detections, persona deltas, captured evidence, and remediation guidance.
-          </p>
+          <h1>Trust Audit Report</h1>
+          <p className="hero-copy">{heroOverview}</p>
           <div className="hero-pills">
+            <span className="signal-pill">{hostLabel}</span>
+            <span className="signal-pill">{audit?.mode ?? "loading"} mode</span>
+            <span className="signal-pill">{audit?.metrics.evidence_origin_label ?? "Evidence loading"}</span>
+            <span className="signal-pill">{audit?.selected_scenarios.length ?? 0} scenarios</span>
+            <span className="signal-pill">{audit?.selected_personas.length ?? 0} personas</span>
             {(audit?.selected_personas ?? []).map((persona) => (
               <span className="signal-pill" key={persona}>
                 {titleize(persona)}
               </span>
             ))}
           </div>
+          <p className="muted" style={{ marginTop: 16 }}>
+            Target URL: {audit?.target_url ?? "Loading"} | Generated: {formatTimestamp(audit?.completed_at ?? audit?.updated_at)}
+          </p>
           <div className="action-row" style={{ marginTop: 24 }}>
             {auditId ? (
               <a className="btn btn-primary" href={api.getReportUrl(auditId)} target="_blank" rel="noreferrer">
@@ -86,9 +184,15 @@ export function ReportPage() {
           </div>
         </div>
         <div className="hero-score">
-          <div className="hero-score-label">Trust score</div>
-          <div className="hero-score-value">{audit?.trust_score ?? "--"}</div>
-          <div className="hero-score-subtitle">{audit?.summary ?? "Report summary is loading."}</div>
+          <div className="hero-score-label">Trust Score</div>
+          <div className="hero-score-value">{scoreDisplay}</div>
+          <div className={`severity-pill severity-${audit?.risk_level === "critical" ? "critical" : audit?.risk_level === "high" ? "high" : audit?.risk_level === "low" ? "low" : "medium"}`}>
+            {audit?.risk_level ?? "loading"} risk
+          </div>
+          <div className="hero-score-subtitle">{riskSummary(audit?.risk_level)}</div>
+          <p className="muted" style={{ marginTop: 12 }}>
+            Higher score = more trustworthy observed journeys. Scale: 82-100 low, 64-81 moderate, 42-63 high, 0-41 critical.
+          </p>
           <div style={{ marginTop: 18 }}>
             <ProgressMeter value={trustProgress} />
           </div>
@@ -127,6 +231,11 @@ export function ReportPage() {
             <div className="metric-value">{audit?.selected_personas.length ?? 0}</div>
             <div className="muted">{audit?.selected_personas.map(titleize).join(", ")}</div>
           </div>
+          <div className="summary-card">
+            <div className="metric-label">Evidence provenance</div>
+            <div className="metric-value">{audit?.metrics.evidence_origin_label ?? "Unknown"}</div>
+            <div className="muted">{audit?.metrics.site_host ?? audit?.target_url}</div>
+          </div>
         </div>
       </section>
 
@@ -146,6 +255,11 @@ export function ReportPage() {
                   <span className="signal-pill">{item.finding_count} findings</span>
                 </div>
                 <h3 className="finding-title">{item.headline}</h3>
+                {personaPaths[item.persona] ? (
+                  <p className="muted">
+                    <strong>Observed path:</strong> {personaPaths[item.persona]}
+                  </p>
+                ) : null}
                 <p className="muted">
                   Average steps: {item.average_steps} | Friction index: {item.friction_index} | Price delta: ${item.price_delta}
                 </p>

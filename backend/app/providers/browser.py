@@ -4,19 +4,26 @@ import itertools
 import time
 from abc import ABC, abstractmethod
 from typing import Callable
-from urllib.parse import urlparse
+from urllib.parse import urljoin, urlparse
 
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 from playwright.sync_api import sync_playwright
 
 from app.extractors.playwright_extractors import (
     capture_screenshot,
+    extract_controls_matching_keywords,
     extract_button_labels,
     extract_checkbox_states,
     extract_dom_excerpt,
+    extract_headings,
+    extract_headings_matching_keywords,
+    extract_lines_matching_keywords,
+    extract_page_title,
     extract_prices,
+    extract_prices_from_text,
     extract_text_snippets,
     guess_friction,
+    scenario_keywords,
 )
 from app.providers.storage import StorageProvider
 from app.schemas.runtime import BrowserRunResult, JourneyObservation, ObservationEvidence
@@ -83,6 +90,8 @@ class MockBrowserAuditProvider(BrowserAuditProvider):
             observations=observations,
             summary={
                 "mode": "mock",
+                "evidence_origin": "simulated",
+                "evidence_origin_label": "Simulated",
                 "observation_count": len(observations),
                 "scenarios": scenarios,
                 "personas": personas,
@@ -123,11 +132,19 @@ class MockBrowserAuditProvider(BrowserAuditProvider):
                 checkbox_states=evidence["checkbox_states"],
                 price_points=evidence["price_points"],
                 text_snippets=evidence["text_snippets"],
+                headings=evidence.get("headings", [scenario.replace("_", " ").title(), persona.replace("_", " ").title()]),
+                page_title=evidence.get("page_title", f"{host} {scenario.replace('_', ' ').title()}"),
                 dom_excerpt=evidence["dom_excerpt"],
                 step_count=evidence["step_count"],
                 friction_indicators=evidence["friction_indicators"],
                 activity_log=evidence["activity_log"],
-                metadata={"source": "mock"},
+                metadata={
+                    "source": "mock",
+                    "source_label": "Simulated",
+                    "site_host": host,
+                    "page_url": f"{target_url.rstrip('/')}/{scenario.replace('_', '-')}",
+                    "interacted_controls": evidence.get("button_labels", [])[:2],
+                },
             ),
         )
 
@@ -142,6 +159,8 @@ class MockBrowserAuditProvider(BrowserAuditProvider):
                     "Improve your experience by saying yes to personalized tracking. Continuing without acceptance may reduce site quality.",
                     "The reject path is buried under a secondary link while the accept action receives the primary visual treatment.",
                 ],
+                "headings": ["Cookie preferences", "Recommended privacy setting"],
+                "page_title": "Cookie preferences",
                 "dom_excerpt": "<div class='banner'><button>Accept all</button><a>Manage settings</a></div>",
                 "step_count": 3,
                 "friction_indicators": ["Reject option hidden behind secondary link", "Retention copy guilting the user"],
@@ -156,6 +175,8 @@ class MockBrowserAuditProvider(BrowserAuditProvider):
                 "text_snippets": [
                     "Accept tracking to unlock an instant 10 percent discount. Essential only is available but visually minimized.",
                 ],
+                "headings": ["Tracking choices", "Discount unlock prompt"],
+                "page_title": "Discount-linked consent prompt",
                 "dom_excerpt": "<div class='cookie-offer'>Accept & save 10%</div>",
                 "step_count": 2,
                 "friction_indicators": ["Discount incentive tied to tracking acceptance"],
@@ -170,6 +191,8 @@ class MockBrowserAuditProvider(BrowserAuditProvider):
                 "text_snippets": [
                     "Before you go, keep the tailored experience turned on. Choosing otherwise may limit recommendations.",
                 ],
+                "headings": ["Before you go", "Personalized experience"],
+                "page_title": "Exit-intent consent prompt",
                 "dom_excerpt": "<div class='modal'>Stay on personalized experience</div>",
                 "step_count": 3,
                 "friction_indicators": ["Exit-intent modal re-prompts consent choice"],
@@ -185,6 +208,8 @@ class MockBrowserAuditProvider(BrowserAuditProvider):
                     "Secure checkout highlights convenience but defaults to saving payment details for future use.",
                     "A protection plan is introduced within the checkout step rather than on the product page.",
                 ],
+                "headings": ["Secure checkout", "Saved details"],
+                "page_title": "Secure checkout",
                 "dom_excerpt": "<form><input type='checkbox' checked name='save-card' /></form>",
                 "step_count": 4,
                 "friction_indicators": ["Stored-payment default enabled"],
@@ -200,6 +225,8 @@ class MockBrowserAuditProvider(BrowserAuditProvider):
                     "Only 2 left at this price. Shipping protection is already selected and taxes and fees appear later in the flow.",
                     "The total jumps at review order after the user already committed to the path.",
                 ],
+                "headings": ["Review order", "Only 2 left at this price"],
+                "page_title": "Review order",
                 "dom_excerpt": "<aside>Only 2 left at this price</aside>",
                 "step_count": 5,
                 "friction_indicators": ["Only X left / countdown copy", "Extra preference step present"],
@@ -214,6 +241,8 @@ class MockBrowserAuditProvider(BrowserAuditProvider):
                 "text_snippets": [
                     "Keep my limited-time bundle before it disappears. Exit-intent behavior triggers another bundled offer.",
                 ],
+                "headings": ["Limited-time bundle", "Complete order"],
+                "page_title": "Bundle upsell",
                 "dom_excerpt": "<div class='bundle'>Keep my limited-time bundle</div>",
                 "step_count": 5,
                 "friction_indicators": ["Only X left / countdown copy", "Retention copy guilting the user"],
@@ -229,6 +258,8 @@ class MockBrowserAuditProvider(BrowserAuditProvider):
                     "Before cancellation, users are prompted to pause, contact support, or accept a retention offer.",
                     "The direct cancellation path is present but visually secondary and multiple detours appear first.",
                 ],
+                "headings": ["Keep your plan", "Talk to support"],
+                "page_title": "Cancellation flow",
                 "dom_excerpt": "<section class='retention'>Talk to support</section>",
                 "step_count": 7,
                 "friction_indicators": ["Support detour likely required", "Retention copy guilting the user", "Extra step present"],
@@ -243,6 +274,8 @@ class MockBrowserAuditProvider(BrowserAuditProvider):
                 "text_snippets": [
                     "Keep my discount and save your plan. Cancel anyway appears after a discount-focused retention card and billing chat prompt.",
                 ],
+                "headings": ["Keep my discount", "Billing support"],
+                "page_title": "Retention offer",
                 "dom_excerpt": "<div class='discount-retention'>Keep my discount</div>",
                 "step_count": 6,
                 "friction_indicators": ["Retention copy guilting the user", "Support detour likely required"],
@@ -257,6 +290,8 @@ class MockBrowserAuditProvider(BrowserAuditProvider):
                 "text_snippets": [
                     "No thanks, lose my benefits is used as the decline label in the cancellation retention step.",
                 ],
+                "headings": ["Stay enrolled", "Pause plan"],
+                "page_title": "Cancellation retention prompt",
                 "dom_excerpt": "<button>No thanks, lose my benefits</button>",
                 "step_count": 7,
                 "friction_indicators": ["Retention copy guilting the user", "Extra step present"],
@@ -341,6 +376,8 @@ class PlaywrightAuditProvider(BrowserAuditProvider):
             observations=observations,
             summary={
                 "mode": "playwright",
+                "evidence_origin": "captured",
+                "evidence_origin_label": "Captured from site",
                 "observation_count": len(observations),
                 "scenarios": scenarios,
                 "personas": personas,
@@ -350,29 +387,49 @@ class PlaywrightAuditProvider(BrowserAuditProvider):
     def _run_scenario(self, audit_id: str, target_url: str, scenario: str, persona: str, page) -> JourneyObservation:
         page.goto(target_url, wait_until="domcontentloaded", timeout=25_000)
         page.wait_for_timeout(1_000)
-        step_count = 1
         activity_log = ["Loaded target URL"]
-        self._attempt_scenario_actions(page, scenario, activity_log)
-        step_count += max(0, len(activity_log) - 1)
+        state_snapshots = [self._snapshot_state(page, scenario=scenario, label="initial")]
 
         first_path, first_url = capture_screenshot(
             page,
             self.storage,
             f"screenshots/{audit_id}/{scenario}_{persona}_live_1.png",
         )
-        page.wait_for_timeout(500)
+        interacted_controls = self._attempt_scenario_actions(page, scenario, persona, activity_log, state_snapshots)
+        page.wait_for_timeout(700)
         second_path, second_url = capture_screenshot(
             page,
             self.storage,
             f"screenshots/{audit_id}/{scenario}_{persona}_live_2.png",
         )
+        state_snapshots.append(self._snapshot_state(page, scenario=scenario, label="final"))
 
-        button_labels = extract_button_labels(page)
-        checkbox_states = extract_checkbox_states(page)
-        price_points = extract_prices(page)
-        text_snippets = extract_text_snippets(page)
-        friction_indicators = guess_friction(text_snippets, button_labels)
+        scenario_states = [state for state in state_snapshots if state["grounded"]]
+        effective_states = scenario_states or state_snapshots[-1:]
+        headings = self._merge_unique_from_states(effective_states, "headings", limit=6)
+        button_labels = self._merge_unique_from_states(effective_states, "buttons", limit=8)
+        text_snippets = self._merge_unique_from_states(effective_states, "texts", limit=8)
+        checkbox_states = self._merge_checkbox_states(effective_states)
+        price_points = self._scenario_price_points(scenario_states)
+        friction_indicators = self._scenario_friction(
+            scenario=scenario,
+            states=effective_states,
+            interacted_controls=interacted_controls,
+            text_snippets=text_snippets,
+            button_labels=button_labels,
+            headings=headings,
+        )
         dom_excerpt = extract_dom_excerpt(page)
+        step_count = max(1, len(interacted_controls))
+        host = urlparse(target_url).netloc or page.url
+        page_title = effective_states[-1]["page_title"] if effective_states else extract_page_title(page)
+        if page_title:
+            activity_log.append(f"Observed page title: {page_title}")
+        scenario_state_found = bool(scenario_states)
+        if scenario_state_found:
+            activity_log.append(f"Scenario-grounded state captured for {scenario.replace('_', ' ')}.")
+        else:
+            activity_log.append(f"No scenario-grounded UI state was confirmed for {scenario.replace('_', ' ')}.")
 
         return JourneyObservation(
             scenario=scenario,
@@ -386,33 +443,553 @@ class PlaywrightAuditProvider(BrowserAuditProvider):
                 checkbox_states=checkbox_states,
                 price_points=price_points,
                 text_snippets=text_snippets,
+                headings=headings,
+                page_title=page_title,
                 dom_excerpt=dom_excerpt,
                 step_count=step_count,
                 friction_indicators=friction_indicators,
                 activity_log=activity_log,
-                metadata={"source": "playwright"},
+                metadata={
+                    "source": "playwright",
+                    "source_label": "Captured from site",
+                    "site_host": host,
+                    "page_url": page.url,
+                    "interacted_controls": interacted_controls,
+                    "scenario_state_found": scenario_state_found,
+                    "scenario_state_count": len(scenario_states),
+                    "state_snapshots": state_snapshots,
+                    "action_count": len(interacted_controls),
+                    "observed_price_delta": self._observed_price_delta(price_points),
+                },
             ),
         )
 
-    def _attempt_scenario_actions(self, page, scenario: str, activity_log: list[str]) -> None:
-        scenario_map = {
-            "cookie_consent": ["accept", "allow", "reject", "essential", "settings", "preferences"],
-            "checkout_flow": ["add to cart", "checkout", "buy now", "continue", "review order"],
-            "cancellation_flow": ["cancel", "unsubscribe", "account", "billing", "manage", "pause"],
-        }
-        keywords = scenario_map.get(scenario, [])
+    def _attempt_scenario_actions(self, page, scenario: str, persona: str, activity_log: list[str], state_snapshots: list[dict]) -> list[str]:
+        if scenario == "checkout_flow":
+            return self._attempt_checkout_actions(page, persona, activity_log, state_snapshots)
+        return self._attempt_plan_actions(page, scenario, persona, activity_log, state_snapshots)
+
+    def _attempt_plan_actions(self, page, scenario: str, persona: str, activity_log: list[str], state_snapshots: list[dict]) -> list[str]:
+        interactions: list[str] = []
+        plan = self._scenario_action_plan(scenario, persona)
         try:
-            for keyword in keywords:
-                locator = page.get_by_role("button", name=lambda text: keyword in text.lower())
-                if locator.count():
-                    locator.first.click(timeout=4_000)
-                    page.wait_for_timeout(800)
-                    activity_log.append(f"Clicked button matching '{keyword}'")
-                    break
+            for step in plan:
+                label = self._click_first_matching(page, step["keywords"], step.get("require_keywords"))
+                if not label:
+                    continue
+                interactions.append(label)
+                activity_log.append(f'Interacted with control "{label}" while testing {scenario.replace("_", " ")}')
+                page.wait_for_timeout(900)
+                state_snapshots.append(self._snapshot_state(page, scenario=scenario, label=step["label"]))
         except PlaywrightTimeoutError:
             activity_log.append(f"Timed out while trying '{scenario}' interaction")
         except Exception as exc:
             activity_log.append(f"Scenario interaction degraded gracefully: {exc.__class__.__name__}")
+        return interactions
+
+    def _attempt_checkout_actions(self, page, persona: str, activity_log: list[str], state_snapshots: list[dict]) -> list[str]:
+        interactions: list[str] = []
+        try:
+            offer = self._choose_checkout_offer(page, persona)
+            if not offer:
+                activity_log.append("No visible offer or destination result could be grounded for checkout.")
+                return interactions
+
+            offer_label = offer["text"]
+            self._append_checkout_offer_state(page, offer, state_snapshots)
+            interactions.append(f'Selected offer "{offer_label[:80]}"')
+            activity_log.append(f'Observed and selected offer "{offer_label[:120]}" from the site.')
+
+            if self._navigate_to_href(page, offer["href"]):
+                page.wait_for_timeout(1_400)
+                result_label = "result_page" if offer["kind"] == "destination" else "offer_result"
+                state_snapshots.append(self._snapshot_state(page, scenario="checkout_flow", label=result_label))
+
+            needs_detail = "/hotel/" not in page.url
+            if needs_detail:
+                hotel = self._choose_hotel_detail_link(page, persona)
+                if hotel and self._navigate_to_href(page, hotel["href"]):
+                    self._append_checkout_hotel_state(page, hotel, state_snapshots)
+                    interactions.append(f'Opened hotel detail "{hotel["text"][:80]}"')
+                    activity_log.append(f'Opened hotel detail "{hotel["text"][:120]}" for checkout review.')
+                    page.wait_for_timeout(1_400)
+                    state_snapshots.append(self._snapshot_state(page, scenario="checkout_flow", label="detail_page"))
+
+            follow_up = self._checkout_follow_up(page, persona)
+            for action in follow_up:
+                label = self._click_first_matching(
+                    page,
+                    action["keywords"],
+                    selector=action.get("selector") or "button, a, [role='button'], input[type='submit'], input[type='button']",
+                )
+                if not label:
+                    continue
+                interactions.append(label)
+                activity_log.append(f'Interacted with checkout control "{label}".')
+                page.wait_for_timeout(900)
+                state_snapshots.append(self._snapshot_state(page, scenario="checkout_flow", label=action["label"]))
+        except PlaywrightTimeoutError:
+            activity_log.append("Timed out while trying checkout-specific navigation.")
+        except Exception as exc:
+            activity_log.append(f"Checkout interaction degraded gracefully: {exc.__class__.__name__}")
+        return interactions
+
+    def _click_first_matching(
+        self,
+        page,
+        keywords: list[str],
+        require_keywords: list[str] | None = None,
+        *,
+        selector: str = "button, a, [role='button'], input[type='submit'], input[type='button']",
+    ) -> str | None:
+        locator = page.locator(selector)
+        total = min(locator.count(), 160)
+        for index in range(total):
+            element = locator.nth(index)
+            try:
+                if not element.is_visible():
+                    continue
+                label = self._element_label(element)
+                lower_label = label.lower()
+                if not label or not any(keyword in lower_label for keyword in keywords):
+                    continue
+                if require_keywords and not any(keyword in lower_label for keyword in require_keywords):
+                    continue
+                try:
+                    element.scroll_into_view_if_needed(timeout=1_000)
+                except Exception:
+                    pass
+                try:
+                    element.click(timeout=2_000)
+                except Exception:
+                    try:
+                        element.click(timeout=2_000, force=True)
+                    except Exception:
+                        element.evaluate("(node) => node.click()")
+                return label
+            except Exception:
+                continue
+        return None
+
+    @staticmethod
+    def _element_label(element) -> str:
+        try:
+            label = " ".join(element.inner_text(timeout=1_500).split()).strip()
+        except Exception:
+            label = ""
+        if not label:
+            try:
+                label = " ".join((element.get_attribute("value") or "").split()).strip()
+            except Exception:
+                label = ""
+        return label[:120]
+
+    def _snapshot_state(self, page, *, scenario: str, label: str) -> dict:
+        keywords = scenario_keywords(scenario)
+        headings = extract_headings_matching_keywords(page, keywords, limit=6)
+        texts = extract_lines_matching_keywords(page, keywords, limit=10)
+        buttons = extract_controls_matching_keywords(page, keywords, limit=10)
+        all_prices = extract_prices(page, limit=12)
+        prices = [item for item in all_prices if self._price_is_scenario_grounded(scenario, item, texts, headings, buttons)]
+        page_title = extract_page_title(page)
+        state_type = self._state_type(page, scenario=scenario, label=label, headings=headings, texts=texts, buttons=buttons)
+        grounded = self._state_is_grounded(
+            scenario,
+            label=label,
+            page_url=page.url,
+            state_type=state_type,
+            headings=headings,
+            texts=texts,
+            buttons=buttons,
+            prices=prices,
+        )
+        return {
+            "label": label,
+            "state_type": state_type,
+            "page_title": page_title,
+            "page_url": page.url,
+            "headings": headings,
+            "texts": texts,
+            "buttons": buttons,
+            "prices": prices,
+            "primary_price": self._representative_price(prices),
+            "checkbox_states": extract_checkbox_states(page),
+            "grounded": grounded,
+        }
+
+    def _scenario_action_plan(self, scenario: str, persona: str) -> list[dict]:
+        plans = {
+            "cookie_consent": {
+                "privacy_sensitive": [
+                    {"type": "click", "keywords": ["reject", "decline", "necessary", "essential"], "label": "consent_decline"},
+                    {"type": "click", "keywords": ["settings", "preferences", "manage"], "label": "consent_settings"},
+                ],
+                "cost_sensitive": [
+                    {"type": "click", "keywords": ["accept", "allow", "agree"], "label": "consent_accept"},
+                    {"type": "click", "keywords": ["continue"], "label": "consent_continue"},
+                ],
+                "exit_intent": [
+                    {"type": "click", "keywords": ["settings", "manage", "preferences"], "label": "consent_settings"},
+                    {"type": "click", "keywords": ["dismiss", "close", "continue"], "label": "consent_dismiss"},
+                ],
+            },
+            "checkout_flow": {
+                "privacy_sensitive": [
+                    {"type": "click", "keywords": ["reject", "decline", "necessary", "essential"], "label": "checkout_privacy_guard"},
+                ],
+                "cost_sensitive": [
+                    {"type": "click", "keywords": ["reserve", "book", "select"], "label": "reserve_step"},
+                ],
+                "exit_intent": [
+                    {"type": "click", "keywords": ["reserve", "book", "select"], "label": "reserve_step"},
+                    {"type": "click", "keywords": ["details", "policies", "cancellation"], "label": "exit_review"},
+                ],
+            },
+            "cancellation_flow": {
+                "privacy_sensitive": [
+                    {"type": "click", "keywords": ["manage", "account", "support"], "label": "account_entry"},
+                    {"type": "click", "keywords": ["cancel", "unsubscribe"], "label": "cancel_entry"},
+                ],
+                "cost_sensitive": [
+                    {"type": "click", "keywords": ["billing", "manage", "help"], "label": "billing_entry"},
+                    {"type": "click", "keywords": ["cancel", "unsubscribe"], "label": "cancel_entry"},
+                ],
+                "exit_intent": [
+                    {"type": "click", "keywords": ["cancel", "unsubscribe", "manage"], "label": "cancel_entry"},
+                    {"type": "click", "keywords": ["pause", "keep", "stay"], "label": "retention_state"},
+                ],
+            },
+        }
+        return plans.get(scenario, {}).get(persona, [])
+
+    def _state_type(self, page, *, scenario: str, label: str, headings: list[str], texts: list[str], buttons: list[str]) -> str:
+        if scenario != "checkout_flow":
+            return label
+        combined = " ".join(headings + texts + buttons).lower()
+        if label == "offer_selection":
+            return "offer"
+        if label in {"reserve_state", "availability_panel"}:
+            return "reserve"
+        if label == "policy_review":
+            return "policy"
+        if "/hotel/" in page.url:
+            return "detail"
+        if "/city/" in page.url or "searchresults.html" in page.url:
+            return "results"
+        if any(term in combined for term in ("current price", "original price", "2 nights", "deal")):
+            return "offer"
+        return "landing"
+
+    @staticmethod
+    def _state_is_grounded(
+        scenario: str,
+        *,
+        label: str,
+        page_url: str,
+        state_type: str,
+        headings: list[str],
+        texts: list[str],
+        buttons: list[str],
+        prices: list[dict],
+    ) -> bool:
+        combined = " ".join(texts + headings + buttons).lower()
+        if scenario == "cookie_consent":
+            return bool(buttons or any(term in combined for term in ("cookie", "consent", "privacy", "tracking", "accept", "reject")))
+        if scenario == "checkout_flow":
+            if label == "initial" or state_type == "landing":
+                return False
+            if state_type == "offer":
+                return bool(prices or any(term in combined for term in ("deal", "price", "current price", "original price", "night")))
+            if state_type == "results":
+                return bool(
+                    any(term in combined for term in ("hotels and places to stay", "check availability", "availability", "hotel"))
+                    or "/city/" in page_url
+                    or "searchresults.html" in page_url
+                )
+            if state_type in {"detail", "reserve", "policy"}:
+                return bool(any(term in combined for term in ("reserve", "availability", "room", "charges may apply", "damage deposit", "policy")))
+            return False
+        if scenario == "cancellation_flow":
+            return label != "initial" and bool(
+                buttons or any(term in combined for term in ("cancel", "unsubscribe", "manage", "pause", "billing", "support"))
+            )
+        return False
+
+    @staticmethod
+    def _price_is_scenario_grounded(scenario: str, price_point: dict, texts: list[str], headings: list[str], buttons: list[str]) -> bool:
+        if scenario != "checkout_flow":
+            return False
+        context = " ".join(texts + headings + buttons + [str(price_point.get("label", ""))]).lower()
+        return any(term in context for term in ("price", "current price", "original price", "tax", "fee", "night", "reserve", "room", "deal", "availability", "book", "charges may apply"))
+
+    def _merge_unique_from_states(self, states: list[dict], key: str, limit: int) -> list[str]:
+        values: list[str] = []
+        seen: set[str] = set()
+        for state in states:
+            for item in state.get(key, []):
+                if not item or item in seen:
+                    continue
+                seen.add(item)
+                values.append(item)
+                if len(values) >= limit:
+                    return values
+        return values
+
+    @staticmethod
+    def _merge_checkbox_states(states: list[dict]) -> dict[str, bool]:
+        merged: dict[str, bool] = {}
+        for state in states:
+            merged.update(state.get("checkbox_states", {}))
+        return merged
+
+    def _scenario_price_points(self, states: list[dict]) -> list[dict]:
+        if len(states) < 2:
+            return []
+        selected_points: list[dict] = []
+        seen_states: set[str] = set()
+        eligible_labels = {"detail_page", "availability_panel", "reserve_state", "policy_review", "final"}
+        for state in states:
+            state_label = state.get("label", "")
+            state_type = state.get("state_type", "")
+            primary_price = state.get("primary_price")
+            if not primary_price or state_label in seen_states:
+                continue
+            if state_type not in {"offer", "results", "detail", "reserve"}:
+                continue
+            if state_label not in eligible_labels:
+                continue
+            seen_states.add(state_label)
+            selected_points.append({**primary_price, "state_label": state_label, "page_url": state.get("page_url", "")})
+        if len(selected_points) < 2:
+            return []
+        unique_values = {float(item.get("value", 0)) for item in selected_points}
+        unique_states = {item.get("state_label") for item in selected_points}
+        return selected_points if len(unique_values) >= 2 and len(unique_states) >= 2 else []
+
+    def _scenario_friction(
+        self,
+        *,
+        scenario: str,
+        states: list[dict],
+        interacted_controls: list[str],
+        text_snippets: list[str],
+        button_labels: list[str],
+        headings: list[str],
+    ) -> list[str]:
+        indicators: list[str] = []
+        if scenario == "checkout_flow":
+            if len(interacted_controls) >= 2:
+                indicators.append("Multiple commerce steps observed")
+            if any(
+                term in " ".join(text_snippets + headings).lower()
+                for term in ("charges may apply", "damage deposit", "availability")
+            ):
+                indicators.append("Checkout details surfaced deeper in the journey")
+        elif scenario == "cancellation_flow":
+            indicators.extend(guess_friction(text_snippets, button_labels, headings))
+            if any("support" in control.lower() for control in interacted_controls):
+                indicators.append("Support detour likely required")
+        elif scenario == "cookie_consent":
+            if any("settings" in control.lower() or "preferences" in control.lower() for control in interacted_controls):
+                indicators.append("Preference layer required before decision")
+        deduped: list[str] = []
+        for item in indicators:
+            if item not in deduped:
+                deduped.append(item)
+        return deduped
+
+    @staticmethod
+    def _observed_price_delta(price_points: list[dict]) -> float:
+        if len(price_points) < 2:
+            return 0.0
+        values = [float(item["value"]) for item in price_points]
+        return round(values[-1] - values[0], 2)
+
+    def _append_checkout_offer_state(self, page, offer: dict, state_snapshots: list[dict]) -> None:
+        offer_prices = extract_prices_from_text(offer["text"], limit=4)
+        offer_state = {
+            "label": "offer_selection",
+            "state_type": "offer",
+            "page_title": extract_page_title(page),
+            "page_url": page.url,
+            "headings": [],
+            "texts": [offer["text"][:240]],
+            "buttons": [offer["text"][:120]],
+            "prices": offer_prices,
+            "primary_price": self._representative_price(offer_prices),
+            "checkbox_states": {},
+            "grounded": True,
+        }
+        state_snapshots.append(offer_state)
+
+    def _append_checkout_hotel_state(self, page, hotel: dict, state_snapshots: list[dict]) -> None:
+        hotel_state = {
+            "label": "detail_selection",
+            "state_type": "detail",
+            "page_title": extract_page_title(page),
+            "page_url": hotel["href"],
+            "headings": [],
+            "texts": [hotel["text"][:240]],
+            "buttons": [hotel["text"][:120]],
+            "prices": [],
+            "primary_price": None,
+            "checkbox_states": {},
+            "grounded": True,
+        }
+        state_snapshots.append(hotel_state)
+
+    def _choose_checkout_offer(self, page, persona: str) -> dict | None:
+        candidates = self._extract_checkout_candidates(page)
+        if not candidates:
+            return None
+        ranked = sorted(candidates, key=lambda item: self._checkout_offer_score(item, persona), reverse=True)
+        return ranked[0]
+
+    def _extract_checkout_candidates(self, page) -> list[dict]:
+        candidates: list[dict] = []
+        locator = page.locator("a[href]")
+        total = min(locator.count(), 160)
+        for index in range(total):
+            element = locator.nth(index)
+            try:
+                if not element.is_visible():
+                    continue
+                text = self._element_label(element)
+                href = element.get_attribute("href") or ""
+                if not text or not href:
+                    continue
+                absolute_href = urljoin(page.url, href)
+                lower_href = absolute_href.lower()
+                lower_text = text.lower()
+                if "searchresults.html" in lower_href and "dest_type=hotel" in lower_href:
+                    kind = "hotel_offer"
+                elif "searchresults.html" in lower_href and "dest_type=city" in lower_href:
+                    kind = "destination"
+                elif "/hotel/" in lower_href:
+                    kind = "hotel_detail"
+                else:
+                    continue
+                prices = extract_prices_from_text(text, limit=4)
+                current_price = prices[-1]["value"] if prices else None
+                discount = 0.0
+                if len(prices) >= 2:
+                    discount = max(0.0, float(prices[0]["value"]) - float(prices[-1]["value"]))
+                candidates.append(
+                    {
+                        "kind": kind,
+                        "text": text,
+                        "href": absolute_href,
+                        "current_price": current_price,
+                        "discount": discount,
+                        "contains_deal": "deal" in lower_text or "current price" in lower_text,
+                    }
+                )
+            except Exception:
+                continue
+        return candidates
+
+    def _checkout_offer_score(self, candidate: dict, persona: str) -> float:
+        text = candidate["text"].lower()
+        kind = candidate["kind"]
+        current_price = float(candidate["current_price"] or 9999.0)
+        discount = float(candidate["discount"] or 0.0)
+        score = 0.0
+        if persona == "privacy_sensitive":
+            if kind == "destination":
+                score += 80
+            if kind == "hotel_offer":
+                score += 20
+            if "deal" in text or "only" in text:
+                score -= 10
+            if "pay at the property" in text or "free cancellation" in text:
+                score += 12
+        elif persona == "cost_sensitive":
+            if kind == "hotel_offer":
+                score += 80
+            score += max(0.0, 600.0 - current_price) / 10
+            score += discount / 5
+            if candidate["contains_deal"]:
+                score += 10
+        else:
+            if kind in {"hotel_offer", "hotel_detail"}:
+                score += 70
+            if "cancellation" in text or "policy" in text:
+                score += 15
+            if candidate["contains_deal"]:
+                score += 8
+            score += discount / 8
+        return score
+
+    def _choose_hotel_detail_link(self, page, persona: str) -> dict | None:
+        locator = page.locator("a[href*='/hotel/']")
+        candidates: list[dict] = []
+        total = min(locator.count(), 80)
+        excluded_labels = {"hotels", "apartments", "resorts", "villas", "cabins", "cottages"}
+        for index in range(total):
+            element = locator.nth(index)
+            try:
+                if not element.is_visible():
+                    continue
+                text = self._element_label(element)
+                href = element.get_attribute("href") or ""
+                if not text or not href:
+                    continue
+                absolute_href = urljoin(page.url, href)
+                lower_text = text.lower()
+                if lower_text in excluded_labels or absolute_href.endswith("/hotel/index.html"):
+                    continue
+                score = 0.0
+                if persona == "exit_intent" and ("suite" in lower_text or "downtown" in lower_text):
+                    score += 6
+                if persona == "privacy_sensitive" and "airport" in lower_text:
+                    score -= 4
+                if "hotel in" in lower_text or len(text.split()) >= 3:
+                    score += 4
+                candidates.append({"text": text, "href": absolute_href, "score": score})
+            except Exception:
+                continue
+        if not candidates:
+            return None
+        return sorted(candidates, key=lambda item: item["score"], reverse=True)[0]
+
+    def _checkout_follow_up(self, page, persona: str) -> list[dict]:
+        if "/hotel/" not in page.url:
+            return []
+        if persona == "privacy_sensitive":
+            return [
+                {"keywords": ["see availability", "availability"], "label": "availability_panel"},
+            ]
+        if persona == "cost_sensitive":
+            return [
+                {"keywords": ["reserve", "see availability", "availability"], "label": "reserve_state"},
+            ]
+        return [
+            {"keywords": ["reserve", "see availability", "availability"], "label": "reserve_state"},
+            {
+                "keywords": ["house rules", "policies", "policy", "cancellation"],
+                "label": "policy_review",
+                "selector": "button, a, [role='button'], summary",
+            },
+        ]
+
+    @staticmethod
+    def _navigate_to_href(page, href: str) -> bool:
+        if not href:
+            return False
+        try:
+            page.goto(href, wait_until="domcontentloaded", timeout=25_000)
+            return True
+        except Exception:
+            return False
+
+    @staticmethod
+    def _representative_price(prices: list[dict]) -> dict | None:
+        preferred_terms = ("current price", "price $", "from $", "total", "you'll pay", "pay")
+        for price in prices:
+            label = str(price.get("label", "")).lower()
+            if any(term in label for term in preferred_terms):
+                return price
+        return None
 
     @staticmethod
     def _context_options(persona: str) -> dict:

@@ -30,10 +30,24 @@ class MockClassifierProvider(ClassifierProvider):
     def classify(self, draft: RuleFindingDraft) -> ClassifiedFinding:
         severity = draft.severity
         confidence = min(0.97, 0.72 + (draft.trust_impact / 30))
-        explanation = (
-            f"{draft.title}. The observed {draft.pattern_family.replace('_', ' ')} signal appears in the "
-            f"{draft.scenario.replace('_', ' ')} journey for the {draft.persona.replace('_', ' ')} persona. "
-            f"Evidence suggests the experience creates avoidable pressure or friction before the user can make a clear choice."
+        payload = draft.evidence_payload
+        site_host = str(payload.get("site_host") or "the audited site")
+        page_title = str(payload.get("page_title") or "")
+        source_label = str(payload.get("source_label") or "Observed")
+        context_label = f'on "{page_title}"' if page_title else f"on {site_host}"
+        quote = str(payload.get("matched_quote") or draft.evidence_excerpt)
+        matched_buttons = [str(item) for item in payload.get("matched_buttons", []) if item][:3]
+        matched_prices = payload.get("matched_prices", [])
+        step_count = int(payload.get("step_count") or 0)
+
+        explanation = self._build_explanation(
+            draft=draft,
+            source_label=source_label,
+            context_label=context_label,
+            quote=quote,
+            matched_buttons=matched_buttons,
+            matched_prices=matched_prices,
+            step_count=step_count,
         )
         remediation_map = {
             "asymmetric_choice": "Present acceptance and refusal actions with equal prominence and plain-language labels.",
@@ -51,6 +65,52 @@ class MockClassifierProvider(ClassifierProvider):
             ),
             confidence=round(confidence, 2),
             severity=severity,
+        )
+
+    def _build_explanation(
+        self,
+        *,
+        draft: RuleFindingDraft,
+        source_label: str,
+        context_label: str,
+        quote: str,
+        matched_buttons: list[str],
+        matched_prices: list,
+        step_count: int,
+    ) -> str:
+        if draft.pattern_family == "hidden_costs" and len(matched_prices) >= 2:
+            first_price = matched_prices[0]
+            last_price = matched_prices[-1]
+            return (
+                f"{source_label} evidence {context_label} showed a visible price movement from "
+                f"{first_price.get('raw', first_price.get('value'))} to {last_price.get('raw', last_price.get('value'))}. "
+                f"The finding is grounded in the specific labels captured during the {draft.scenario.replace('_', ' ')} journey, not a generic heuristic."
+            )
+
+        if draft.pattern_family == "asymmetric_choice":
+            controls = ", ".join(f'"{label}"' for label in matched_buttons) or f'"{quote}"'
+            return (
+                f"{source_label} evidence {context_label} surfaced approval-oriented controls such as {controls}. "
+                f"The audit did not capture an equally explicit refusal action in the same view for the {draft.persona.replace('_', ' ')} persona."
+            )
+
+        if draft.pattern_family == "obstruction":
+            return (
+                f"{source_label} evidence {context_label} required {step_count} captured interaction steps before the journey stabilized. "
+                f"This indicates the user path adds avoidable friction during the {draft.scenario.replace('_', ' ')} flow."
+            )
+
+        if draft.pattern_family == "sneaking":
+            controls = ", ".join(f'"{label}"' for label in matched_buttons) or f'"{quote}"'
+            return (
+                f"{source_label} evidence {context_label} showed optional choices tied to {controls}. "
+                f"That makes the final user choice less explicit than it should be for a trust-sensitive flow."
+            )
+
+        return (
+            f"{source_label} evidence {context_label} surfaced the line \"{quote[:160]}\" during the "
+            f"{draft.scenario.replace('_', ' ')} journey for the {draft.persona.replace('_', ' ')} persona. "
+            f"This finding is tied to the captured UI state rather than a generic dark-pattern template."
         )
 
 

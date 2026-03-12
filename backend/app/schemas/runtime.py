@@ -12,6 +12,8 @@ class ObservationEvidence:
     checkbox_states: dict[str, bool] = field(default_factory=dict)
     price_points: list[dict[str, Any]] = field(default_factory=list)
     text_snippets: list[str] = field(default_factory=list)
+    headings: list[str] = field(default_factory=list)
+    page_title: str = ""
     dom_excerpt: str = ""
     step_count: int = 0
     friction_indicators: list[str] = field(default_factory=list)

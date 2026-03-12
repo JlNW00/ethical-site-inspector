@@ -23,8 +23,16 @@ export interface Finding {
   evidence_excerpt: string;
   rule_reason: string;
   evidence_payload: {
+    source?: string;
+    source_label?: string;
+    site_host?: string;
+    page_title?: string;
+    page_url?: string;
     screenshot_urls?: string[];
     button_labels?: string[];
+    matched_buttons?: string[];
+    matched_prices?: Array<{ label: string; value: number; raw?: string }>;
+    supporting_evidence?: string[];
     checkbox_states?: Record<string, boolean>;
     price_points?: Array<{ label: string; value: number }>;
     friction_indicators?: string[];
@@ -50,6 +58,8 @@ export interface Audit {
   metrics: {
     finding_count?: number;
     observation_count?: number;
+    site_host?: string;
+    evidence_origin_label?: string;
     persona_comparison?: PersonaComparison[];
     scenario_breakdown?: ScenarioBreakdown[];
   };
