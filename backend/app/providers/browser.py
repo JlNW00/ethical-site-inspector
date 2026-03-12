@@ -17,6 +17,7 @@ from app.extractors.playwright_extractors import (
     extract_dom_excerpt,
     extract_headings,
     extract_headings_matching_keywords,
+    extract_locator_label,
     extract_lines_matching_keywords,
     extract_page_title,
     extract_prices,
@@ -388,6 +389,9 @@ class PlaywrightAuditProvider(BrowserAuditProvider):
         page.goto(target_url, wait_until="domcontentloaded", timeout=25_000)
         page.wait_for_timeout(1_000)
         activity_log = ["Loaded target URL"]
+        self._dismiss_irrelevant_dialogs(page, scenario, activity_log)
+        page.wait_for_timeout(700)
+        self._dismiss_irrelevant_dialogs(page, scenario, activity_log)
         state_snapshots = [self._snapshot_state(page, scenario=scenario, label="initial")]
 
         first_path, first_url = capture_screenshot(
@@ -467,6 +471,8 @@ class PlaywrightAuditProvider(BrowserAuditProvider):
     def _attempt_scenario_actions(self, page, scenario: str, persona: str, activity_log: list[str], state_snapshots: list[dict]) -> list[str]:
         if scenario == "checkout_flow":
             return self._attempt_checkout_actions(page, persona, activity_log, state_snapshots)
+        if scenario == "cookie_consent":
+            return self._attempt_cookie_actions(page, persona, activity_log, state_snapshots)
         return self._attempt_plan_actions(page, scenario, persona, activity_log, state_snapshots)
 
     def _attempt_plan_actions(self, page, scenario: str, persona: str, activity_log: list[str], state_snapshots: list[dict]) -> list[str]:
@@ -485,6 +491,42 @@ class PlaywrightAuditProvider(BrowserAuditProvider):
             activity_log.append(f"Timed out while trying '{scenario}' interaction")
         except Exception as exc:
             activity_log.append(f"Scenario interaction degraded gracefully: {exc.__class__.__name__}")
+        return interactions
+
+    def _attempt_cookie_actions(self, page, persona: str, activity_log: list[str], state_snapshots: list[dict]) -> list[str]:
+        current_buttons = state_snapshots[-1].get("buttons", []) if state_snapshots else []
+        direct_cookie_controls = any(
+            term in label.lower()
+            for label in current_buttons
+            for term in ("accept", "reject", "decline", "allow", "agree", "essential", "necessary", "preferences", "settings")
+        )
+        interactions = (
+            self._attempt_plan_actions(page, "cookie_consent", persona, activity_log, state_snapshots)
+            if direct_cookie_controls
+            else []
+        )
+        if interactions or any(state.get("grounded") for state in state_snapshots):
+            return interactions
+
+        for scroll_ratio in (0.0, 0.45, 0.8, 1.0):
+            try:
+                page.evaluate("(ratio) => window.scrollTo(0, document.body.scrollHeight * ratio)", scroll_ratio)
+                page.wait_for_timeout(500)
+            except Exception:
+                pass
+            label = self._click_first_matching(
+                page,
+                ["cookie", "cookies", "consent", "privacy", "preferences"],
+                selector="a, button, [role='button'], input[type='submit'], input[type='button']",
+            )
+            if not label:
+                continue
+            interactions.append(label)
+            activity_log.append(f'Opened privacy or cookie entry point "{label}".')
+            page.wait_for_timeout(900)
+            state_snapshots.append(self._snapshot_state(page, scenario="cookie_consent", label="consent_entry"))
+            return interactions
+        activity_log.append("No visible cookie or privacy entry point was captured after dismissing unrelated blockers.")
         return interactions
 
     def _attempt_checkout_actions(self, page, persona: str, activity_log: list[str], state_snapshots: list[dict]) -> list[str]:
@@ -542,8 +584,41 @@ class PlaywrightAuditProvider(BrowserAuditProvider):
         *,
         selector: str = "button, a, [role='button'], input[type='submit'], input[type='button']",
     ) -> str | None:
-        locator = page.locator(selector)
-        total = min(locator.count(), 160)
+        for frame in self._candidate_frames(page):
+            label = self._click_first_matching_in_scope(frame, keywords, require_keywords, selector=selector)
+            if label:
+                return label
+        return None
+
+    @staticmethod
+    def _element_label(element) -> str:
+        return extract_locator_label(element)
+
+    @staticmethod
+    def _candidate_frames(page) -> list:
+        frames: list = []
+        for frame in page.frames:
+            try:
+                if frame.is_detached():
+                    continue
+            except Exception:
+                continue
+            frames.append(frame)
+        return frames or [page]
+
+    def _click_first_matching_in_scope(
+        self,
+        scope,
+        keywords: list[str],
+        require_keywords: list[str] | None = None,
+        *,
+        selector: str,
+    ) -> str | None:
+        locator = scope.locator(selector)
+        try:
+            total = min(locator.count(), 360)
+        except Exception:
+            return None
         for index in range(total):
             element = locator.nth(index)
             try:
@@ -571,18 +646,28 @@ class PlaywrightAuditProvider(BrowserAuditProvider):
                 continue
         return None
 
-    @staticmethod
-    def _element_label(element) -> str:
-        try:
-            label = " ".join(element.inner_text(timeout=1_500).split()).strip()
-        except Exception:
-            label = ""
-        if not label:
+    def _dismiss_irrelevant_dialogs(self, page, scenario: str, activity_log: list[str]) -> None:
+        dialogs = page.locator("[role='dialog'], dialog, [aria-modal='true']")
+        total = min(dialogs.count(), 4)
+        for index in range(total):
+            dialog = dialogs.nth(index)
             try:
-                label = " ".join((element.get_attribute("value") or "").split()).strip()
+                if not dialog.is_visible():
+                    continue
+                dialog_text = " ".join(dialog.inner_text(timeout=1_500).split()).strip().lower()
+                if any(term in dialog_text for term in scenario_keywords(scenario)):
+                    continue
+                label = self._click_first_matching_in_scope(
+                    dialog,
+                    ["dismiss", "close", "not now", "maybe later", "no thanks", "skip"],
+                    selector="button, [role='button'], input[type='submit'], input[type='button'], a",
+                )
+                if not label:
+                    continue
+                activity_log.append(f'Dismissed unrelated dialog via "{label}".')
+                page.wait_for_timeout(500)
             except Exception:
-                label = ""
-        return label[:120]
+                continue
 
     def _snapshot_state(self, page, *, scenario: str, label: str) -> dict:
         keywords = scenario_keywords(scenario)
@@ -622,14 +707,14 @@ class PlaywrightAuditProvider(BrowserAuditProvider):
             "cookie_consent": {
                 "privacy_sensitive": [
                     {"type": "click", "keywords": ["reject", "decline", "necessary", "essential"], "label": "consent_decline"},
-                    {"type": "click", "keywords": ["settings", "preferences", "manage"], "label": "consent_settings"},
+                    {"type": "click", "keywords": ["settings", "preferences"], "label": "consent_settings"},
                 ],
                 "cost_sensitive": [
                     {"type": "click", "keywords": ["accept", "allow", "agree"], "label": "consent_accept"},
                     {"type": "click", "keywords": ["continue"], "label": "consent_continue"},
                 ],
                 "exit_intent": [
-                    {"type": "click", "keywords": ["settings", "manage", "preferences"], "label": "consent_settings"},
+                    {"type": "click", "keywords": ["settings", "preferences"], "label": "consent_settings"},
                     {"type": "click", "keywords": ["dismiss", "close", "continue"], "label": "consent_dismiss"},
                 ],
             },

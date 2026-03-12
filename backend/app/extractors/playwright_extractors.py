@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 
-from playwright.sync_api import Locator, Page
+from playwright.sync_api import Frame, Locator, Page
 
 from app.providers.storage import StorageProvider
 
@@ -15,6 +15,7 @@ TRUST_KEYWORDS = (
     "reject",
     "decline",
     "essential",
+    "settings",
     "preference",
     "tracking",
     "save",
@@ -36,7 +37,7 @@ TRUST_KEYWORDS = (
 )
 
 SCENARIO_KEYWORDS = {
-    "cookie_consent": ("cookie", "consent", "privacy", "tracking", "preferences", "accept", "reject", "decline", "essential"),
+    "cookie_consent": ("cookie", "consent", "privacy", "tracking", "preferences", "settings", "accept", "reject", "decline", "essential"),
     "checkout_flow": (
         "price",
         "availability",
@@ -58,6 +59,9 @@ SCENARIO_KEYWORDS = {
 }
 
 
+FrameLike = Page | Frame
+
+
 def _normalize_text(value: str) -> str:
     return " ".join(value.split()).strip()
 
@@ -67,6 +71,11 @@ def _safe_text(locator: Locator, *, timeout: int = 3_000) -> str:
         text = locator.inner_text(timeout=timeout)
     except Exception:
         text = ""
+    if not text:
+        try:
+            text = locator.text_content(timeout=timeout) or ""
+        except Exception:
+            text = ""
     return _normalize_text(text)
 
 
@@ -78,18 +87,63 @@ def _contains_keyword(text: str, keyword: str) -> bool:
     return re.search(rf"\b{re.escape(lower_keyword)}\b", lower_text) is not None
 
 
-def _visible_text_lines(page: Page, limit: int = 180) -> list[str]:
-    body_text = page.locator("body").inner_text(timeout=8_000)
+def _safe_attr(locator: Locator, name: str) -> str:
+    try:
+        return _normalize_text(locator.get_attribute(name) or "")
+    except Exception:
+        return ""
+
+
+def extract_locator_labels(locator: Locator) -> list[str]:
+    labels: list[str] = []
+    seen: set[str] = set()
+    for candidate in (
+        _safe_text(locator),
+        _safe_attr(locator, "value"),
+        _safe_attr(locator, "aria-label"),
+        _safe_attr(locator, "title"),
+        _safe_attr(locator, "name"),
+    ):
+        if len(candidate) < 2 or candidate in seen:
+            continue
+        seen.add(candidate)
+        labels.append(candidate[:160])
+    return labels
+
+
+def extract_locator_label(locator: Locator) -> str:
+    labels = extract_locator_labels(locator)
+    return labels[0][:120] if labels else ""
+
+
+def _iter_frames(page: Page) -> list[FrameLike]:
+    frames: list[FrameLike] = []
+    for frame in page.frames:
+        try:
+            if frame.is_detached():
+                continue
+        except Exception:
+            continue
+        frames.append(frame)
+    return frames or [page]
+
+
+def _visible_text_lines(page: Page, limit: int | None = 180) -> list[str]:
     lines: list[str] = []
     seen: set[str] = set()
-    for raw_line in body_text.splitlines():
-        line = _normalize_text(raw_line)
-        if len(line) < 3 or line in seen:
+    for frame in _iter_frames(page):
+        try:
+            body_text = frame.locator("body").inner_text(timeout=8_000)
+        except Exception:
             continue
-        seen.add(line)
-        lines.append(line[:240])
-        if len(lines) >= limit:
-            break
+        for raw_line in body_text.splitlines():
+            line = _normalize_text(raw_line)
+            if len(line) < 3 or line in seen:
+                continue
+            seen.add(line)
+            lines.append(line[:240])
+            if limit is not None and len(lines) >= limit:
+                return lines
     return lines
 
 
@@ -103,57 +157,77 @@ def extract_page_title(page: Page) -> str:
 def extract_headings(page: Page, limit: int = 6) -> list[str]:
     headings: list[str] = []
     seen: set[str] = set()
-    locator = page.locator("h1, h2, h3, [role='heading']")
-    total = min(locator.count(), 16)
-    for index in range(total):
-        heading = _safe_text(locator.nth(index))
-        if len(heading) < 3 or heading in seen:
+    for frame in _iter_frames(page):
+        locator = frame.locator("h1, h2, h3, [role='heading']")
+        try:
+            total = min(locator.count(), 24)
+        except Exception:
             continue
-        seen.add(heading)
-        headings.append(heading[:160])
-        if len(headings) >= limit:
-            break
+        for index in range(total):
+            heading = _safe_text(locator.nth(index))
+            if len(heading) < 3 or heading in seen:
+                continue
+            seen.add(heading)
+            headings.append(heading[:160])
+            if len(headings) >= limit:
+                return headings
     return headings
 
 
 def extract_button_labels(page: Page, limit: int = 16) -> list[str]:
     labels: list[str] = []
     seen: set[str] = set()
-    locator = page.locator("button, [role='button'], input[type='submit'], input[type='button'], a")
-    total = min(locator.count(), 80)
-    for index in range(total):
-        element = locator.nth(index)
-        label = _safe_text(element)
-        if not label:
-            label = _normalize_text(element.get_attribute("value") or "")
-        if len(label) < 2 or label in seen:
+    for frame in _iter_frames(page):
+        locator = frame.locator("button, [role='button'], input[type='submit'], input[type='button'], a")
+        try:
+            total = min(locator.count(), 160)
+        except Exception:
             continue
-        seen.add(label)
-        labels.append(label[:120])
-        if len(labels) >= limit:
-            break
+        for index in range(total):
+            element = locator.nth(index)
+            try:
+                if not element.is_visible():
+                    continue
+            except Exception:
+                continue
+            for label in extract_locator_labels(element):
+                if label in seen:
+                    continue
+                seen.add(label)
+                labels.append(label[:120])
+                if len(labels) >= limit:
+                    return labels
     return labels
 
 
 def extract_checkbox_states(page: Page) -> dict[str, bool]:
     states: dict[str, bool] = {}
-    checkboxes = page.locator("input[type='checkbox']")
-    total = min(checkboxes.count(), 8)
-    for index in range(total):
-        checkbox = checkboxes.nth(index)
-        checkbox_id = checkbox.get_attribute("id")
-        label = ""
-        if checkbox_id:
-            label = _safe_text(page.locator(f"label[for='{checkbox_id}']").first)
-        if not label:
+    counter = 0
+    for frame in _iter_frames(page):
+        checkboxes = frame.locator("input[type='checkbox']")
+        try:
+            total = min(checkboxes.count(), 16)
+        except Exception:
+            continue
+        for index in range(total):
             try:
-                parent_label = checkbox.locator("xpath=ancestor::label[1]").first
-                label = _safe_text(parent_label)
-            except Exception:
+                checkbox = checkboxes.nth(index)
+                checkbox_id = checkbox.get_attribute("id")
                 label = ""
-        if not label:
-            label = checkbox.get_attribute("aria-label") or checkbox.get_attribute("name") or f"checkbox_{index + 1}"
-        states[_normalize_text(label)[:100]] = checkbox.is_checked()
+                if checkbox_id:
+                    label = _safe_text(frame.locator(f"label[for='{checkbox_id}']").first)
+                if not label:
+                    try:
+                        parent_label = checkbox.locator("xpath=ancestor::label[1]").first
+                        label = _safe_text(parent_label)
+                    except Exception:
+                        label = ""
+                if not label:
+                    label = _safe_attr(checkbox, "aria-label") or _safe_attr(checkbox, "name") or f"checkbox_{counter + 1}"
+                states[_normalize_text(label)[:100]] = checkbox.is_checked()
+                counter += 1
+            except Exception:
+                continue
     return states
 
 
@@ -202,7 +276,7 @@ def extract_prices_from_text(text: str, limit: int = 4) -> list[dict[str, float 
 
 
 def extract_text_snippets(page: Page, limit: int = 6) -> list[str]:
-    lines = _visible_text_lines(page)
+    lines = _visible_text_lines(page, limit=None)
     prioritized = [line for line in lines if any(_contains_keyword(line, keyword) for keyword in TRUST_KEYWORDS)]
     selected: list[str] = []
     seen: set[str] = set()
@@ -219,7 +293,7 @@ def extract_text_snippets(page: Page, limit: int = 6) -> list[str]:
 def extract_lines_matching_keywords(page: Page, keywords: tuple[str, ...], limit: int = 8) -> list[str]:
     matched: list[str] = []
     seen: set[str] = set()
-    for line in _visible_text_lines(page):
+    for line in _visible_text_lines(page, limit=None):
         if not any(_contains_keyword(line, keyword) for keyword in keywords):
             continue
         if line in seen:
@@ -234,39 +308,50 @@ def extract_lines_matching_keywords(page: Page, keywords: tuple[str, ...], limit
 def extract_controls_matching_keywords(page: Page, keywords: tuple[str, ...], limit: int = 10) -> list[str]:
     labels: list[str] = []
     seen: set[str] = set()
-    locator = page.locator("button, [role='button'], input[type='submit'], input[type='button'], a")
-    total = min(locator.count(), 120)
-    for index in range(total):
-        element = locator.nth(index)
-        label = _safe_text(element)
-        if not label:
-            label = _normalize_text(element.get_attribute("value") or "")
-        if len(label) < 2 or label in seen:
+    for frame in _iter_frames(page):
+        locator = frame.locator("button, [role='button'], input[type='submit'], input[type='button'], a")
+        try:
+            total = min(locator.count(), 360)
+        except Exception:
             continue
-        if not any(_contains_keyword(label, keyword) for keyword in keywords):
-            continue
-        seen.add(label)
-        labels.append(label[:120])
-        if len(labels) >= limit:
-            break
+        for index in range(total):
+            element = locator.nth(index)
+            try:
+                if not element.is_visible():
+                    continue
+            except Exception:
+                continue
+            for label in extract_locator_labels(element):
+                if label in seen:
+                    continue
+                if not any(_contains_keyword(label, keyword) for keyword in keywords):
+                    continue
+                seen.add(label)
+                labels.append(label[:120])
+                if len(labels) >= limit:
+                    return labels
     return labels
 
 
 def extract_headings_matching_keywords(page: Page, keywords: tuple[str, ...], limit: int = 6) -> list[str]:
     headings: list[str] = []
     seen: set[str] = set()
-    locator = page.locator("h1, h2, h3, [role='heading']")
-    total = min(locator.count(), 24)
-    for index in range(total):
-        heading = _safe_text(locator.nth(index))
-        if len(heading) < 3 or heading in seen:
+    for frame in _iter_frames(page):
+        locator = frame.locator("h1, h2, h3, [role='heading']")
+        try:
+            total = min(locator.count(), 32)
+        except Exception:
             continue
-        if not any(_contains_keyword(heading, keyword) for keyword in keywords):
-            continue
-        seen.add(heading)
-        headings.append(heading[:160])
-        if len(headings) >= limit:
-            break
+        for index in range(total):
+            heading = _safe_text(locator.nth(index))
+            if len(heading) < 3 or heading in seen:
+                continue
+            if not any(_contains_keyword(heading, keyword) for keyword in keywords):
+                continue
+            seen.add(heading)
+            headings.append(heading[:160])
+            if len(headings) >= limit:
+                return headings
     return headings
 
 
@@ -275,9 +360,18 @@ def scenario_keywords(scenario: str) -> tuple[str, ...]:
 
 
 def extract_dom_excerpt(page: Page, limit: int = 3_500) -> str:
-    html = page.locator("body").inner_html(timeout=8_000)
-    compact = re.sub(r"\s+", " ", html).strip()
-    return compact[:limit]
+    excerpts: list[str] = []
+    for frame in _iter_frames(page):
+        try:
+            html = frame.locator("body").inner_html(timeout=8_000)
+        except Exception:
+            continue
+        compact = re.sub(r"\s+", " ", html).strip()
+        if compact:
+            excerpts.append(compact)
+        if sum(len(item) for item in excerpts) >= limit:
+            break
+    return " ".join(excerpts)[:limit]
 
 
 def capture_screenshot(page: Page, storage: StorageProvider, relative_key: str, full_page: bool = True) -> tuple[str | None, str]:
