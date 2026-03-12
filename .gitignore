@@ -13,3 +13,4 @@ frontend/node_modules/
 frontend/dist/
 backend/.pytest_cache/
 playwright-report/
+frontend/tsconfig.tsbuildinfo
