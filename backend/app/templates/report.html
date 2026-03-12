@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EthicalSiteInspector Report</title>
+  <style>
+    :root {
+      --bg: #07111f;
+      --panel: #ffffff;
+      --ink: #102034;
+      --muted: #5b6b82;
+      --line: #d6deea;
+      --good: #1f8f66;
+      --warn: #d97706;
+      --bad: #d9485f;
+      --critical: #7f1d1d;
+      --accent: #1d4ed8;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Space Grotesk", "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(29, 78, 216, 0.22), transparent 32%),
+        linear-gradient(180deg, #07111f 0%, #0b1629 100%);
+      color: var(--ink);
+    }
+    .shell {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 40px 24px 80px;
+    }
+    .hero {
+      padding: 28px 32px;
+      border-radius: 28px;
+      background: linear-gradient(135deg, rgba(10, 20, 36, 0.92), rgba(29, 78, 216, 0.78));
+      color: white;
+      box-shadow: 0 30px 60px rgba(6, 12, 24, 0.35);
+    }
+    .eyebrow {
+      font-size: 12px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      opacity: 0.72;
+    }
+    .hero-grid {
+      margin-top: 24px;
+      display: grid;
+      grid-template-columns: 1.4fr 0.8fr;
+      gap: 24px;
+    }
+    .hero h1 {
+      margin: 12px 0 8px;
+      font-size: 42px;
+      line-height: 1.05;
+    }
+    .hero p {
+      margin: 0;
+      max-width: 760px;
+      color: rgba(255, 255, 255, 0.82);
+    }
+    .score-card {
+      padding: 24px;
+      border-radius: 24px;
+      background: rgba(255, 255, 255, 0.12);
+      backdrop-filter: blur(12px);
+    }
+    .score {
+      font-size: 68px;
+      font-weight: 700;
+      line-height: 1;
+      margin-top: 12px;
+    }
+    .risk-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.14);
+      text-transform: capitalize;
+      font-size: 14px;
+    }
+    .section {
+      margin-top: 28px;
+      padding: 28px;
+      border-radius: 28px;
+      background: var(--panel);
+      box-shadow: 0 24px 60px rgba(8, 15, 30, 0.16);
+    }
+    .section h2 {
+      margin: 0 0 16px;
+      font-size: 26px;
+    }
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+    }
+    .stat-card,
+    .compare-card,
+    .scenario-card,
+    .finding-card {
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 18px;
+      background: #fbfdff;
+    }
+    .stat-card strong {
+      display: block;
+      margin-top: 8px;
+      font-size: 28px;
+    }
+    .scenario-title,
+    .finding-title {
+      margin: 0 0 8px;
+      font-size: 20px;
+    }
+    .pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 12px 0;
+    }
+    .pill {
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #e7eef9;
+      color: #19304e;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .severity-low { background: rgba(31, 143, 102, 0.12); color: var(--good); }
+    .severity-medium { background: rgba(217, 119, 6, 0.12); color: var(--warn); }
+    .severity-high { background: rgba(217, 72, 95, 0.12); color: var(--bad); }
+    .severity-critical { background: rgba(127, 29, 29, 0.12); color: var(--critical); }
+    .evidence-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      margin-top: 14px;
+    }
+    .evidence-grid img {
+      width: 100%;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      background: #dbe5f2;
+    }
+    .muted { color: var(--muted); }
+    .finding-card + .finding-card {
+      margin-top: 18px;
+    }
+    .scenario-block + .scenario-block {
+      margin-top: 24px;
+      padding-top: 24px;
+      border-top: 1px solid var(--line);
+    }
+    @media (max-width: 900px) {
+      .hero-grid { grid-template-columns: 1fr; }
+      .score { font-size: 54px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <section class="hero">
+      <div class="eyebrow">EthicalSiteInspector Trust Audit</div>
+      <div class="hero-grid">
+        <div>
+          <h1>{{ audit.target_url }}</h1>
+          <p>{{ audit.summary }}</p>
+          <div class="pill-row" style="margin-top: 18px;">
+            <span class="pill">{{ audit.mode }} mode</span>
+            <span class="pill">{{ metrics.finding_count }} findings</span>
+            <span class="pill">{{ metrics.observation_count }} journey observations</span>
+          </div>
+        </div>
+        <div class="score-card">
+          <div class="muted">Trust score</div>
+          <div class="score">{{ audit.trust_score or "n/a" }}</div>
+          <div class="risk-badge">{{ audit.risk_level }} risk</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Audit Summary</h2>
+      <div class="cards">
+        <div class="stat-card">
+          <div class="muted">Scenario coverage</div>
+          <strong>{{ audit.selected_scenarios | length }}</strong>
+          <div>{{ audit.selected_scenarios | join(", ") }}</div>
+        </div>
+        <div class="stat-card">
+          <div class="muted">Persona coverage</div>
+          <strong>{{ audit.selected_personas | length }}</strong>
+          <div>{{ audit.selected_personas | join(", ") }}</div>
+        </div>
+        <div class="stat-card">
+          <div class="muted">Report status</div>
+          <strong>Decision-ready</strong>
+          <div>Evidence-backed HTML artifact generated for stakeholder review.</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Persona Comparison</h2>
+      <div class="cards">
+        {% for persona in metrics.persona_comparison %}
+        <div class="compare-card">
+          <div class="pill-row">
+            <span class="pill">{{ persona.persona }}</span>
+            <span class="pill">{{ persona.finding_count }} findings</span>
+          </div>
+          <p class="scenario-title">{{ persona.headline }}</p>
+          <p class="muted">Average steps: {{ persona.average_steps }} | Friction index: {{ persona.friction_index }} | Price delta: ${{ persona.price_delta }}</p>
+          <p class="muted">Dominant patterns: {{ persona.notable_patterns | join(", ") if persona.notable_patterns else "none" }}</p>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Scenario Breakdown</h2>
+      <div class="cards">
+        {% for scenario in metrics.scenario_breakdown %}
+        <div class="scenario-card">
+          <div class="pill-row">
+            <span class="pill">{{ scenario.scenario }}</span>
+            <span class="pill severity-{{ scenario.risk_level }}">{{ scenario.risk_level }} risk</span>
+          </div>
+          <p class="scenario-title">{{ scenario.headline }}</p>
+          <p class="muted">{{ scenario.finding_count }} findings | Dominant patterns: {{ scenario.dominant_patterns | join(", ") if scenario.dominant_patterns else "none" }}</p>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Findings and Evidence</h2>
+      {% for scenario, personas in grouped_findings.items() %}
+      <div class="scenario-block">
+        <h3>{{ scenario.replace("_", " ").title() }}</h3>
+        {% for persona, persona_findings in personas.items() %}
+        <p class="muted"><strong>{{ persona.replace("_", " ").title() }}</strong></p>
+        {% for finding in persona_findings %}
+        <article class="finding-card">
+          <div class="pill-row">
+            <span class="pill severity-{{ finding.severity }}">{{ finding.severity }}</span>
+            <span class="pill">{{ finding.pattern_family }}</span>
+            <span class="pill">{{ "%.0f"|format(finding.confidence * 100) }}% confidence</span>
+          </div>
+          <h4 class="finding-title">{{ finding.title }}</h4>
+          <p>{{ finding.explanation }}</p>
+          <p><strong>Evidence:</strong> {{ finding.evidence_excerpt }}</p>
+          <p><strong>Why it matters:</strong> {{ finding.rule_reason }}</p>
+          <p><strong>Remediation:</strong> {{ finding.remediation }}</p>
+          {% set screenshots = finding.evidence_payload.get("screenshot_urls", []) %}
+          {% if screenshots %}
+          <div class="evidence-grid">
+            {% for screenshot in screenshots[:3] %}
+            <img src="{{ screenshot }}" alt="Evidence screenshot for {{ finding.title }}" />
+            {% endfor %}
+          </div>
+          {% endif %}
+        </article>
+        {% endfor %}
+        {% endfor %}
+      </div>
+      {% endfor %}
+    </section>
+  </div>
+</body>
+</html>

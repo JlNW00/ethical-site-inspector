@@ -1,0 +1,63 @@
+from __future__ import annotations
+
+from pathlib import Path
+
+from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi.responses import FileResponse
+from sqlalchemy import select
+from sqlalchemy.orm import Session, selectinload
+
+from app.core.config import get_settings
+from app.core.database import SessionLocal, get_db
+from app.models import Audit, Finding
+from app.schemas.audit import AuditCreateRequest, AuditRead, FindingsResponse
+from app.services.audit_orchestrator import AuditOrchestrator
+
+
+router = APIRouter(prefix="/audits", tags=["audits"])
+orchestrator = AuditOrchestrator(SessionLocal)
+
+
+@router.post("", response_model=AuditRead, status_code=status.HTTP_202_ACCEPTED)
+def create_audit(payload: AuditCreateRequest, db: Session = Depends(get_db)) -> Audit:
+    settings = get_settings()
+    audit = orchestrator.create_audit(db, payload, mode=settings.effective_mode)
+    orchestrator.launch_audit(audit.id)
+    return audit
+
+
+@router.get("/{audit_id}", response_model=AuditRead)
+def get_audit(audit_id: str, db: Session = Depends(get_db)) -> Audit:
+    statement = select(Audit).where(Audit.id == audit_id).options(selectinload(Audit.events))
+    audit = db.scalar(statement)
+    if audit is None:
+        raise HTTPException(status_code=404, detail="Audit not found")
+    return audit
+
+
+@router.get("/{audit_id}/findings", response_model=FindingsResponse)
+def get_findings(audit_id: str, db: Session = Depends(get_db)) -> FindingsResponse:
+    audit = db.scalar(select(Audit).where(Audit.id == audit_id))
+    if audit is None:
+        raise HTTPException(status_code=404, detail="Audit not found")
+    findings = list(db.scalars(select(Finding).where(Finding.audit_id == audit_id).order_by(Finding.order_index)).all())
+    return FindingsResponse(audit_id=audit_id, findings=findings)
+
+
+@router.get("/{audit_id}/report")
+def get_report(audit_id: str, db: Session = Depends(get_db)) -> Response:
+    audit = db.scalar(select(Audit).where(Audit.id == audit_id))
+    if audit is None:
+        raise HTTPException(status_code=404, detail="Audit not found")
+    if not audit.report_path:
+        raise HTTPException(status_code=404, detail="Report not generated yet")
+
+    report_path = Path(audit.report_path)
+    if not report_path.exists():
+        raise HTTPException(status_code=404, detail="Report file missing")
+
+    return FileResponse(
+        report_path,
+        media_type="text/html",
+        filename=f"ethical-site-inspector-{audit.id}.html",
+    )

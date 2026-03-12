@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+*.pyc
+backend/.env
+frontend/.env
+data/ethicalsiteinspector.db
+data/ethicalsiteinspector.db-*
+data/screenshots/*
+!data/screenshots/.gitkeep
+data/reports/*
+!data/reports/.gitkeep
+frontend/node_modules/
+frontend/dist/
+backend/.pytest_cache/
+playwright-report/
