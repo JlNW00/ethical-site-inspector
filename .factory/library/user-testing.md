@@ -108,3 +108,51 @@ C:\EthicalSiteInspector\backend\.venv\Scripts\python.exe -c "import urllib.reque
 ```
 cd C:\EthicalSiteInspector\backend && .venv\Scripts\python.exe -m pytest tests/ -v --tb=short -x
 ```
+
+## Flow Validator Guidance: Web Browser (ui-demo)
+
+### Testing Approach
+For ui-demo milestone assertions, the primary testing surface is the web browser at http://127.0.0.1:5173 backed by the API at http://127.0.0.1:8000. Use `agent-browser` skill for all browser automation.
+
+### Services Running
+- Backend API: http://127.0.0.1:8000 (health check passing)
+- Frontend: http://127.0.0.1:5173 (Vite dev server)
+
+### Available Test Data
+The database has 22 audits with the following notable entries:
+- **Audit with findings (booking.com)**: ID `adcde59c-d03d-41c5-be90-9fdf4d3e96f8` - trust_score=26.0, risk_level=critical, 3 findings, scenarios=checkout_flow, personas=privacy_sensitive/cost_sensitive/exit_intent (3 personas - good for diff view)
+- **Completed audits with multiple personas**: ID `87a270b4-ab32-4068-92df-204ddca23e00` (example.com), ID `c10a9583-e82a-4be4-8473-d64ab47d0504` (example.com) - both with 2 scenarios, 2 personas
+- **Completed live audit**: ID `16aa958c-f640-4bff-9577-baa4635ac362` (nonexistent domain, 0 findings)
+- **Running audits**: 2 audits currently in "running" status (stuck from previous sessions)
+- **No failed audits exist** - VAL-UI-011 must check error states with available data (running/completed)
+
+### Key Pages and Routes
+- `/` - SubmitPage (home): Form to submit new audit with URL, scenarios, personas
+- `/history` - HistoryPage: Lists all audits with status badges, search, filter, compare
+- `/audits/:id/run` - RunPage: Shows audit progress with polling, events timeline
+- `/audits/:id/report` - ReportPage: Full report with findings, screenshots, PDF download
+- `/audits/:id/diff` - PersonaDiffPage: Side-by-side persona comparison
+- `/compare?a=:id1&b=:id2` - ComparePage: Compare two audits
+
+### Recommended Audit IDs for Testing
+- For history/listings: Navigate to /history - should show 20+ audits
+- For report with findings: Use `adcde59c-d03d-41c5-be90-9fdf4d3e96f8` (booking.com, has 3 findings)
+- For persona diff: Use `adcde59c-d03d-41c5-be90-9fdf4d3e96f8` (has 3 personas)
+- For compare: Select any 2 completed audits from history
+- For submit/run: Submit a new mock audit from the home page
+
+### Isolation Rules
+- Do NOT modify any application code
+- Do NOT stop services
+- Each browser session should use a unique session ID based on group name
+- Browser tests are read-only against the same server - no shared state conflicts
+- Multiple validators can run concurrently without interference
+
+### agent-browser Session Naming
+Use session format: `7b3986a5a96e__<group>` where group is the validator group name (e.g., `7b3986a5a96e__histnav`, `7b3986a5a96e__report`, etc.)
+
+### Common Gotchas
+- On Windows, PowerShell `curl` is an alias for Invoke-WebRequest - use Python urllib instead for API calls
+- The frontend uses a glass-morphism dark theme with CSS transitions
+- Some pages use polling (RunPage) - wait for content to load
+- PDF download uses the browser's download mechanism
