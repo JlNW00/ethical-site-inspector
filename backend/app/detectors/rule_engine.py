@@ -2,10 +2,8 @@ from __future__ import annotations
 
 from copy import deepcopy
 
+from app.core.taxonomy import SEVERITY_RANK
 from app.schemas.runtime import JourneyObservation, RuleFindingDraft
-
-
-SEVERITY_RANK = {"low": 1, "medium": 2, "high": 3, "critical": 4}
 
 
 def build_rule_findings(observation: JourneyObservation) -> list[RuleFindingDraft]:

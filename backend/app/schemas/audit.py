@@ -5,19 +5,14 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 
+from app.core.taxonomy import (
+    PersonaType,
+    ScenarioType,
+)
 
-ScenarioType = Literal["cookie_consent", "checkout_flow", "cancellation_flow"]
-PersonaType = Literal["privacy_sensitive", "cost_sensitive", "exit_intent"]
-PatternFamily = Literal[
-    "asymmetric_choice",
-    "hidden_costs",
-    "confirmshaming",
-    "obstruction",
-    "sneaking",
-    "urgency",
-]
-SeverityType = Literal["low", "medium", "high", "critical"]
-AuditStatus = Literal["queued", "running", "completed", "failed"]
+# Local literal types for schema definitions
+HealthStatus = Literal["ok"]
+ReadinessStatus = Literal["ready"]
 
 
 class AuditCreateRequest(BaseModel):
@@ -103,13 +98,13 @@ class FindingsResponse(BaseModel):
 
 
 class HealthResponse(BaseModel):
-    status: Literal["ok"]
+    status: HealthStatus
     timestamp: datetime
     version: str = "0.1.0"
 
 
 class ReadinessResponse(BaseModel):
-    status: Literal["ready"]
+    status: ReadinessStatus
     configured_mode: str
     effective_mode: str
     browser_provider: str
@@ -119,3 +114,15 @@ class ReadinessResponse(BaseModel):
     playwright_ready: bool
     storage_ready: bool
     seeded_demo_audit_id: str | None
+
+
+# Rebuild models to resolve forward references
+AuditCreateRequest.model_rebuild()
+AuditEventRead.model_rebuild()
+FindingRead.model_rebuild()
+PersonaSummary.model_rebuild()
+ScenarioSummary.model_rebuild()
+AuditRead.model_rebuild()
+FindingsResponse.model_rebuild()
+HealthResponse.model_rebuild()
+ReadinessResponse.model_rebuild()
