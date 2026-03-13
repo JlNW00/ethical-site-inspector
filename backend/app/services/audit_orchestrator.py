@@ -8,7 +8,12 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
+from app.core.taxonomy import EVIDENCE_TYPE_LABELS, get_regulations_for_pattern_family
 from app.detectors.rule_engine import build_rule_findings
+from app.detectors.suppression import (
+    apply_suppression,
+    calculate_confidence,
+)
 from app.models import Audit, AuditEvent, Finding
 from app.schemas.audit import AuditCreateRequest
 from app.schemas.runtime import RuleFindingDraft
@@ -183,6 +188,36 @@ class AuditOrchestrator:
         finding_models: list[Finding] = []
         for index, draft in enumerate(drafts, start=1):
             classified = classifier_provider.classify(draft)
+
+            # Determine evidence type from observation metadata
+            evidence_type = self._determine_evidence_type(draft.evidence_payload)
+
+            # Calculate confidence based on evidence type
+            has_ai_evidence = draft.evidence_payload.get("source") == "nova_act"
+            has_heuristic_evidence = True  # Rule engine findings are heuristic-based
+            confidence = calculate_confidence(
+                evidence_type=evidence_type,
+                has_ai_evidence=has_ai_evidence,
+                has_heuristic_evidence=has_heuristic_evidence,
+                pattern_family=draft.pattern_family,
+                evidence_payload=draft.evidence_payload,
+            )
+
+            # Add evidence_type to payload
+            updated_payload = draft.evidence_payload.copy()
+            updated_payload["evidence_type"] = evidence_type
+            updated_payload["evidence_type_label"] = EVIDENCE_TYPE_LABELS.get(evidence_type, "Unknown")
+
+            # Apply suppression rules
+            suppressed, final_payload = apply_suppression(
+                pattern_family=draft.pattern_family,
+                evidence_payload=updated_payload,
+                confidence=confidence,
+            )
+
+            # Get regulatory categories from taxonomy
+            regulatory_categories = get_regulations_for_pattern_family(draft.pattern_family)
+
             finding_models.append(
                 Finding(
                     audit_id=audit_id,
@@ -195,10 +230,12 @@ class AuditOrchestrator:
                     remediation=classified.remediation,
                     evidence_excerpt=draft.evidence_excerpt,
                     rule_reason=draft.rule_reason,
-                    evidence_payload=draft.evidence_payload,
-                    confidence=classified.confidence,
+                    evidence_payload=final_payload,
+                    confidence=confidence,
                     trust_impact=draft.trust_impact,
                     order_index=index,
+                    regulatory_categories=regulatory_categories,
+                    suppressed=suppressed,
                 )
             )
 
@@ -355,6 +392,9 @@ class AuditOrchestrator:
                 }
             )
 
+        # Calculate suppressed count
+        suppressed_count = sum(1 for finding in finding_models if finding.suppressed)
+
         return {
             "provider_summary": summary,
             "site_host": site_host,
@@ -362,6 +402,8 @@ class AuditOrchestrator:
             "persona_comparison": sorted(persona_comparison, key=lambda item: item["finding_count"], reverse=True),
             "scenario_breakdown": sorted(scenario_breakdown, key=lambda item: item["finding_count"], reverse=True),
             "finding_count": len(finding_models),
+            "suppressed_count": suppressed_count,
+            "active_finding_count": len(finding_models) - suppressed_count,
             "observation_count": len(observations),
         }
 
@@ -463,3 +505,28 @@ class AuditOrchestrator:
             if len(result) >= limit:
                 break
         return result
+
+    @staticmethod
+    def _determine_evidence_type(evidence_payload: dict[str, Any]) -> str:
+        """
+        Determine the evidence type based on payload metadata.
+
+        Returns one of: 'nova_ai', 'heuristic', 'rule_based', 'mock'
+        """
+        source = evidence_payload.get("source", "")
+        detection_basis = evidence_payload.get("detection_basis", "")
+
+        if source == "nova_act":
+            return "nova_ai"
+        if detection_basis in (
+            "button contrast",
+            "price delta",
+            "preselected checkbox",
+            "captured copy",
+            "step count",
+            "bundled option",
+        ):
+            return "heuristic"
+        if source == "mock":
+            return "mock"
+        return "rule_based"

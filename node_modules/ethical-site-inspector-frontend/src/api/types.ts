@@ -42,6 +42,8 @@ export interface Finding {
   confidence: number;
   trust_impact: number;
   order_index: number;
+  regulatory_categories: string[];
+  suppressed: boolean;
   created_at: string;
 }
 

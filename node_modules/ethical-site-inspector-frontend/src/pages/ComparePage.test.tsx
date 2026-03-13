@@ -149,6 +149,8 @@ const mockFindingsA: Finding[] = [
     trust_impact: -10,
     order_index: 1,
     created_at: "2026-03-10T10:10:00Z",
+    regulatory_categories: ["FTC", "GDPR"],
+    suppressed: false,
   },
 ];
 
@@ -173,6 +175,8 @@ const mockFindingsB: Finding[] = [
     trust_impact: -20,
     order_index: 1,
     created_at: "2026-03-11T10:10:00Z",
+    regulatory_categories: ["FTC", "GDPR"],
+    suppressed: false,
   },
   {
     id: "finding-3",
@@ -193,6 +197,8 @@ const mockFindingsB: Finding[] = [
     trust_impact: -5,
     order_index: 2,
     created_at: "2026-03-11T10:15:00Z",
+    regulatory_categories: ["FTC"],
+    suppressed: false,
   },
 ];
 

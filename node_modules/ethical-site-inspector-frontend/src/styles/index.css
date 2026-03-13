@@ -1,3 +1,4 @@
+@import "tailwindcss";
 @import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Space+Grotesk:wght@400;500;700&display=swap");
 
 :root {
@@ -539,6 +540,64 @@ input {
 .finding-card .muted,
 .finding-card .signal-pill {
   color: var(--muted);
+}
+
+/* Suppressed finding card styles */
+.finding-card-suppressed {
+  opacity: 0.7;
+  background: rgba(248, 251, 255, 0.75);
+  border: 1px solid rgba(138, 160, 190, 0.3);
+}
+
+.finding-card-suppressed .finding-title {
+  color: var(--muted);
+}
+
+/* Regulation badges */
+.regulation-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0 12px;
+}
+
+.regulation-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border: 1px solid;
+}
+
+.regulation-other {
+  background: rgba(105, 162, 255, 0.12);
+  color: var(--accent-secondary);
+  border-color: rgba(105, 162, 255, 0.3);
+}
+
+/* Confidence pill styling */
+.confidence-pill {
+  background: rgba(92, 212, 169, 0.15);
+  color: #15803d;
+  border-color: rgba(92, 212, 169, 0.3);
+}
+
+/* Source/evidence pill styling */
+.source-pill {
+  background: rgba(139, 92, 246, 0.12);
+  color: #7c3aed;
+  border-color: rgba(139, 92, 246, 0.3);
+}
+
+/* Suppressed badge */
+.suppressed-pill {
+  background: rgba(107, 114, 128, 0.15);
+  color: #6b7280;
+  border-color: rgba(107, 114, 128, 0.3);
 }
 
 .severity-pill {

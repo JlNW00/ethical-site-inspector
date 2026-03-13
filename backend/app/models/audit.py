@@ -66,6 +66,8 @@ class Finding(Base):
     confidence: Mapped[float] = mapped_column(Float, default=0.5)
     trust_impact: Mapped[float] = mapped_column(Float, default=5.0)
     order_index: Mapped[int] = mapped_column(Integer, default=0)
+    regulatory_categories: Mapped[list[str]] = mapped_column(JSON, default=list)
+    suppressed: Mapped[bool] = mapped_column(default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
     audit: Mapped[Audit] = relationship(back_populates="findings")

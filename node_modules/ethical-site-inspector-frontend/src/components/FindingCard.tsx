@@ -1,5 +1,6 @@
 import type { Finding } from "../api/types";
 import { titleize } from "../lib/format";
+import { REGULATION_INFO, getEvidenceTypeLabel, formatConfidenceAsPercentage } from "../constants/taxonomy";
 
 interface FindingCardProps {
   finding: Finding;
@@ -63,25 +64,55 @@ function displayEvidenceExcerpt(finding: Finding, observedPath: string) {
   return finding.evidence_excerpt;
 }
 
+function RegulationBadge({ regulation }: { regulation: string }) {
+  const info = REGULATION_INFO[regulation as keyof typeof REGULATION_INFO];
+  if (!info) {
+    return <span className="regulation-pill regulation-other">{regulation}</span>;
+  }
+  return (
+    <span
+      className="regulation-pill"
+      style={{
+        backgroundColor: `${info.color}20`,
+        color: info.color,
+        borderColor: `${info.color}40`,
+      }}
+      title={info.fullName}
+    >
+      {info.name}
+    </span>
+  );
+}
+
 export function FindingCard({ finding }: FindingCardProps) {
   const screenshots = finding.evidence_payload.screenshot_urls ?? [];
   const matchedButtons = finding.evidence_payload.matched_buttons ?? [];
   const matchedPrices = finding.evidence_payload.matched_prices ?? [];
   const supportingEvidence = finding.evidence_payload.supporting_evidence ?? [];
-  const sourceLabel = finding.evidence_payload.source_label ?? "Evidence";
+  const sourceLabel = getEvidenceTypeLabel(finding.evidence_payload.source);
   const interactedControls = (finding.evidence_payload as { interacted_controls?: string[] }).interacted_controls ?? [];
   const observedPath = prettyPath(interactedControls);
   const evidenceLabel = observedEvidenceLabel(finding, Boolean(observedPath));
   const displayExcerpt = displayEvidenceExcerpt(finding, observedPath);
+  const regulatoryCategories = finding.regulatory_categories ?? [];
+  const isSuppressed = finding.suppressed ?? false;
 
   return (
-    <article className="finding-card">
+    <article className={`finding-card${isSuppressed ? " finding-card-suppressed" : ""}`}>
       <div className="action-row">
         <span className={`severity-pill severity-${finding.severity}`}>{finding.severity}</span>
         <span className="signal-pill">{titleize(finding.pattern_family)}</span>
-        <span className="signal-pill">{Math.round(finding.confidence * 100)}% confidence</span>
-        <span className="signal-pill">{sourceLabel}</span>
+        <span className="signal-pill confidence-pill">{formatConfidenceAsPercentage(finding.confidence)} confidence</span>
+        <span className="signal-pill source-pill">{sourceLabel}</span>
+        {isSuppressed && <span className="signal-pill suppressed-pill">Likely false positive</span>}
       </div>
+      {regulatoryCategories.length > 0 && (
+        <div className="regulation-row">
+          {regulatoryCategories.map((reg) => (
+            <RegulationBadge key={reg} regulation={reg} />
+          ))}
+        </div>
+      )}
       <h3 className="finding-title">{finding.title}</h3>
       <p className="muted">
         {titleize(finding.scenario)} | {titleize(finding.persona)}

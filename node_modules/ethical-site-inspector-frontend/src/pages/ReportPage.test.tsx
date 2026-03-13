@@ -122,6 +122,8 @@ const createMockFinding = (overrides: Partial<Finding> = {}): Finding => ({
   trust_impact: 0.3,
   order_index: 1,
   created_at: "2026-03-13T10:00:00Z",
+  regulatory_categories: ["FTC", "GDPR"],
+  suppressed: false,
   ...overrides,
 });
 

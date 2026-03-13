@@ -50,6 +50,8 @@ class FindingRead(BaseModel):
     confidence: float
     trust_impact: float
     order_index: int
+    regulatory_categories: list[str] = []
+    suppressed: bool = False
     created_at: datetime
 
 

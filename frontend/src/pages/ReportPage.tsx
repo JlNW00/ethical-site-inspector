@@ -418,7 +418,14 @@ export function ReportPage() {
           <div className="summary-card">
             <div className="metric-label">Finding count</div>
             <div className="metric-value">{findings.length}</div>
-            <div className="muted">Evidence-backed trust and compliance concerns</div>
+            <div className="muted">
+              {(() => {
+                const suppressedCount = findings.filter((f) => f.suppressed).length;
+                return suppressedCount > 0
+                  ? `${findings.length - suppressedCount} confirmed (${suppressedCount} suppressed)`
+                  : "Evidence-backed trust and compliance concerns";
+              })()}
+            </div>
           </div>
           <div className="summary-card">
             <div className="metric-label">Scenarios covered</div>
@@ -437,6 +444,100 @@ export function ReportPage() {
           </div>
         </div>
       </section>
+
+      {/* Regulatory Summary Section */}
+      {(() => {
+        const regulatoryCounts = findings
+          .filter((f) => !f.suppressed)
+          .reduce<Record<string, number>>((acc, finding) => {
+            (finding.regulatory_categories ?? []).forEach((reg) => {
+              acc[reg] = (acc[reg] || 0) + 1;
+            });
+            return acc;
+          }, {});
+
+        const hasRegulatoryFindings = Object.keys(regulatoryCounts).length > 0;
+
+        if (!hasRegulatoryFindings) return null;
+
+        return (
+          <section className="content-panel">
+            <div className="section-header">
+              <div>
+                <h2 className="section-title">Regulatory summary</h2>
+                <p className="section-subtitle">Regulatory frameworks potentially implicated by findings.</p>
+              </div>
+            </div>
+            <div className="regulatory-grid">
+              {Object.entries(regulatoryCounts).map(([reg, count]) => {
+                const info = (() => {
+                  switch (reg) {
+                    case "FTC":
+                      return {
+                        name: "FTC",
+                        fullName: "Federal Trade Commission",
+                        color: "#f97316",
+                        description: "US consumer protection",
+                      };
+                    case "GDPR":
+                      return {
+                        name: "GDPR",
+                        fullName: "General Data Protection Regulation",
+                        color: "#3b82f6",
+                        description: "EU data protection",
+                      };
+                    case "DSA":
+                      return {
+                        name: "DSA",
+                        fullName: "Digital Services Act",
+                        color: "#8b5cf6",
+                        description: "EU digital platform regulations",
+                      };
+                    case "CPRA":
+                      return {
+                        name: "CPRA",
+                        fullName: "California Privacy Rights Act",
+                        color: "#10b981",
+                        description: "California consumer privacy",
+                      };
+                    default:
+                      return {
+                        name: reg,
+                        fullName: reg,
+                        color: "#69a2ff",
+                        description: "Regulatory framework",
+                      };
+                  }
+                })();
+                return (
+                  <div
+                    key={reg}
+                    className="regulatory-card"
+                    style={{
+                      borderLeft: `4px solid ${info.color}`,
+                    }}
+                  >
+                    <div className="regulatory-header">
+                      <span
+                        className="regulatory-badge"
+                        style={{
+                          backgroundColor: `${info.color}20`,
+                          color: info.color,
+                        }}
+                      >
+                        {info.name}
+                      </span>
+                      <span className="regulatory-count">{count} finding{count === 1 ? "" : "s"}</span>
+                    </div>
+                    <div className="regulatory-fullname">{info.fullName}</div>
+                    <div className="regulatory-description">{info.description}</div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        );
+      })()}
 
       <div className="grid-2" style={{ marginTop: 22 }}>
         <section className="content-panel">
