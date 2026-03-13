@@ -26,9 +26,12 @@ def get_browser_provider(mode: str | None = None, settings: Settings | None = No
     config = settings or get_settings()
     effective_mode = mode or config.effective_mode
     storage = get_storage_provider(config)
-    if effective_mode == "live" and NOVA_ACT_AVAILABLE:
-        return NovaActAuditProvider(storage)
-    if effective_mode in {"hybrid", "live"}:
+    if effective_mode == "live":
+        if NOVA_ACT_AVAILABLE:
+            return NovaActAuditProvider(storage)
+        # Fallback to mock if NovaAct is not available in live mode
+        return MockBrowserAuditProvider(storage)
+    if effective_mode == "hybrid":
         return PlaywrightAuditProvider(storage)
     return MockBrowserAuditProvider(storage)
 
