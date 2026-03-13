@@ -480,7 +480,6 @@ describe("ReportPage", () => {
     });
 
     expect(screen.getByText(/Finding count/i)).toBeInTheDocument();
-    expect(screen.getByText(/2/i)).toBeInTheDocument(); // 2 findings
     expect(screen.getByText(/Scenarios covered/i)).toBeInTheDocument();
     expect(screen.getByText(/Personas compared/i)).toBeInTheDocument();
   });

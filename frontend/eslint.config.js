@@ -15,6 +15,15 @@ export default [
         sourceType: "module",
         ecmaFeatures: { jsx: true },
       },
+      globals: {
+        fetch: "readonly",
+        window: "readonly",
+        document: "readonly",
+        URL: "readonly",
+        URLSearchParams: "readonly",
+        RequestInit: "readonly",
+        HTMLElement: "readonly",
+      },
     },
     plugins: {
       "@typescript-eslint": tsPlugin,

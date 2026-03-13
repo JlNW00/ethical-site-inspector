@@ -19,6 +19,18 @@ const scenarioOptions = [
     value: "cancellation_flow",
     description: "Measure cancellation friction, retention pressure, and confirmshaming on exit.",
   },
+  {
+    value: "account_deletion",
+    description: "Detect obstruction and friction when attempting to delete an account.",
+  },
+  {
+    value: "newsletter_signup",
+    description: "Check for pre-checked boxes, confusing opt-in language, and dark enrollment patterns.",
+  },
+  {
+    value: "pricing_comparison",
+    description: "Compare prices across personas to detect bait-and-switch or discriminatory pricing.",
+  },
 ] as const;
 
 const personaOptions = [
@@ -44,6 +56,9 @@ export function SubmitPage() {
     "cookie_consent",
     "checkout_flow",
     "cancellation_flow",
+    "account_deletion",
+    "newsletter_signup",
+    "pricing_comparison",
   ]);
   const [selectedPersonas, setSelectedPersonas] = useState<string[]>([
     "privacy_sensitive",

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
 import { api } from "../api/client";
@@ -101,9 +102,56 @@ export function RunPage() {
         </div>
       </section>
 
-      {error ? <section className="content-panel"><div className="empty-state">{error}</div></section> : null}
+      {error ? (
+        <section className="content-panel">
+          <div className="error-state">
+            <div className="error-state-icon">⚠️</div>
+            <h3 className="error-state-title">Error Loading Audit</h3>
+            <p className="error-state-message">{error}</p>
+            <div className="action-row" style={{ marginTop: 16 }}>
+              <Link className="btn btn-secondary" to="/history">
+                Back to History
+              </Link>
+              <button
+                className="btn btn-primary"
+                type="button"
+                onClick={() => window.location.reload()}
+              >
+                Retry
+              </button>
+            </div>
+          </div>
+        </section>
+      ) : null}
 
-      <section className="content-panel">
+      {audit?.status === "failed" ? (
+        <section className="content-panel">
+          <div className="error-state">
+            <div className="error-state-icon">❌</div>
+            <h3 className="error-state-title">Audit Failed</h3>
+            <p className="error-state-message">
+              The audit encountered an error and could not complete successfully.
+            </p>
+            {audit.summary && (
+              <p className="error-state-details">Details: {audit.summary}</p>
+            )}
+            <div className="action-row" style={{ marginTop: 16 }}>
+              <Link className="btn btn-secondary" to="/history">
+                Back to History
+              </Link>
+              <Link
+                className="btn btn-primary"
+                to={`/audits/${audit.id}/report`}
+              >
+                View Error Report
+              </Link>
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      {!error && audit?.status !== "failed" && (
+        <section className="content-panel">
         <div className="section-header">
           <div>
             <h2 className="section-title">Run state</h2>
@@ -194,6 +242,7 @@ export function RunPage() {
           )}
         </section>
       </div>
+      ) : null}
     </Layout>
   );
 }

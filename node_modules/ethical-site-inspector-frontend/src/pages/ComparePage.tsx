@@ -68,10 +68,10 @@ export function ComparePage() {
     async function loadAudits() {
       try {
         const [auditAResponse, auditBResponse, findingsAResponse, findingsBResponse] = await Promise.all([
-          api.getAudit(auditIdA),
-          api.getAudit(auditIdB),
-          api.getFindings(auditIdA),
-          api.getFindings(auditIdB),
+          api.getAudit(auditIdA as string),
+          api.getAudit(auditIdB as string),
+          api.getFindings(auditIdA as string),
+          api.getFindings(auditIdB as string),
         ]);
 
         if (!cancelled) {
