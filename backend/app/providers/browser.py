@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import contextlib
+import contextlib
+import contextlib
+import contextlib
 import itertools
 import time
 from abc import ABC, abstractmethod
@@ -691,10 +695,8 @@ class PlaywrightAuditProvider(BrowserAuditProvider):
                     continue
                 if require_keywords and not any(keyword in lower_label for keyword in require_keywords):
                     continue
-                try:
+                with contextlib.suppress(Exception):
                     element.scroll_into_view_if_needed(timeout=1_000)
-                except Exception:
-                    pass
                 try:
                     element.click(timeout=2_000)
                 except Exception:

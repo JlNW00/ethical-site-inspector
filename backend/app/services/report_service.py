@@ -49,7 +49,7 @@ class ReportService:
         return {
             "target_host": self._target_host(audit.target_url),
             "generated_at": self._format_timestamp(completed_at),
-            "score_display": f"{int(round(audit.trust_score or 0))} / 100" if audit.trust_score is not None else "n/a",
+            "score_display": f"{round(audit.trust_score or 0)} / 100" if audit.trust_score is not None else "n/a",
             "risk_summary": self._risk_summary(audit.risk_level or "moderate"),
             "score_scale": [
                 {"label": "Low risk", "range": "82-100"},

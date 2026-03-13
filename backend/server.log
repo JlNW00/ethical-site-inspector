@@ -1,0 +1,10 @@
+INFO:     Started server process [84104]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+{"method": "GET", "path": "/api/health", "request_id": "bd5d96ff-c247-407c-9c53-5fa30d612be1", "event": "request_started", "logger": "middleware.request_id", "level": "info", "timestamp": "2026-03-13T09:19:48.371937Z"}
+{"method": "GET", "path": "/api/health", "status_code": 200, "request_id": "bd5d96ff-c247-407c-9c53-5fa30d612be1", "event": "request_completed", "logger": "middleware.request_id", "level": "info", "timestamp": "2026-03-13T09:19:48.373436Z"}
+INFO:     127.0.0.1:37431 - "GET /api/health HTTP/1.1" 200 OK
+{"method": "GET", "path": "/api/readiness", "request_id": "d751c6e9-6560-4956-b21c-f1341fd76783", "event": "request_started", "logger": "middleware.request_id", "level": "info", "timestamp": "2026-03-13T09:19:48.382435Z"}
+{"method": "GET", "path": "/api/readiness", "status_code": 200, "request_id": "d751c6e9-6560-4956-b21c-f1341fd76783", "event": "request_completed", "logger": "middleware.request_id", "level": "info", "timestamp": "2026-03-13T09:19:48.453938Z"}
+INFO:     127.0.0.1:37432 - "GET /api/readiness HTTP/1.1" 200 OK

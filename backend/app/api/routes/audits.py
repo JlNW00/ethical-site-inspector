@@ -21,7 +21,7 @@ orchestrator = AuditOrchestrator(SessionLocal)
 
 @router.get("", response_model=list[AuditRead])
 def list_audits(
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db),  # noqa: B008
     status: Annotated[str | None, Query(description="Filter by audit status")] = None,
     url_contains: Annotated[str | None, Query(description="Case-insensitive URL search")] = None,
 ) -> list[Audit]:
@@ -48,7 +48,7 @@ def list_audits(
 
 
 @router.post("", response_model=AuditRead, status_code=status.HTTP_202_ACCEPTED)
-def create_audit(payload: AuditCreateRequest, db: Session = Depends(get_db)) -> Audit:
+def create_audit(payload: AuditCreateRequest, db: Session = Depends(get_db)) -> Audit:  # noqa: B008  # noqa: B008  # noqa: B008
     settings = get_settings()
     audit = orchestrator.create_audit(db, payload, mode=settings.effective_mode)
     orchestrator.launch_audit(audit.id)
@@ -56,7 +56,7 @@ def create_audit(payload: AuditCreateRequest, db: Session = Depends(get_db)) -> 
 
 
 @router.get("/{audit_id}", response_model=AuditRead)
-def get_audit(audit_id: str, db: Session = Depends(get_db)) -> Audit:
+def get_audit(audit_id: str, db: Session = Depends(get_db)) -> Audit:  # noqa: B008  # noqa: B008  # noqa: B008
     statement = select(Audit).where(Audit.id == audit_id).options(selectinload(Audit.events))
     audit = db.scalar(statement)
     if audit is None:
@@ -65,7 +65,7 @@ def get_audit(audit_id: str, db: Session = Depends(get_db)) -> Audit:
 
 
 @router.get("/{audit_id}/findings", response_model=FindingsResponse)
-def get_findings(audit_id: str, db: Session = Depends(get_db)) -> FindingsResponse:
+def get_findings(audit_id: str, db: Session = Depends(get_db)) -> FindingsResponse:  # noqa: B008  # noqa: B008  # noqa: B008
     audit = db.scalar(select(Audit).where(Audit.id == audit_id))
     if audit is None:
         raise HTTPException(status_code=404, detail="Audit not found")
@@ -74,7 +74,7 @@ def get_findings(audit_id: str, db: Session = Depends(get_db)) -> FindingsRespon
 
 
 @router.get("/{audit_id}/report")
-def get_report(audit_id: str, db: Session = Depends(get_db)) -> Response:
+def get_report(audit_id: str, db: Session = Depends(get_db)) -> Response:  # noqa: B008  # noqa: B008  # noqa: B008
     audit = db.scalar(select(Audit).where(Audit.id == audit_id))
     if audit is None:
         raise HTTPException(status_code=404, detail="Audit not found")
@@ -93,7 +93,7 @@ def get_report(audit_id: str, db: Session = Depends(get_db)) -> Response:
 
 
 @router.get("/{audit_id}/report/pdf")
-def get_report_pdf(audit_id: str, db: Session = Depends(get_db)) -> Response:
+def get_report_pdf(audit_id: str, db: Session = Depends(get_db)) -> Response:  # noqa: B008  # noqa: B008  # noqa: B008
     """Generate and download a PDF version of the audit report.
 
     Returns a PDF file containing:

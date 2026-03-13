@@ -14,9 +14,9 @@ def build_rule_findings(observation: JourneyObservation) -> list[RuleFindingDraf
     matched_findings: dict[str, RuleFindingDraft] = {}
     text_lines = [item for item in evidence.headings + evidence.text_snippets if item]
     checked_boxes = [name for name, checked in evidence.checkbox_states.items() if checked]
-    prices = [item for item in evidence.price_points if isinstance(item.get("value"), (float, int))]
+    prices = [item for item in evidence.price_points if isinstance(item.get("value"), float | int)]
     action_count = int(metadata.get("action_count", 0))
-    scenario_states = metadata.get("state_snapshots", [])
+    _scenario_states = metadata.get("state_snapshots", [])
 
     def add_or_merge(
         pattern_family: str,

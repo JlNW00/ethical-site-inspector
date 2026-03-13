@@ -415,8 +415,8 @@ class NovaActAuditProvider(BrowserAuditProvider):
     ) -> JourneyObservation:
         """Run cookie consent scenario with Nova Act."""
         # NovaAct is imported at module level
-        NovaActClass = NovaAct  # Use module-level import
-        if NovaActClass is None:
+        nova_act_class = NovaAct  # Use module-level import
+        if nova_act_class is None:
             raise RuntimeError("Nova Act SDK not available")
 
         activity_log: list[str] = []
@@ -475,7 +475,16 @@ class NovaActAuditProvider(BrowserAuditProvider):
                         observation_result.parsed_response if hasattr(observation_result, "parsed_response") else {}
                     )
                 except Exception:
-                    consent_data = CookieConsentObservation(banner_present=True)
+                    consent_data = CookieConsentObservation(
+                        banner_present=True,
+                        accept_button_text="",
+                        reject_button_text=None,
+                        reject_button_visible=False,
+                        accept_clicks_required=0,
+                        reject_clicks_required=0,
+                        asymmetry_detected=False,
+                        has_essential_only_option=False,
+                    )
 
                 # Try to interact based on persona
                 if persona == "privacy_sensitive":
@@ -801,7 +810,12 @@ class NovaActAuditProvider(BrowserAuditProvider):
                     cancel_result.parsed_response if hasattr(cancel_result, "parsed_response") else {}
                 )
             except Exception:
-                cancel_data = SubscriptionCancellationObservation(cancellation_flow_found=False)
+                cancel_data = SubscriptionCancellationObservation(
+                    cancellation_flow_found=False,
+                    confirmshaming_detected=False,
+                    pause_offered=False,
+                    final_cancel_difficult=False,
+                )
 
             # If cancellation option exists, try to navigate through it
             if cancel_data.cancellation_flow_found:
@@ -948,7 +962,13 @@ class NovaActAuditProvider(BrowserAuditProvider):
                     deletion_result.parsed_response if hasattr(deletion_result, "parsed_response") else {}
                 )
             except Exception:
-                deletion_data = AccountDeletionObservation(deletion_flow_found=False)
+                deletion_data = AccountDeletionObservation(
+                    deletion_flow_found=False,
+                    requires_contact_support=False,
+                    confirmation_required=False,
+                    data_retention_warning=None,
+                    flow_completed=False,
+                )
 
             # If deletion option exists, try to navigate through it
             if deletion_data.deletion_flow_found:
@@ -1089,7 +1109,14 @@ class NovaActAuditProvider(BrowserAuditProvider):
                     newsletter_result.parsed_response if hasattr(newsletter_result, "parsed_response") else {}
                 )
             except Exception:
-                newsletter_data = NewsletterSignupObservation(signup_form_found=False)
+                newsletter_data = NewsletterSignupObservation(
+                    signup_form_found=False,
+                    confusing_opt_in=False,
+                    dark_enrollment_detected=False,
+                    bundled_with_other_services=False,
+                    unsubscription_difficulty=None,
+                    consent_separated=False,
+                )
 
             # If form found, try to interact based on persona
             if newsletter_data.signup_form_found:
@@ -1219,7 +1246,11 @@ class NovaActAuditProvider(BrowserAuditProvider):
                     pricing_result.parsed_response if hasattr(pricing_result, "parsed_response") else {}
                 )
             except Exception:
-                pricing_data = PricingComparisonObservation()
+                pricing_data = PricingComparisonObservation(
+                    price_variations_detected=False,
+                    bait_and_switch_suspected=False,
+                    loyalty_program_pressure=False,
+                )
 
             # Continue browsing to check for price changes
             nova.act(
