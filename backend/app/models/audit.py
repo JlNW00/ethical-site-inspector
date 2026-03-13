@@ -36,12 +36,12 @@ class Audit(Base):
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
-    findings: Mapped[list["Finding"]] = relationship(
+    findings: Mapped[list[Finding]] = relationship(
         back_populates="audit",
         cascade="all, delete-orphan",
         order_by="Finding.order_index",
     )
-    events: Mapped[list["AuditEvent"]] = relationship(
+    events: Mapped[list[AuditEvent]] = relationship(
         back_populates="audit",
         cascade="all, delete-orphan",
         order_by="AuditEvent.id",

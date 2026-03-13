@@ -3,7 +3,7 @@ from __future__ import annotations
 from app.core.config import Settings, get_settings
 from app.providers.browser import BrowserAuditProvider, MockBrowserAuditProvider, PlaywrightAuditProvider
 from app.providers.classifier import ClassifierProvider, LiveNovaClassifierProvider, MockClassifierProvider
-from app.providers.nova_act_browser import NovaActAuditProvider, NOVA_ACT_AVAILABLE
+from app.providers.nova_act_browser import NOVA_ACT_AVAILABLE, NovaActAuditProvider
 from app.providers.storage import LocalStorageProvider, S3StorageProvider, StorageProvider
 
 

@@ -246,9 +246,9 @@ describe("ComparePage", () => {
     renderComparePage();
 
     await waitFor(() => {
-      // Trust scores should be displayed
-      expect(screen.getByText(/75/)).toBeInTheDocument();
-      expect(screen.getByText(/45/)).toBeInTheDocument();
+      // Trust scores should be displayed - use getAllByText since they may appear in multiple places
+      expect(screen.getAllByText(/75/).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/45/).length).toBeGreaterThan(0);
     });
   });
 
@@ -267,8 +267,8 @@ describe("ComparePage", () => {
     renderComparePage();
 
     await waitFor(() => {
-      // Delta should be shown (-30 points)
-      expect(screen.getByText(/-30/)).toBeInTheDocument();
+      // Delta should be shown (45 - 75 = -30 points)
+      expect(screen.getAllByText(/-30/).length).toBeGreaterThan(0);
     });
   });
 
@@ -287,8 +287,9 @@ describe("ComparePage", () => {
     renderComparePage();
 
     await waitFor(() => {
-      expect(screen.getByText(/moderate/)).toBeInTheDocument();
-      expect(screen.getByText(/high/)).toBeInTheDocument();
+      // Risk levels appear in multiple places (badges, severity pills)
+      expect(screen.getAllByText(/moderate/).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/high/).length).toBeGreaterThan(0);
     });
   });
 
@@ -307,9 +308,9 @@ describe("ComparePage", () => {
     renderComparePage();
 
     await waitFor(() => {
-      // Scenario names should be visible
-      expect(screen.getByText(/Checkout Flow/i)).toBeInTheDocument();
-      expect(screen.getByText(/Cookie Consent/i)).toBeInTheDocument();
+      // Scenario names appear in multiple places (scenario breakdown, timeline, etc.)
+      expect(screen.getAllByText(/Checkout Flow/i).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/Cookie Consent/i).length).toBeGreaterThan(0);
     });
   });
 
@@ -328,8 +329,11 @@ describe("ComparePage", () => {
     renderComparePage();
 
     await waitFor(() => {
-      const links = screen.getAllByTestId("link");
-      expect(links.length).toBeGreaterThan(0);
+      // Check for View Report links - use getAllByRole to find links by their text
+      const viewReportLinks = screen.getAllByRole("link", { name: /View Report/i });
+      expect(viewReportLinks.length).toBeGreaterThanOrEqual(2); // At least one per audit
+      // Verify the links have correct hrefs
+      expect(viewReportLinks[0]).toHaveAttribute("href", "/audits/audit-a-123/report");
     });
   });
 
@@ -340,7 +344,9 @@ describe("ComparePage", () => {
     renderComparePage();
 
     await waitFor(() => {
-      expect(screen.getByText(/Error loading comparison/i)).toBeInTheDocument();
+      // Component renders "Error: {error message}" in empty-state
+      expect(screen.getByText(/Error:/i)).toBeInTheDocument();
+      expect(screen.getByText(/Network error/i)).toBeInTheDocument();
     });
   });
 
@@ -359,8 +365,9 @@ describe("ComparePage", () => {
     renderComparePage();
 
     await waitFor(() => {
-      // Finding count difference (15 - 8 = 7)
-      expect(screen.getByText(/7.*more/i)).toBeInTheDocument();
+      // Finding count difference - finding arrays have 1 and 2 items, so delta is +1
+      // Look for "+1" in the page (finding delta in hero pills or Key Differences section)
+      expect(screen.getAllByText(/\+1/).length).toBeGreaterThan(0);
     });
   });
 

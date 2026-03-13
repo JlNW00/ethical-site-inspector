@@ -62,7 +62,10 @@ describe("Layout", () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByText("History")).toBeInTheDocument();
+    // Use getAllByText since "History" appears in both nav and breadcrumbs
+    const historyElements = screen.getAllByText("History");
+    expect(historyElements.length).toBeGreaterThanOrEqual(1);
+    // "Report" should be unique in breadcrumbs
     expect(screen.getByText("Report")).toBeInTheDocument();
   });
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 import itertools
 import time
 from abc import ABC, abstractmethod
-from typing import Callable
+from collections.abc import Callable
 from urllib.parse import urljoin, urlparse
 
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
@@ -11,24 +11,20 @@ from playwright.sync_api import sync_playwright
 
 from app.extractors.playwright_extractors import (
     capture_screenshot,
-    extract_controls_matching_keywords,
-    extract_button_labels,
     extract_checkbox_states,
+    extract_controls_matching_keywords,
     extract_dom_excerpt,
-    extract_headings,
     extract_headings_matching_keywords,
-    extract_locator_label,
     extract_lines_matching_keywords,
+    extract_locator_label,
     extract_page_title,
     extract_prices,
     extract_prices_from_text,
-    extract_text_snippets,
     guess_friction,
     scenario_keywords,
 )
 from app.providers.storage import StorageProvider
 from app.schemas.runtime import BrowserRunResult, JourneyObservation, ObservationEvidence
-
 
 ProgressCallback = Callable[[str, str, int, str, dict], None]
 

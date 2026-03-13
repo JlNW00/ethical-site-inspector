@@ -15,8 +15,6 @@ from app.schemas.audit import AuditCreateRequest, AuditRead, FindingsResponse
 from app.services.audit_orchestrator import AuditOrchestrator
 from app.services.pdf_service import generate_pdf_from_html
 
-
-
 router = APIRouter(prefix="/audits", tags=["audits"])
 orchestrator = AuditOrchestrator(SessionLocal)
 

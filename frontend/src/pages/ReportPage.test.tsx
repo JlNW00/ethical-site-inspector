@@ -307,7 +307,7 @@ describe("ReportPage", () => {
       expect(screen.getByText("Findings and evidence")).toBeInTheDocument();
     });
 
-    // Find by text content in headings
+    // Find by text content in headings - use getAllByText since scenarios appear in multiple places
     const headings = screen.getAllByRole("heading");
     expect(headings.some((h) => h.textContent?.includes("Cookie Consent"))).toBe(true);
     expect(headings.some((h) => h.textContent?.includes("Checkout Flow"))).toBe(true);
@@ -360,8 +360,11 @@ describe("ReportPage", () => {
       expect(screen.getByText("Persona comparison")).toBeInTheDocument();
     });
 
-    expect(screen.getByText(/Privacy Sensitive/i)).toBeInTheDocument();
-    expect(screen.getByText(/Cost Sensitive/i)).toBeInTheDocument();
+    // Use getAllByText since persona names appear in multiple places (cards, headers, breadcrumbs)
+    const privacyElements = screen.getAllByText(/Privacy Sensitive/i);
+    const costElements = screen.getAllByText(/Cost Sensitive/i);
+    expect(privacyElements.length).toBeGreaterThan(0);
+    expect(costElements.length).toBeGreaterThan(0);
   });
 
   it("shows scenario breakdown section", async () => {
@@ -379,8 +382,9 @@ describe("ReportPage", () => {
       expect(screen.getByText("Scenario breakdown")).toBeInTheDocument();
     });
 
-    expect(screen.getByText(/Cookie Consent/i)).toBeInTheDocument();
-    expect(screen.getByText(/Checkout Flow/i)).toBeInTheDocument();
+    // Use getAllByText since scenario names may appear in multiple places (breakdown and timeline)
+    expect(screen.getAllByText(/Cookie Consent/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Checkout Flow/i).length).toBeGreaterThan(0);
   });
 
   it("displays Open HTML report button", async () => {

@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
 import { api } from "../api/client";
@@ -152,97 +151,99 @@ export function RunPage() {
 
       {!error && audit?.status !== "failed" && (
         <section className="content-panel">
-        <div className="section-header">
-          <div>
-            <h2 className="section-title">Run state</h2>
-            <p className="section-subtitle">
-              Current mode, scenario coverage, and evidence throughput for the active audit.
-            </p>
-          </div>
-          {audit?.status === "completed" ? (
-            <Link className="btn btn-primary" to={`/audits/${audit.id}/report`}>
-              Open report
-            </Link>
-          ) : null}
-        </div>
-        <div className="grid-3">
-          <div className="metric-card">
-            <div className="metric-label">Current focus</div>
-            <div className="metric-value">
-              {latestEvent?.details.scenario && typeof latestEvent.details.scenario === "string"
-                ? titleize(latestEvent.details.scenario)
-                : "Queueing"}
-            </div>
-            <div className="muted">
-              {latestEvent?.details.persona && typeof latestEvent.details.persona === "string"
-                ? titleize(latestEvent.details.persona)
-                : "Waiting for persona branch"}
-            </div>
-          </div>
-          <div className="metric-card">
-            <div className="metric-label">Evidence captured</div>
-            <div className="metric-value">{evidence.length}</div>
-            <div className="muted">Screenshots surfaced through the activity feed</div>
-          </div>
-          <div className="metric-card">
-            <div className="metric-label">Final trust score</div>
-            <div className="metric-value">{audit?.trust_score ?? "--"}</div>
-            <div className="muted">{audit?.status === "completed" ? `${audit.risk_level} risk` : "Calculated after classification"}</div>
-          </div>
-        </div>
-      </section>
-
-      <div className="grid-2" style={{ marginTop: 22 }}>
-        <section className="content-panel">
           <div className="section-header">
             <div>
-              <h2 className="section-title">Activity timeline</h2>
-              <p className="section-subtitle">A granular event feed showing progress, captured artifacts, and reasoning milestones.</p>
+              <h2 className="section-title">Run state</h2>
+              <p className="section-subtitle">
+                Current mode, scenario coverage, and evidence throughput for the active audit.
+              </p>
+            </div>
+            {audit?.status === "completed" ? (
+              <Link className="btn btn-primary" to={`/audits/${audit.id}/report`}>
+                Open report
+              </Link>
+            ) : null}
+          </div>
+          <div className="grid-3">
+            <div className="metric-card">
+              <div className="metric-label">Current focus</div>
+              <div className="metric-value">
+                {latestEvent?.details.scenario && typeof latestEvent.details.scenario === "string"
+                  ? titleize(latestEvent.details.scenario)
+                  : "Queueing"}
+              </div>
+              <div className="muted">
+                {latestEvent?.details.persona && typeof latestEvent.details.persona === "string"
+                  ? titleize(latestEvent.details.persona)
+                  : "Waiting for persona branch"}
+              </div>
+            </div>
+            <div className="metric-card">
+              <div className="metric-label">Evidence captured</div>
+              <div className="metric-value">{evidence.length}</div>
+              <div className="muted">Screenshots surfaced through the activity feed</div>
+            </div>
+            <div className="metric-card">
+              <div className="metric-label">Final trust score</div>
+              <div className="metric-value">{audit?.trust_score ?? "--"}</div>
+              <div className="muted">{audit?.status === "completed" ? `${audit.risk_level} risk` : "Calculated after classification"}</div>
             </div>
           </div>
-          <div className="timeline">
-            {events.length ? (
-              [...events].reverse().map((event) => (
-                <div className="timeline-item" key={event.id}>
-                  <div className="timeline-phase">{event.phase}</div>
-                  <div>
-                    <div className="timeline-message">{event.message}</div>
-                    <div className="timeline-details">
-                      {relativeTime(event.created_at)}
-                      {typeof event.details.scenario === "string" ? ` | ${titleize(event.details.scenario)}` : ""}
-                      {typeof event.details.persona === "string" ? ` | ${titleize(event.details.persona)}` : ""}
+        </section>
+      )}
+
+      {!error && audit?.status !== "failed" && (
+        <div className="grid-2" style={{ marginTop: 22 }}>
+          <section className="content-panel">
+            <div className="section-header">
+              <div>
+                <h2 className="section-title">Activity timeline</h2>
+                <p className="section-subtitle">A granular event feed showing progress, captured artifacts, and reasoning milestones.</p>
+              </div>
+            </div>
+            <div className="timeline">
+              {events.length ? (
+                [...events].reverse().map((event) => (
+                  <div className="timeline-item" key={event.id}>
+                    <div className="timeline-phase">{event.phase}</div>
+                    <div>
+                      <div className="timeline-message">{event.message}</div>
+                      <div className="timeline-details">
+                        {relativeTime(event.created_at)}
+                        {typeof event.details.scenario === "string" ? ` | ${titleize(event.details.scenario)}` : ""}
+                        {typeof event.details.persona === "string" ? ` | ${titleize(event.details.persona)}` : ""}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))
-            ) : (
-              <div className="empty-state">Waiting for the first timeline event.</div>
-            )}
-          </div>
-        </section>
+                ))
+              ) : (
+                <div className="empty-state">Waiting for the first timeline event.</div>
+              )}
+            </div>
+          </section>
 
-        <section className="content-panel">
-          <div className="section-header">
-            <div>
-              <h2 className="section-title">Evidence previews</h2>
-              <p className="section-subtitle">Captured screenshots flow in here while the audit runs.</p>
+          <section className="content-panel">
+            <div className="section-header">
+              <div>
+                <h2 className="section-title">Evidence previews</h2>
+                <p className="section-subtitle">Captured screenshots flow in here while the audit runs.</p>
+              </div>
             </div>
-          </div>
-          {evidence.length ? (
-            <div className="evidence-grid">
-              {evidence.slice(0, 6).map((item, index) => (
-                <article className="evidence-card" key={`${item.url}-${index}`}>
-                  <img className="evidence-thumb" src={item.url} alt={item.caption} />
-                  <div style={{ marginTop: 12, fontWeight: 600 }}>{item.caption}</div>
-                </article>
-              ))}
-            </div>
-          ) : (
-            <div className="empty-state">Evidence will appear once a scenario run completes its first capture step.</div>
-          )}
-        </section>
-      </div>
-      ) : null}
+            {evidence.length ? (
+              <div className="evidence-grid">
+                {evidence.slice(0, 6).map((item, index) => (
+                  <article className="evidence-card" key={`${item.url}-${index}`}>
+                    <img className="evidence-thumb" src={item.url} alt={item.caption} />
+                    <div style={{ marginTop: 12, fontWeight: 600 }}>{item.caption}</div>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <div className="empty-state">Evidence will appear once a scenario run completes its first capture step.</div>
+            )}
+          </section>
+        </div>
+      )}
     </Layout>
   );
 }

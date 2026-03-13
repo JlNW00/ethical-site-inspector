@@ -6,7 +6,6 @@ from playwright.sync_api import Frame, Locator, Page
 
 from app.providers.storage import StorageProvider
 
-
 PRICE_RE = re.compile(r"(?:[$€£]|USD\s?|EUR\s?|GBP\s?)(\d{1,4}(?:[.,]\d{2})?)")
 TRUST_KEYWORDS = (
     "cookie",

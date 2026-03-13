@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import Counter, defaultdict
-from datetime import UTC, datetime, timezone
+from datetime import UTC, datetime
 from threading import Thread
 from typing import Any
 

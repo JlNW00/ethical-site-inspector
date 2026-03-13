@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter
 from sqlalchemy import select
@@ -16,13 +16,12 @@ from app.services.provider_registry import (
     is_playwright_ready,
 )
 
-
 router = APIRouter()
 
 
 @router.get("/health", response_model=HealthResponse)
 def health() -> HealthResponse:
-    return HealthResponse(status="ok", timestamp=datetime.now(timezone.utc))
+    return HealthResponse(status="ok", timestamp=datetime.now(UTC))
 
 
 @router.get("/readiness", response_model=ReadinessResponse)

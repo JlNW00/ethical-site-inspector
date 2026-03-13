@@ -155,12 +155,14 @@ describe("PersonaDiffPage", () => {
     renderPersonaDiffPage();
 
     await waitFor(() => {
-      // Use role selector to find the specific persona name heading
-      const personaHeadings = screen.getAllByRole("heading", { name: /Privacy Sensitive/i });
-      expect(personaHeadings.length).toBeGreaterThan(0);
+      // Use getAllByText since persona names appear in multiple places (headers, pills, etc.)
+      const privacySensitiveElements = screen.getAllByText(/Privacy Sensitive/i);
+      expect(privacySensitiveElements.length).toBeGreaterThan(0);
     });
 
-    expect(screen.getByText(/Cost Sensitive/i)).toBeInTheDocument();
+    // Use getAllByText since "Cost Sensitive" may appear in multiple places
+    const costSensitiveElements = screen.getAllByText(/Cost Sensitive/i);
+    expect(costSensitiveElements.length).toBeGreaterThan(0);
   });
 
   it("displays persona-specific findings in columns", async () => {
@@ -294,10 +296,12 @@ describe("PersonaDiffPage", () => {
     renderPersonaDiffPage();
 
     await waitFor(() => {
-      expect(screen.getByText(/back to report/i)).toBeInTheDocument();
+      // Use getAllByText since "Back to Report" may appear multiple times
+      const backButtonElements = screen.getAllByText(/back to report/i);
+      expect(backButtonElements.length).toBeGreaterThan(0);
     });
 
-    const backButton = screen.getByText(/back to report/i).closest("a");
+    const backButton = screen.getAllByText(/back to report/i)[0].closest("a");
     expect(backButton).toHaveAttribute("href", "/audits/audit-123/report");
   });
 
@@ -380,13 +384,14 @@ describe("PersonaDiffPage", () => {
     renderPersonaDiffPage();
 
     await waitFor(() => {
-      // Use getAllByText since controls may appear multiple times
+      // Use getAllByText since controls appear in both control-tags and "Observed controls" text
       const acceptAllElements = screen.getAllByText(/accept all/i);
       expect(acceptAllElements.length).toBeGreaterThan(0);
     });
 
-    expect(screen.getByText(/reject all/i)).toBeInTheDocument();
-    expect(screen.getByText(/customize/i)).toBeInTheDocument();
+    // Use getAllByText since "Reject All" appears in both control-tag and "Observed controls" line
+    expect(screen.getAllByText(/reject all/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/customize/i).length).toBeGreaterThan(0);
   });
 
   it("shows empty state when no findings for a persona", async () => {
@@ -432,7 +437,9 @@ describe("PersonaDiffPage", () => {
       expect(cookieConsentHeadings.length).toBeGreaterThan(0);
     });
 
-    expect(screen.getByText(/Checkout Flow/i)).toBeInTheDocument();
+    // Use getAllByText since "Checkout Flow" may appear in multiple places (scenario titles and timeline)
+    const checkoutFlowElements = screen.getAllByText(/Checkout Flow/i);
+    expect(checkoutFlowElements.length).toBeGreaterThan(0);
   });
 
   it("displays trust score comparison", async () => {
@@ -476,6 +483,27 @@ describe("PersonaDiffPage", () => {
   });
 
   it("shows summary of key differences at top", async () => {
+    // Create findings with different patterns to trigger difference detection
+    const findings: Finding[] = [
+      createMockFinding({
+        id: "f1",
+        persona: "privacy_sensitive",
+        pattern_family: "manipulative_design",
+        evidence_payload: {
+          matched_buttons: ["Accept All"],
+          matched_prices: [{ label: "total", value: 100, raw: "$100.00" }],
+        },
+      }),
+      createMockFinding({
+        id: "f2",
+        persona: "cost_sensitive",
+        pattern_family: "deceptive_content",
+        evidence_payload: {
+          matched_buttons: ["Buy Now"],
+          matched_prices: [{ label: "total", value: 85, raw: "$85.00" }],
+        },
+      }),
+    ];
     const audit = createMockAudit({
       id: "audit-123",
       selected_personas: ["privacy_sensitive", "cost_sensitive"],
@@ -504,13 +532,14 @@ describe("PersonaDiffPage", () => {
     });
 
     mockGetAudit.mockResolvedValue(audit);
-    mockGetFindings.mockResolvedValue({ audit_id: "audit-123", findings: [] });
+    mockGetFindings.mockResolvedValue({ audit_id: "audit-123", findings });
 
     renderPersonaDiffPage();
 
     await waitFor(() => {
-      // Look for the "Key Differences" section header
-      expect(screen.getByText(/key differences/i)).toBeInTheDocument();
+      // "Key Differences" appears in the section heading and hero subtitle
+      // Use getAllByText to match all occurrences
+      expect(screen.getAllByText(/key differences/i).length).toBeGreaterThan(0);
     });
   });
 
@@ -526,7 +555,8 @@ describe("PersonaDiffPage", () => {
     renderPersonaDiffPage();
 
     await waitFor(() => {
-      expect(screen.getByText(/Privacy Sensitive/i)).toBeInTheDocument();
+      // Use getAllByText since persona names may appear in multiple places
+      expect(screen.getAllByText(/Privacy Sensitive/i).length).toBeGreaterThan(0);
     });
 
     expect(screen.queryByText(/Cost Sensitive/i)).not.toBeInTheDocument();

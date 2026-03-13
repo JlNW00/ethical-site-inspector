@@ -11,7 +11,6 @@ from botocore.config import Config
 from app.core.config import PROJECT_ROOT, Settings
 from app.schemas.runtime import ClassifiedFinding, RuleFindingDraft
 
-
 PROMPT_PATH = PROJECT_ROOT / "backend" / "app" / "prompts" / "nova_classifier_prompt.txt"
 
 

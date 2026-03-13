@@ -7,10 +7,9 @@ Uses act() for navigation and act_get() with Pydantic schemas for structured ext
 
 from __future__ import annotations
 
-import itertools
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Any, Callable, ClassVar
+from typing import Any, ClassVar
 from urllib.parse import urlparse
 
 from pydantic import BaseModel, Field
@@ -18,8 +17,6 @@ from pydantic import BaseModel, Field
 from app.core.taxonomy import (
     AUDIT_SCENARIOS,
     PERSONA_DEFINITIONS,
-    DarkPatternCategory,
-    EvidenceType,
     PersonaType,
     ScenarioType,
 )
@@ -31,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 # Try to import Nova Act, but allow it to fail gracefully
 try:
-    from nova_act import NovaAct, BOOL_SCHEMA, STRING_SCHEMA
+    from nova_act import BOOL_SCHEMA, STRING_SCHEMA, NovaAct
 
     NOVA_ACT_AVAILABLE = True
 except ImportError:
@@ -538,7 +535,7 @@ class NovaActAuditProvider(BrowserAuditProvider):
                     button_labels=[consent_data.accept_button_text, consent_data.reject_button_text]
                     if consent_data.reject_button_text
                     else [consent_data.accept_button_text],
-                    checkbox_states={opt: True for opt in consent_data.pre_selected_options},
+                    checkbox_states=dict.fromkeys(consent_data.pre_selected_options, True),
                     price_points=[],
                     text_snippets=consent_data.deceptive_language,
                     headings=["Cookie Consent"] if consent_data.banner_present else [],
@@ -719,7 +716,7 @@ class NovaActAuditProvider(BrowserAuditProvider):
                 screenshot_urls=screenshot_urls,
                 screenshot_paths=screenshot_paths,
                 button_labels=[],
-                checkbox_states={addon: True for addon in checkout_data.pre_selected_addons},
+                checkbox_states=dict.fromkeys(checkout_data.pre_selected_addons, True),
                 price_points=checkout_data.prices_seen,
                 text_snippets=checkout_data.urgency_tactics + checkout_data.hidden_fees,
                 headings=["Checkout"] if checkout_data.page_reached else [],
@@ -1136,7 +1133,7 @@ class NovaActAuditProvider(BrowserAuditProvider):
                 screenshot_urls=screenshot_urls,
                 screenshot_paths=screenshot_paths,
                 button_labels=[],
-                checkbox_states={box: True for box in newsletter_data.pre_checked_boxes},
+                checkbox_states=dict.fromkeys(newsletter_data.pre_checked_boxes, True),
                 price_points=[],
                 text_snippets=newsletter_data.confusing_language_examples,
                 headings=["Newsletter Signup"] if newsletter_data.signup_form_found else [],
