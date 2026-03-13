@@ -1,0 +1,82 @@
+{
+  "milestone": "ui-demo",
+  "round": 1,
+  "status": "fail",
+  "validatorsRun": {
+    "test_backend": {
+      "passed": true,
+      "command": "cd backend && .venv\\Scripts\\python.exe -m pytest tests/ -v --tb=short -x",
+      "exitCode": 0,
+      "summary": "204 passed in 7.70s"
+    },
+    "test_frontend": {
+      "passed": false,
+      "command": "cd frontend && npm test",
+      "exitCode": 1,
+      "summary": "13 failed, 77 passed (90 total). Failures in Layout.test.tsx (1: breadcrumb 'History' text conflicts with nav-link 'History'), PersonaDiffPage.test.tsx (1: multiple 'Checkout Flow' elements found), ReportPage.test.tsx (multiple failures from duplicate text elements), and others with similar multiple-element selector issues."
+    },
+    "lint_backend": {
+      "passed": false,
+      "command": "cd backend && .venv\\Scripts\\python.exe -m ruff check app/",
+      "exitCode": 1,
+      "summary": "36 errors: I001 (import sorting) in audits.py, browser.py, classifier.py, nova_act_browser.py, provider_registry.py; B008 (Depends in defaults) in audits.py; F401 (unused imports) in browser.py, classifier.py; SIM105 in browser.py; N806 in nova_act_browser.py; C420 in nova_act_browser.py; DTZ005 in report_service.py; RUF046 in report_service.py. 24 fixable with --fix."
+    },
+    "typecheck_backend": {
+      "passed": false,
+      "command": "cd backend && .venv\\Scripts\\python.exe -m mypy app/ --ignore-missing-imports",
+      "exitCode": 1,
+      "summary": "119 errors in 12 files: Missing type parameters (dict, list) throughout browser.py, nova_act_browser.py, audit_orchestrator.py; no-untyped-def in browser.py, audit_orchestrator.py, seed_service.py; call-overload errors in taxonomy.py; unused type-ignore comments in nova_act_browser.py; missing named arguments in nova_act_browser.py Pydantic model constructors."
+    },
+    "lint_frontend": {
+      "passed": false,
+      "command": "cd frontend && npm run lint",
+      "exitCode": 1,
+      "summary": "1 error: RunPage.tsx line 154 'JSX expressions must have one parent element' (parsing error). 5 warnings: complexity in FindingCard (19>15), ComparePage (30>15), PersonaDiffPage (31>15), ReportPage (78>15); max-lines in ReportPage (594>500)."
+    },
+    "typecheck_frontend": {
+      "passed": false,
+      "command": "cd frontend && npx tsc -b",
+      "exitCode": 1,
+      "summary": "3 errors all in RunPage.tsx: TS2657 (JSX expressions must have one parent element at line 154), TS1005 ('}' expected at line 245), TS1381 (unexpected token at line 245). This is a syntax/structural issue in the file."
+    },
+    "build_frontend": {
+      "passed": false,
+      "command": "cd frontend && npm run build",
+      "exitCode": 1,
+      "summary": "Same RunPage.tsx errors as typecheck - build cannot proceed."
+    }
+  },
+  "reviewsSummary": {
+    "total": 0,
+    "passed": 0,
+    "failed": 0,
+    "failedFeatures": [],
+    "note": "Feature reviews not performed because validators failed"
+  },
+  "blockingIssues": [
+    {
+      "featureId": "navigation-and-visual-polish",
+      "severity": "blocking",
+      "description": "RunPage.tsx has a JSX syntax error at line 154: 'JSX expressions must have one parent element'. This breaks TypeScript compilation, ESLint, and production build. The file likely has a malformed JSX return statement where multiple top-level elements are returned without a fragment wrapper."
+    },
+    {
+      "featureId": "navigation-and-visual-polish",
+      "severity": "blocking",
+      "description": "Frontend tests fail with 13 failures. Key issues: (1) Layout.test.tsx breadcrumb test finds duplicate 'History' text from both nav-link and breadcrumb, (2) PersonaDiffPage.test.tsx finds multiple 'Checkout Flow' elements, (3) ReportPage.test.tsx has similar duplicate element issues. Tests use getByText which requires unique matches - tests need to use getAllByText or more specific selectors."
+    },
+    {
+      "featureId": "multiple",
+      "severity": "blocking",
+      "description": "Backend lint (ruff) reports 36 errors across 7 files. Most are I001 (import sorting, auto-fixable), but also includes B008 (Depends() in defaults), F401 (unused imports), SIM105, N806, C420, DTZ005, RUF046. 24 are auto-fixable with --fix."
+    },
+    {
+      "featureId": "multiple",
+      "severity": "blocking",
+      "description": "Backend mypy reports 119 errors in 12 files. Major categories: missing type parameters for generic types (dict, list) throughout browser.py and nova_act_browser.py; no-untyped-def for many functions in browser.py; call-overload errors in taxonomy.py where dict.get() is called with plain str instead of Literal types; missing named arguments in nova_act_browser.py Pydantic model constructors."
+    }
+  ],
+  "appliedUpdates": [],
+  "suggestedGuidanceUpdates": [],
+  "rejectedObservations": [],
+  "previousRound": null
+}
