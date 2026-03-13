@@ -82,7 +82,9 @@ def build_rule_findings(observation: JourneyObservation) -> list[RuleFindingDraf
             payload.get("matched_prices", []),
             limit=4,
         )
-        if payload.get("matched_quote") and payload.get("matched_quote") != existing.evidence_payload.get("matched_quote"):
+        if payload.get("matched_quote") and payload.get("matched_quote") != existing.evidence_payload.get(
+            "matched_quote"
+        ):
             existing.evidence_payload["supporting_evidence"] = _merge_unique(
                 existing.evidence_payload.get("supporting_evidence", []),
                 [payload["matched_quote"]],
@@ -95,11 +97,13 @@ def build_rule_findings(observation: JourneyObservation) -> list[RuleFindingDraf
             evidence.button_labels,
             ("reject", "decline", "refuse", "necessary only", "essential only", "continue without"),
         )
-        alternate_buttons = _matching_buttons(evidence.button_labels, ("settings", "preferences", "manage", "learn more"))
+        alternate_buttons = _matching_buttons(
+            evidence.button_labels, ("settings", "preferences", "manage", "learn more")
+        )
         if accept_buttons and not explicit_reject_buttons:
             evidence_line = (
-                f'Visible controls included {_format_list(accept_buttons)}'
-                + (f' plus {_format_list(alternate_buttons)}.' if alternate_buttons else ".")
+                f"Visible controls included {_format_list(accept_buttons)}"
+                + (f" plus {_format_list(alternate_buttons)}." if alternate_buttons else ".")
                 + " No equally explicit reject or decline action was captured in the same control set."
             )
             add_or_merge(
@@ -132,10 +136,10 @@ def build_rule_findings(observation: JourneyObservation) -> list[RuleFindingDraf
         first_price = prices[0]
         last_price = prices[-1]
         price_excerpt = (
-            f'{first_price.get("raw", f"${first_price["value"]:.2f}")} in "{str(first_price.get("label", ""))[:110]}" '
-            f'({first_price.get("state_label", "state 1")}) changed to {last_price.get("raw", f"${last_price["value"]:.2f}")} '
+            f'{first_price.get("raw", f"${first_price['value']:.2f}")} in "{str(first_price.get("label", ""))[:110]}" '
+            f"({first_price.get('state_label', 'state 1')}) changed to {last_price.get('raw', f'${last_price["value"]:.2f}')} "
             f'in "{str(last_price.get("label", ""))[:110]}" ({last_price.get("state_label", "state 2")}) '
-            f'({price_delta:+.2f}).'
+            f"({price_delta:+.2f})."
         )
         add_or_merge(
             "hidden_costs",
@@ -155,7 +159,9 @@ def build_rule_findings(observation: JourneyObservation) -> list[RuleFindingDraf
     )
     if confirm_quote and (
         observation.scenario != "cookie_consent"
-        or any(term in confirm_quote.lower() for term in ("cookie", "consent", "privacy", "tracking", "accept", "reject"))
+        or any(
+            term in confirm_quote.lower() for term in ("cookie", "consent", "privacy", "tracking", "accept", "reject")
+        )
     ):
         add_or_merge(
             "confirmshaming",
@@ -172,10 +178,16 @@ def build_rule_findings(observation: JourneyObservation) -> list[RuleFindingDraf
     if action_count >= 2 or (
         observation.scenario == "cancellation_flow"
         and action_count >= 1
-        and any("support" in item.lower() or "pause" in item.lower() for item in metadata.get("interacted_controls", []))
+        and any(
+            "support" in item.lower() or "pause" in item.lower() for item in metadata.get("interacted_controls", [])
+        )
     ):
         friction_summary = ", ".join(evidence.friction_indicators[:2])
-        activity_summary = "; ".join(evidence.activity_log[1:5]) if len(evidence.activity_log) > 1 else "No extra interactions were captured."
+        activity_summary = (
+            "; ".join(evidence.activity_log[1:5])
+            if len(evidence.activity_log) > 1
+            else "No extra interactions were captured."
+        )
         interacted_controls = metadata.get("interacted_controls", [])[:3]
         control_summary = " -> ".join(f'"{item[:60]}"' for item in interacted_controls)
         obstruction_excerpt = (
@@ -196,8 +208,14 @@ def build_rule_findings(observation: JourneyObservation) -> list[RuleFindingDraf
             detection_basis="step count",
         )
 
-    urgency_quote = _first_matching_line(text_lines, ("only", "left", "limited time", "offer ends", "deal ends", "last chance"))
-    if urgency_quote and observation.scenario in {"checkout_flow", "cancellation_flow"} and _quote_is_scenario_grounded(observation.scenario, urgency_quote):
+    urgency_quote = _first_matching_line(
+        text_lines, ("only", "left", "limited time", "offer ends", "deal ends", "last chance")
+    )
+    if (
+        urgency_quote
+        and observation.scenario in {"checkout_flow", "cancellation_flow"}
+        and _quote_is_scenario_grounded(observation.scenario, urgency_quote)
+    ):
         add_or_merge(
             "urgency",
             "medium",
@@ -210,21 +228,29 @@ def build_rule_findings(observation: JourneyObservation) -> list[RuleFindingDraf
             detection_basis="captured copy",
         )
 
-    bundled_quote = _first_matching_line(text_lines, ("protection", "bundle", "save details", "recommended", "newsletter"))
+    bundled_quote = _first_matching_line(
+        text_lines, ("protection", "bundle", "save details", "recommended", "newsletter")
+    )
     relevant_checked_boxes = checked_boxes
     relevant_bundled_quote = bundled_quote
     if observation.scenario == "checkout_flow":
         relevant_checked_boxes = [
             item
             for item in checked_boxes
-            if any(term in item.lower() for term in ("save", "bundle", "protect", "insurance", "newsletter", "faster", "payment", "details"))
+            if any(
+                term in item.lower()
+                for term in ("save", "bundle", "protect", "insurance", "newsletter", "faster", "payment", "details")
+            )
         ]
         if relevant_bundled_quote and not any(
-            term in relevant_bundled_quote.lower() for term in ("protection", "bundle", "save details", "recommended", "newsletter")
+            term in relevant_bundled_quote.lower()
+            for term in ("protection", "bundle", "save details", "recommended", "newsletter")
         ):
             relevant_bundled_quote = None
 
-    if observation.scenario in {"cookie_consent", "checkout_flow"} and (relevant_checked_boxes or relevant_bundled_quote):
+    if observation.scenario in {"cookie_consent", "checkout_flow"} and (
+        relevant_checked_boxes or relevant_bundled_quote
+    ):
         excerpt = (
             f"Checked controls observed: {_format_list(relevant_checked_boxes)}."
             if relevant_checked_boxes
@@ -301,7 +327,10 @@ def _price_delta(prices: list[dict]) -> float:
 def _quote_is_scenario_grounded(scenario: str, quote: str) -> bool:
     lower_quote = quote.lower()
     if scenario == "checkout_flow":
-        return any(term in lower_quote for term in ("price", "night", "deal", "offer", "reserve", "availability", "room", "book"))
+        return any(
+            term in lower_quote
+            for term in ("price", "night", "deal", "offer", "reserve", "availability", "room", "book")
+        )
     if scenario == "cancellation_flow":
         return any(term in lower_quote for term in ("cancel", "leave", "stay", "pause", "subscription"))
     return any(term in lower_quote for term in ("cookie", "consent", "privacy", "tracking"))

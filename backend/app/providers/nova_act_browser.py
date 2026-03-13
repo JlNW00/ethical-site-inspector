@@ -32,6 +32,7 @@ logger = logging.getLogger(__name__)
 # Try to import Nova Act, but allow it to fail gracefully
 try:
     from nova_act import NovaAct, BOOL_SCHEMA, STRING_SCHEMA
+
     NOVA_ACT_AVAILABLE = True
 except ImportError:
     NOVA_ACT_AVAILABLE = False
@@ -78,7 +79,9 @@ class SubscriptionCancellationObservation(BaseModel):
 
     cancellation_flow_found: bool = Field(description="Whether a cancellation flow was found")
     clicks_to_cancel: int = Field(default=0, description="Number of clicks to reach cancellation")
-    detours_encountered: list[str] = Field(default_factory=list, description="Retention offers, support chat prompts, etc.")
+    detours_encountered: list[str] = Field(
+        default_factory=list, description="Retention offers, support chat prompts, etc."
+    )
     confirmshaming_detected: bool = Field(description="Whether guilt-tripping language was used")
     confirmshaming_phrases: list[str] = Field(default_factory=list, description="Specific guilt-tripping phrases")
     pause_offered: bool = Field(description="Whether 'pause instead of cancel' was offered")
@@ -121,7 +124,9 @@ class PricingComparisonObservation(BaseModel):
     persona_specific_offers: list[str] = Field(default_factory=list, description="Offers that appear persona-specific")
     hidden_discounts: list[str] = Field(default_factory=list, description="Discounts not immediately visible")
     loyalty_program_pressure: bool = Field(description="Whether loyalty program pushed to access prices")
-    dynamic_pricing_indicators: list[str] = Field(default_factory=list, description="Signs of dynamic/discriminatory pricing")
+    dynamic_pricing_indicators: list[str] = Field(
+        default_factory=list, description="Signs of dynamic/discriminatory pricing"
+    )
 
 
 class ScreenshotEvidence(BaseModel):
@@ -166,14 +171,16 @@ class NovaActAuditProvider(BrowserAuditProvider):
     def _ensure_nova_act(self) -> Any:
         """Ensure Nova Act SDK is available."""
         if not NOVA_ACT_AVAILABLE or NovaAct is None:
-            raise RuntimeError(
-                "Nova Act SDK is required but not installed. Run: pip install nova-act"
-            )
-        return type("NovaActModule", (), {
-            "NovaAct": NovaAct,
-            "BOOL_SCHEMA": BOOL_SCHEMA,
-            "STRING_SCHEMA": STRING_SCHEMA,
-        })()
+            raise RuntimeError("Nova Act SDK is required but not installed. Run: pip install nova-act")
+        return type(
+            "NovaActModule",
+            (),
+            {
+                "NovaAct": NovaAct,
+                "BOOL_SCHEMA": BOOL_SCHEMA,
+                "STRING_SCHEMA": STRING_SCHEMA,
+            },
+        )()
 
     def run_audit(
         self,
@@ -338,10 +345,12 @@ class NovaActAuditProvider(BrowserAuditProvider):
             starting_page=target_url,
             headless=self.headless,
             tty=self.tty,
-            timeout=self.timeout,
+            go_to_url_timeout=self.timeout,
         ) as nova:
             # Initial screenshot
-            self._capture_screenshot(audit_id, nova, "cookie_consent", persona, "initial", screenshot_paths, screenshot_urls)
+            self._capture_screenshot(
+                audit_id, nova, "cookie_consent", persona, "initial", screenshot_paths, screenshot_urls
+            )
             activity_log.append(f"Loaded {target_url}")
             state_snapshots.append({"url": target_url, "step": "initial", "action": "page_load"})
 
@@ -365,7 +374,9 @@ class NovaActAuditProvider(BrowserAuditProvider):
 
             if has_banner:
                 activity_log.append("Cookie banner detected")
-                self._capture_screenshot(audit_id, nova, "cookie_consent", persona, "banner_found", screenshot_paths, screenshot_urls)
+                self._capture_screenshot(
+                    audit_id, nova, "cookie_consent", persona, "banner_found", screenshot_paths, screenshot_urls
+                )
 
                 # Extract structured observations
                 observation_result = nova.act_get(
@@ -384,7 +395,7 @@ class NovaActAuditProvider(BrowserAuditProvider):
 
                 # Try to interact based on persona
                 if persona == "privacy_sensitive":
-                    action_result = nova.act(
+                    nova.act(
                         "Try to reject all cookies or select only necessary/essential cookies. "
                         "Click through any settings/preferences if needed to find the minimal option.",
                         max_steps=15,
@@ -392,7 +403,7 @@ class NovaActAuditProvider(BrowserAuditProvider):
                     interacted_controls.append("reject_all_attempt")
                     activity_log.append("Attempted to reject cookies (privacy-sensitive persona)")
                 elif persona == "cost_sensitive":
-                    action_result = nova.act(
+                    nova.act(
                         "Look for any discount or savings tied to accepting cookies. "
                         "If found, note it. Then try to accept cookies if it's the only way to see prices.",
                         max_steps=10,
@@ -400,7 +411,7 @@ class NovaActAuditProvider(BrowserAuditProvider):
                     interacted_controls.append("price_check_attempt")
                     activity_log.append("Checked for price-linked cookie acceptance")
                 else:  # exit_intent
-                    action_result = nova.act(
+                    nova.act(
                         "Try to dismiss the cookie banner without making a choice, or find a 'manage preferences' option.",
                         max_steps=8,
                     )
@@ -408,12 +419,16 @@ class NovaActAuditProvider(BrowserAuditProvider):
                     activity_log.append("Attempted to dismiss or manage cookie preferences")
 
                 # Post-interaction screenshot
-                self._capture_screenshot(audit_id, nova, "cookie_consent", persona, "after_interaction", screenshot_paths, screenshot_urls)
-                state_snapshots.append({
-                    "url": nova.page.url if hasattr(nova, "page") else target_url,
-                    "step": "after_interaction",
-                    "action": interacted_controls[-1] if interacted_controls else "none",
-                })
+                self._capture_screenshot(
+                    audit_id, nova, "cookie_consent", persona, "after_interaction", screenshot_paths, screenshot_urls
+                )
+                state_snapshots.append(
+                    {
+                        "url": nova.page.url if hasattr(nova, "page") else target_url,
+                        "step": "after_interaction",
+                        "action": interacted_controls[-1] if interacted_controls else "none",
+                    }
+                )
 
                 # Re-extract observations after interaction
                 post_result = nova.act_get(
@@ -433,7 +448,9 @@ class NovaActAuditProvider(BrowserAuditProvider):
                 evidence = ObservationEvidence(
                     screenshot_urls=screenshot_urls,
                     screenshot_paths=screenshot_paths,
-                    button_labels=[consent_data.accept_button_text, consent_data.reject_button_text] if consent_data.reject_button_text else [consent_data.accept_button_text],
+                    button_labels=[consent_data.accept_button_text, consent_data.reject_button_text]
+                    if consent_data.reject_button_text
+                    else [consent_data.accept_button_text],
                     checkbox_states={opt: True for opt in consent_data.pre_selected_options},
                     price_points=[],
                     text_snippets=consent_data.deceptive_language,
@@ -441,7 +458,9 @@ class NovaActAuditProvider(BrowserAuditProvider):
                     page_title="Cookie Consent Analysis",
                     dom_excerpt=f"Banner present: {consent_data.banner_present}, Asymmetry: {consent_data.asymmetry_detected}",
                     step_count=len(interacted_controls) + 1,
-                    friction_indicators=["Preference layer required"] if consent_data.reject_clicks_required > consent_data.accept_clicks_required else [],
+                    friction_indicators=["Preference layer required"]
+                    if consent_data.reject_clicks_required > consent_data.accept_clicks_required
+                    else [],
                     activity_log=activity_log,
                     metadata={
                         "source": "nova_act",
@@ -520,28 +539,40 @@ class NovaActAuditProvider(BrowserAuditProvider):
             starting_page=target_url,
             headless=self.headless,
             tty=self.tty,
-            timeout=self.timeout,
+            go_to_url_timeout=self.timeout,
         ) as nova:
             # Initial state
-            self._capture_screenshot(audit_id, nova, "checkout_flow", persona, "initial", screenshot_paths, screenshot_urls)
+            self._capture_screenshot(
+                audit_id, nova, "checkout_flow", persona, "initial", screenshot_paths, screenshot_urls
+            )
             activity_log.append(f"Loaded {target_url}")
             state_snapshots.append({"url": target_url, "step": "initial", "action": "page_load"})
 
             # Navigate to find products/offers based on persona
             if persona == "cost_sensitive":
-                nova.act("Look for deals, discounts, or lowest-priced items. Click on a product or offer that shows a price.", max_steps=8)
+                nova.act(
+                    "Look for deals, discounts, or lowest-priced items. Click on a product or offer that shows a price.",
+                    max_steps=8,
+                )
                 interacted_controls.append("select_offer")
                 activity_log.append("Selected an offer/product (cost-sensitive persona)")
             elif persona == "privacy_sensitive":
-                nova.act("Look for products but avoid anything requiring account creation. Try to find 'guest checkout' or 'pay at property' options.", max_steps=8)
+                nova.act(
+                    "Look for products but avoid anything requiring account creation. Try to find 'guest checkout' or 'pay at property' options.",
+                    max_steps=8,
+                )
                 interacted_controls.append("privacy_aware_navigation")
                 activity_log.append("Navigated with privacy preferences")
             else:  # exit_intent
-                nova.act("Browse products but act hesitant. Look at details without committing to purchase.", max_steps=5)
+                nova.act(
+                    "Browse products but act hesitant. Look at details without committing to purchase.", max_steps=5
+                )
                 interacted_controls.append("browse_hesitant")
                 activity_log.append("Browsed with exit-intent behavior")
 
-            self._capture_screenshot(audit_id, nova, "checkout_flow", persona, "product_selected", screenshot_paths, screenshot_urls)
+            self._capture_screenshot(
+                audit_id, nova, "checkout_flow", persona, "product_selected", screenshot_paths, screenshot_urls
+            )
 
             # Extract checkout observations
             checkout_result = nova.act_get(
@@ -568,7 +599,9 @@ class NovaActAuditProvider(BrowserAuditProvider):
             interacted_controls.append("proceed_checkout")
             activity_log.append("Attempted to proceed through checkout flow")
 
-            self._capture_screenshot(audit_id, nova, "checkout_flow", persona, "checkout_progress", screenshot_paths, screenshot_urls)
+            self._capture_screenshot(
+                audit_id, nova, "checkout_flow", persona, "checkout_progress", screenshot_paths, screenshot_urls
+            )
 
             # Extract final checkout observations
             final_checkout_result = nova.act_get(
@@ -585,12 +618,14 @@ class NovaActAuditProvider(BrowserAuditProvider):
             except Exception:
                 pass
 
-            state_snapshots.append({
-                "url": nova.page.url if hasattr(nova, "page") else target_url,
-                "step": "checkout_review",
-                "action": "review_checkout",
-                "prices": checkout_data.prices_seen,
-            })
+            state_snapshots.append(
+                {
+                    "url": nova.page.url if hasattr(nova, "page") else target_url,
+                    "step": "checkout_review",
+                    "action": "review_checkout",
+                    "prices": checkout_data.prices_seen,
+                }
+            )
 
             # Build observation evidence
             evidence = ObservationEvidence(
@@ -646,10 +681,12 @@ class NovaActAuditProvider(BrowserAuditProvider):
             starting_page=target_url,
             headless=self.headless,
             tty=self.tty,
-            timeout=self.timeout,
+            go_to_url_timeout=self.timeout,
         ) as nova:
             # Initial state
-            self._capture_screenshot(audit_id, nova, "subscription_cancellation", persona, "initial", screenshot_paths, screenshot_urls)
+            self._capture_screenshot(
+                audit_id, nova, "subscription_cancellation", persona, "initial", screenshot_paths, screenshot_urls
+            )
             activity_log.append(f"Loaded {target_url}")
             state_snapshots.append({"url": target_url, "step": "initial", "action": "page_load"})
 
@@ -663,7 +700,9 @@ class NovaActAuditProvider(BrowserAuditProvider):
             interacted_controls.append("find_account_settings")
             activity_log.append("Attempted to find account/subscription settings")
 
-            self._capture_screenshot(audit_id, nova, "subscription_cancellation", persona, "account_area", screenshot_paths, screenshot_urls)
+            self._capture_screenshot(
+                audit_id, nova, "subscription_cancellation", persona, "account_area", screenshot_paths, screenshot_urls
+            )
 
             # Check for cancellation flow
             cancel_result = nova.act_get(
@@ -690,7 +729,15 @@ class NovaActAuditProvider(BrowserAuditProvider):
                 interacted_controls.append("initiate_cancellation")
                 activity_log.append("Initiated cancellation flow")
 
-                self._capture_screenshot(audit_id, nova, "subscription_cancellation", persona, "cancel_flow", screenshot_paths, screenshot_urls)
+                self._capture_screenshot(
+                    audit_id,
+                    nova,
+                    "subscription_cancellation",
+                    persona,
+                    "cancel_flow",
+                    screenshot_paths,
+                    screenshot_urls,
+                )
 
                 # Extract observations from cancellation flow
                 flow_result = nova.act_get(
@@ -709,12 +756,14 @@ class NovaActAuditProvider(BrowserAuditProvider):
                 except Exception:
                     pass
 
-                state_snapshots.append({
-                    "url": nova.page.url if hasattr(nova, "page") else target_url,
-                    "step": "cancellation_attempted",
-                    "action": "cancel_flow",
-                    "detours": cancel_data.detours_encountered,
-                })
+                state_snapshots.append(
+                    {
+                        "url": nova.page.url if hasattr(nova, "page") else target_url,
+                        "step": "cancellation_attempted",
+                        "action": "cancel_flow",
+                        "detours": cancel_data.detours_encountered,
+                    }
+                )
 
             # Build observation evidence
             friction_indicators: list[str] = []
@@ -728,7 +777,8 @@ class NovaActAuditProvider(BrowserAuditProvider):
             evidence = ObservationEvidence(
                 screenshot_urls=screenshot_urls,
                 screenshot_paths=screenshot_paths,
-                button_labels=cancel_data.alternative_options + (cancel_data.confirmshaming_phrases if cancel_data.confirmshaming_detected else []),
+                button_labels=cancel_data.alternative_options
+                + (cancel_data.confirmshaming_phrases if cancel_data.confirmshaming_detected else []),
                 checkbox_states={},
                 price_points=[],
                 text_snippets=cancel_data.confirmshaming_phrases if cancel_data.confirmshaming_detected else [],
@@ -778,10 +828,12 @@ class NovaActAuditProvider(BrowserAuditProvider):
             starting_page=target_url,
             headless=self.headless,
             tty=self.tty,
-            timeout=self.timeout,
+            go_to_url_timeout=self.timeout,
         ) as nova:
             # Initial state
-            self._capture_screenshot(audit_id, nova, "account_deletion", persona, "initial", screenshot_paths, screenshot_urls)
+            self._capture_screenshot(
+                audit_id, nova, "account_deletion", persona, "initial", screenshot_paths, screenshot_urls
+            )
             activity_log.append(f"Loaded {target_url}")
             state_snapshots.append({"url": target_url, "step": "initial", "action": "page_load"})
 
@@ -795,7 +847,9 @@ class NovaActAuditProvider(BrowserAuditProvider):
             interacted_controls.append("find_privacy_settings")
             activity_log.append("Attempted to find privacy/account settings")
 
-            self._capture_screenshot(audit_id, nova, "account_deletion", persona, "settings_area", screenshot_paths, screenshot_urls)
+            self._capture_screenshot(
+                audit_id, nova, "account_deletion", persona, "settings_area", screenshot_paths, screenshot_urls
+            )
 
             # Check for deletion option
             deletion_result = nova.act_get(
@@ -822,7 +876,9 @@ class NovaActAuditProvider(BrowserAuditProvider):
                 interacted_controls.append("initiate_deletion")
                 activity_log.append("Initiated account deletion flow")
 
-                self._capture_screenshot(audit_id, nova, "account_deletion", persona, "deletion_flow", screenshot_paths, screenshot_urls)
+                self._capture_screenshot(
+                    audit_id, nova, "account_deletion", persona, "deletion_flow", screenshot_paths, screenshot_urls
+                )
 
                 # Extract observations from deletion flow
                 flow_result = nova.act_get(
@@ -841,12 +897,14 @@ class NovaActAuditProvider(BrowserAuditProvider):
                 except Exception:
                     pass
 
-                state_snapshots.append({
-                    "url": nova.page.url if hasattr(nova, "page") else target_url,
-                    "step": "deletion_attempted",
-                    "action": "deletion_flow",
-                    "obstacles": deletion_data.obstacles_encountered,
-                })
+                state_snapshots.append(
+                    {
+                        "url": nova.page.url if hasattr(nova, "page") else target_url,
+                        "step": "deletion_attempted",
+                        "action": "deletion_flow",
+                        "obstacles": deletion_data.obstacles_encountered,
+                    }
+                )
 
             # Build observation evidence
             friction_indicators: list[str] = []
@@ -910,10 +968,12 @@ class NovaActAuditProvider(BrowserAuditProvider):
             starting_page=target_url,
             headless=self.headless,
             tty=self.tty,
-            timeout=self.timeout,
+            go_to_url_timeout=self.timeout,
         ) as nova:
             # Initial state
-            self._capture_screenshot(audit_id, nova, "newsletter_signup", persona, "initial", screenshot_paths, screenshot_urls)
+            self._capture_screenshot(
+                audit_id, nova, "newsletter_signup", persona, "initial", screenshot_paths, screenshot_urls
+            )
             activity_log.append(f"Loaded {target_url}")
             state_snapshots.append({"url": target_url, "step": "initial", "action": "page_load"})
 
@@ -927,7 +987,9 @@ class NovaActAuditProvider(BrowserAuditProvider):
             interacted_controls.append("find_newsletter_elements")
             activity_log.append("Searched for newsletter signup elements")
 
-            self._capture_screenshot(audit_id, nova, "newsletter_signup", persona, "search_complete", screenshot_paths, screenshot_urls)
+            self._capture_screenshot(
+                audit_id, nova, "newsletter_signup", persona, "search_complete", screenshot_paths, screenshot_urls
+            )
 
             # Extract newsletter observations
             newsletter_result = nova.act_get(
@@ -964,7 +1026,15 @@ class NovaActAuditProvider(BrowserAuditProvider):
                     interacted_controls.append("check_exit_intent_popups")
                     activity_log.append("Checked for exit-intent newsletter prompts")
 
-                self._capture_screenshot(audit_id, nova, "newsletter_signup", persona, "interaction_complete", screenshot_paths, screenshot_urls)
+                self._capture_screenshot(
+                    audit_id,
+                    nova,
+                    "newsletter_signup",
+                    persona,
+                    "interaction_complete",
+                    screenshot_paths,
+                    screenshot_urls,
+                )
 
             # Build observation evidence
             friction_indicators: list[str] = []
@@ -1028,10 +1098,12 @@ class NovaActAuditProvider(BrowserAuditProvider):
             starting_page=target_url,
             headless=self.headless,
             tty=self.tty,
-            timeout=self.timeout,
+            go_to_url_timeout=self.timeout,
         ) as nova:
             # Initial state
-            self._capture_screenshot(audit_id, nova, "pricing_comparison", persona, "initial", screenshot_paths, screenshot_urls)
+            self._capture_screenshot(
+                audit_id, nova, "pricing_comparison", persona, "initial", screenshot_paths, screenshot_urls
+            )
             activity_log.append(f"Loaded {target_url}")
             state_snapshots.append({"url": target_url, "step": "initial", "action": "page_load"})
 
@@ -1045,7 +1117,9 @@ class NovaActAuditProvider(BrowserAuditProvider):
             interacted_controls.append("browse_prices")
             activity_log.append("Browsed for price information")
 
-            self._capture_screenshot(audit_id, nova, "pricing_comparison", persona, "first_pass", screenshot_paths, screenshot_urls)
+            self._capture_screenshot(
+                audit_id, nova, "pricing_comparison", persona, "first_pass", screenshot_paths, screenshot_urls
+            )
 
             # Extract pricing observations
             pricing_result = nova.act_get(
@@ -1072,7 +1146,9 @@ class NovaActAuditProvider(BrowserAuditProvider):
             interacted_controls.append("continue_browsing")
             activity_log.append("Continued browsing to check price consistency")
 
-            self._capture_screenshot(audit_id, nova, "pricing_comparison", persona, "second_pass", screenshot_paths, screenshot_urls)
+            self._capture_screenshot(
+                audit_id, nova, "pricing_comparison", persona, "second_pass", screenshot_paths, screenshot_urls
+            )
 
             # Re-extract pricing observations
             final_pricing_result = nova.act_get(
@@ -1090,12 +1166,14 @@ class NovaActAuditProvider(BrowserAuditProvider):
             except Exception:
                 pass
 
-            state_snapshots.append({
-                "url": nova.page.url if hasattr(nova, "page") else target_url,
-                "step": "pricing_check",
-                "action": "price_comparison",
-                "prices": pricing_data.prices_found,
-            })
+            state_snapshots.append(
+                {
+                    "url": nova.page.url if hasattr(nova, "page") else target_url,
+                    "step": "pricing_check",
+                    "action": "price_comparison",
+                    "prices": pricing_data.prices_found,
+                }
+            )
 
             # Calculate price delta if multiple prices found
             price_delta = 0.0

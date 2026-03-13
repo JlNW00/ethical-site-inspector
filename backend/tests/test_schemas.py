@@ -1,4 +1,5 @@
 """Tests for Pydantic schemas in app.schemas.audit."""
+
 from __future__ import annotations
 
 import os
@@ -23,6 +24,7 @@ from app.schemas.audit import (
 # ---------------------------------------------------------------------------
 # AuditCreateRequest
 # ---------------------------------------------------------------------------
+
 
 class TestAuditCreateRequest:
     def test_valid_url(self):
@@ -61,6 +63,7 @@ class TestAuditCreateRequest:
 # HealthResponse
 # ---------------------------------------------------------------------------
 
+
 class TestHealthResponse:
     def test_health_response_creation(self):
         now = datetime.now(timezone.utc)
@@ -73,6 +76,7 @@ class TestHealthResponse:
 # ---------------------------------------------------------------------------
 # ReadinessResponse
 # ---------------------------------------------------------------------------
+
 
 class TestReadinessResponse:
     def test_readiness_response_creation(self):
@@ -113,6 +117,7 @@ class TestReadinessResponse:
 # ---------------------------------------------------------------------------
 # FindingRead (from_attributes)
 # ---------------------------------------------------------------------------
+
 
 class TestFindingRead:
     def test_finding_read_from_dict(self):

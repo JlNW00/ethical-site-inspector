@@ -108,7 +108,7 @@ class MockClassifierProvider(ClassifierProvider):
             )
 
         return (
-            f"{source_label} evidence {context_label} surfaced the line \"{quote[:160]}\" during the "
+            f'{source_label} evidence {context_label} surfaced the line "{quote[:160]}" during the '
             f"{draft.scenario.replace('_', ' ')} journey for the {draft.persona.replace('_', ' ')} persona. "
             f"This finding is tied to the captured UI state rather than a generic dark-pattern template."
         )
@@ -162,9 +162,7 @@ class LiveNovaClassifierProvider(ClassifierProvider):
                 inferenceConfig={"temperature": 0.2, "maxTokens": 900},
             )
             raw_text = "".join(
-                part.get("text", "")
-                for part in response["output"]["message"]["content"]
-                if isinstance(part, dict)
+                part.get("text", "") for part in response["output"]["message"]["content"] if isinstance(part, dict)
             )
             parsed = self._parse_response(raw_text)
             return ClassifiedFinding(

@@ -1,4 +1,5 @@
 """Tests for health and readiness API endpoints."""
+
 from __future__ import annotations
 
 import os

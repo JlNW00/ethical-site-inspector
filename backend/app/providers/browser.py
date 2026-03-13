@@ -133,7 +133,9 @@ class MockBrowserAuditProvider(BrowserAuditProvider):
                 checkbox_states=evidence["checkbox_states"],
                 price_points=evidence["price_points"],
                 text_snippets=evidence["text_snippets"],
-                headings=evidence.get("headings", [scenario.replace("_", " ").title(), persona.replace("_", " ").title()]),
+                headings=evidence.get(
+                    "headings", [scenario.replace("_", " ").title(), persona.replace("_", " ").title()]
+                ),
                 page_title=evidence.get("page_title", f"{host} {scenario.replace('_', ' ').title()}"),
                 dom_excerpt=evidence["dom_excerpt"],
                 step_count=evidence["step_count"],
@@ -164,9 +166,19 @@ class MockBrowserAuditProvider(BrowserAuditProvider):
                 "page_title": "Cookie preferences",
                 "dom_excerpt": "<div class='banner'><button>Accept all</button><a>Manage settings</a></div>",
                 "step_count": 3,
-                "friction_indicators": ["Reject option hidden behind secondary link", "Retention copy guilting the user"],
-                "activity_log": ["Cookie banner detected", "Secondary preferences panel opened", "Pre-selected consent toggles found"],
-                "image_notes": ["Consent banner uses a dominant approval CTA", "Preferences modal shows pre-selected toggles"],
+                "friction_indicators": [
+                    "Reject option hidden behind secondary link",
+                    "Retention copy guilting the user",
+                ],
+                "activity_log": [
+                    "Cookie banner detected",
+                    "Secondary preferences panel opened",
+                    "Pre-selected consent toggles found",
+                ],
+                "image_notes": [
+                    "Consent banner uses a dominant approval CTA",
+                    "Preferences modal shows pre-selected toggles",
+                ],
             },
             ("cookie_consent", "cost_sensitive"): {
                 "accent": "#d97706",
@@ -181,8 +193,14 @@ class MockBrowserAuditProvider(BrowserAuditProvider):
                 "dom_excerpt": "<div class='cookie-offer'>Accept & save 10%</div>",
                 "step_count": 2,
                 "friction_indicators": ["Discount incentive tied to tracking acceptance"],
-                "activity_log": ["Discount-linked consent variant surfaced", "Essential-only action located below the fold"],
-                "image_notes": ["Discount incentive attached to consent", "Essential-only path is visually de-emphasized"],
+                "activity_log": [
+                    "Discount-linked consent variant surfaced",
+                    "Essential-only action located below the fold",
+                ],
+                "image_notes": [
+                    "Discount incentive attached to consent",
+                    "Essential-only path is visually de-emphasized",
+                ],
             },
             ("cookie_consent", "exit_intent"): {
                 "accent": "#9f1239",
@@ -202,7 +220,11 @@ class MockBrowserAuditProvider(BrowserAuditProvider):
             },
             ("checkout_flow", "privacy_sensitive"): {
                 "accent": "#0f766e",
-                "button_labels": ["Continue to secure checkout", "Add protection plan", "Save details for faster checkout"],
+                "button_labels": [
+                    "Continue to secure checkout",
+                    "Add protection plan",
+                    "Save details for faster checkout",
+                ],
                 "checkbox_states": {"Save card for future use": True, "Protection plan": False},
                 "price_points": [{"label": "Product page", "value": 49.99}, {"label": "Checkout", "value": 57.98}],
                 "text_snippets": [
@@ -214,7 +236,11 @@ class MockBrowserAuditProvider(BrowserAuditProvider):
                 "dom_excerpt": "<form><input type='checkbox' checked name='save-card' /></form>",
                 "step_count": 4,
                 "friction_indicators": ["Stored-payment default enabled"],
-                "activity_log": ["Checkout CTA clicked", "Saved-payment checkbox detected", "Total price increased at checkout"],
+                "activity_log": [
+                    "Checkout CTA clicked",
+                    "Saved-payment checkbox detected",
+                    "Total price increased at checkout",
+                ],
                 "image_notes": ["Checkout total exceeds product page total", "Stored-card preference pre-selected"],
             },
             ("checkout_flow", "cost_sensitive"): {
@@ -231,8 +257,15 @@ class MockBrowserAuditProvider(BrowserAuditProvider):
                 "dom_excerpt": "<aside>Only 2 left at this price</aside>",
                 "step_count": 5,
                 "friction_indicators": ["Only X left / countdown copy", "Extra preference step present"],
-                "activity_log": ["Urgency banner captured", "Protection add-on preselected", "Review order reveals higher total"],
-                "image_notes": ["Urgency banner adjacent to checkout CTA", "Review order includes late-stage fee increase"],
+                "activity_log": [
+                    "Urgency banner captured",
+                    "Protection add-on preselected",
+                    "Review order reveals higher total",
+                ],
+                "image_notes": [
+                    "Urgency banner adjacent to checkout CTA",
+                    "Review order includes late-stage fee increase",
+                ],
             },
             ("checkout_flow", "exit_intent"): {
                 "accent": "#7c3aed",
@@ -263,9 +296,20 @@ class MockBrowserAuditProvider(BrowserAuditProvider):
                 "page_title": "Cancellation flow",
                 "dom_excerpt": "<section class='retention'>Talk to support</section>",
                 "step_count": 7,
-                "friction_indicators": ["Support detour likely required", "Retention copy guilting the user", "Extra step present"],
-                "activity_log": ["Account settings reached", "Pause plan option prioritized", "Support detour inserted before final cancellation"],
-                "image_notes": ["Retention screen appears before cancellation", "Support detour blocks direct cancel action"],
+                "friction_indicators": [
+                    "Support detour likely required",
+                    "Retention copy guilting the user",
+                    "Extra step present",
+                ],
+                "activity_log": [
+                    "Account settings reached",
+                    "Pause plan option prioritized",
+                    "Support detour inserted before final cancellation",
+                ],
+                "image_notes": [
+                    "Retention screen appears before cancellation",
+                    "Support detour blocks direct cancel action",
+                ],
             },
             ("cancellation_flow", "cost_sensitive"): {
                 "accent": "#b45309",
@@ -315,8 +359,8 @@ class MockBrowserAuditProvider(BrowserAuditProvider):
   <rect x="80" y="90" width="1280" height="720" rx="32" fill="#f8fafc"/>
   <rect x="80" y="90" width="1280" height="84" rx="32" fill="{accent}"/>
   <text x="128" y="142" fill="#f8fafc" font-family="Segoe UI, Arial" font-size="28" font-weight="700">EthicalSiteInspector Mock Capture</text>
-  <text x="128" y="245" fill="#0f172a" font-family="Segoe UI, Arial" font-size="48" font-weight="700">{scenario.replace('_', ' ').title()}</text>
-  <text x="128" y="302" fill="#334155" font-family="Segoe UI, Arial" font-size="28">{persona.replace('_', ' ').title()} persona on {host}</text>
+  <text x="128" y="245" fill="#0f172a" font-family="Segoe UI, Arial" font-size="48" font-weight="700">{scenario.replace("_", " ").title()}</text>
+  <text x="128" y="302" fill="#334155" font-family="Segoe UI, Arial" font-size="28">{persona.replace("_", " ").title()} persona on {host}</text>
   <rect x="128" y="360" width="1184" height="220" rx="24" fill="#e2e8f0"/>
   <text x="164" y="430" fill="#0f172a" font-family="Segoe UI, Arial" font-size="34" font-weight="700">Captured signal</text>
   <text x="164" y="486" fill="#334155" font-family="Segoe UI, Arial" font-size="26">{note}</text>
@@ -468,14 +512,18 @@ class PlaywrightAuditProvider(BrowserAuditProvider):
             ),
         )
 
-    def _attempt_scenario_actions(self, page, scenario: str, persona: str, activity_log: list[str], state_snapshots: list[dict]) -> list[str]:
+    def _attempt_scenario_actions(
+        self, page, scenario: str, persona: str, activity_log: list[str], state_snapshots: list[dict]
+    ) -> list[str]:
         if scenario == "checkout_flow":
             return self._attempt_checkout_actions(page, persona, activity_log, state_snapshots)
         if scenario == "cookie_consent":
             return self._attempt_cookie_actions(page, persona, activity_log, state_snapshots)
         return self._attempt_plan_actions(page, scenario, persona, activity_log, state_snapshots)
 
-    def _attempt_plan_actions(self, page, scenario: str, persona: str, activity_log: list[str], state_snapshots: list[dict]) -> list[str]:
+    def _attempt_plan_actions(
+        self, page, scenario: str, persona: str, activity_log: list[str], state_snapshots: list[dict]
+    ) -> list[str]:
         interactions: list[str] = []
         plan = self._scenario_action_plan(scenario, persona)
         try:
@@ -493,12 +541,24 @@ class PlaywrightAuditProvider(BrowserAuditProvider):
             activity_log.append(f"Scenario interaction degraded gracefully: {exc.__class__.__name__}")
         return interactions
 
-    def _attempt_cookie_actions(self, page, persona: str, activity_log: list[str], state_snapshots: list[dict]) -> list[str]:
+    def _attempt_cookie_actions(
+        self, page, persona: str, activity_log: list[str], state_snapshots: list[dict]
+    ) -> list[str]:
         current_buttons = state_snapshots[-1].get("buttons", []) if state_snapshots else []
         direct_cookie_controls = any(
             term in label.lower()
             for label in current_buttons
-            for term in ("accept", "reject", "decline", "allow", "agree", "essential", "necessary", "preferences", "settings")
+            for term in (
+                "accept",
+                "reject",
+                "decline",
+                "allow",
+                "agree",
+                "essential",
+                "necessary",
+                "preferences",
+                "settings",
+            )
         )
         interactions = (
             self._attempt_plan_actions(page, "cookie_consent", persona, activity_log, state_snapshots)
@@ -526,10 +586,14 @@ class PlaywrightAuditProvider(BrowserAuditProvider):
             page.wait_for_timeout(900)
             state_snapshots.append(self._snapshot_state(page, scenario="cookie_consent", label="consent_entry"))
             return interactions
-        activity_log.append("No visible cookie or privacy entry point was captured after dismissing unrelated blockers.")
+        activity_log.append(
+            "No visible cookie or privacy entry point was captured after dismissing unrelated blockers."
+        )
         return interactions
 
-    def _attempt_checkout_actions(self, page, persona: str, activity_log: list[str], state_snapshots: list[dict]) -> list[str]:
+    def _attempt_checkout_actions(
+        self, page, persona: str, activity_log: list[str], state_snapshots: list[dict]
+    ) -> list[str]:
         interactions: list[str] = []
         try:
             offer = self._choose_checkout_offer(page, persona)
@@ -562,7 +626,8 @@ class PlaywrightAuditProvider(BrowserAuditProvider):
                 label = self._click_first_matching(
                     page,
                     action["keywords"],
-                    selector=action.get("selector") or "button, a, [role='button'], input[type='submit'], input[type='button']",
+                    selector=action.get("selector")
+                    or "button, a, [role='button'], input[type='submit'], input[type='button']",
                 )
                 if not label:
                     continue
@@ -675,9 +740,13 @@ class PlaywrightAuditProvider(BrowserAuditProvider):
         texts = extract_lines_matching_keywords(page, keywords, limit=10)
         buttons = extract_controls_matching_keywords(page, keywords, limit=10)
         all_prices = extract_prices(page, limit=12)
-        prices = [item for item in all_prices if self._price_is_scenario_grounded(scenario, item, texts, headings, buttons)]
+        prices = [
+            item for item in all_prices if self._price_is_scenario_grounded(scenario, item, texts, headings, buttons)
+        ]
         page_title = extract_page_title(page)
-        state_type = self._state_type(page, scenario=scenario, label=label, headings=headings, texts=texts, buttons=buttons)
+        state_type = self._state_type(
+            page, scenario=scenario, label=label, headings=headings, texts=texts, buttons=buttons
+        )
         grounded = self._state_is_grounded(
             scenario,
             label=label,
@@ -706,7 +775,11 @@ class PlaywrightAuditProvider(BrowserAuditProvider):
         plans = {
             "cookie_consent": {
                 "privacy_sensitive": [
-                    {"type": "click", "keywords": ["reject", "decline", "necessary", "essential"], "label": "consent_decline"},
+                    {
+                        "type": "click",
+                        "keywords": ["reject", "decline", "necessary", "essential"],
+                        "label": "consent_decline",
+                    },
                     {"type": "click", "keywords": ["settings", "preferences"], "label": "consent_settings"},
                 ],
                 "cost_sensitive": [
@@ -720,7 +793,11 @@ class PlaywrightAuditProvider(BrowserAuditProvider):
             },
             "checkout_flow": {
                 "privacy_sensitive": [
-                    {"type": "click", "keywords": ["reject", "decline", "necessary", "essential"], "label": "checkout_privacy_guard"},
+                    {
+                        "type": "click",
+                        "keywords": ["reject", "decline", "necessary", "essential"],
+                        "label": "checkout_privacy_guard",
+                    },
                 ],
                 "cost_sensitive": [
                     {"type": "click", "keywords": ["reserve", "book", "select"], "label": "reserve_step"},
@@ -747,7 +824,9 @@ class PlaywrightAuditProvider(BrowserAuditProvider):
         }
         return plans.get(scenario, {}).get(persona, [])
 
-    def _state_type(self, page, *, scenario: str, label: str, headings: list[str], texts: list[str], buttons: list[str]) -> str:
+    def _state_type(
+        self, page, *, scenario: str, label: str, headings: list[str], texts: list[str], buttons: list[str]
+    ) -> str:
         if scenario != "checkout_flow":
             return label
         combined = " ".join(headings + texts + buttons).lower()
@@ -779,33 +858,66 @@ class PlaywrightAuditProvider(BrowserAuditProvider):
     ) -> bool:
         combined = " ".join(texts + headings + buttons).lower()
         if scenario == "cookie_consent":
-            return bool(buttons or any(term in combined for term in ("cookie", "consent", "privacy", "tracking", "accept", "reject")))
+            return bool(
+                buttons
+                or any(term in combined for term in ("cookie", "consent", "privacy", "tracking", "accept", "reject"))
+            )
         if scenario == "checkout_flow":
             if label == "initial" or state_type == "landing":
                 return False
             if state_type == "offer":
-                return bool(prices or any(term in combined for term in ("deal", "price", "current price", "original price", "night")))
+                return bool(
+                    prices
+                    or any(term in combined for term in ("deal", "price", "current price", "original price", "night"))
+                )
             if state_type == "results":
                 return bool(
-                    any(term in combined for term in ("hotels and places to stay", "check availability", "availability", "hotel"))
+                    any(
+                        term in combined
+                        for term in ("hotels and places to stay", "check availability", "availability", "hotel")
+                    )
                     or "/city/" in page_url
                     or "searchresults.html" in page_url
                 )
             if state_type in {"detail", "reserve", "policy"}:
-                return bool(any(term in combined for term in ("reserve", "availability", "room", "charges may apply", "damage deposit", "policy")))
+                return bool(
+                    any(
+                        term in combined
+                        for term in ("reserve", "availability", "room", "charges may apply", "damage deposit", "policy")
+                    )
+                )
             return False
         if scenario == "cancellation_flow":
             return label != "initial" and bool(
-                buttons or any(term in combined for term in ("cancel", "unsubscribe", "manage", "pause", "billing", "support"))
+                buttons
+                or any(term in combined for term in ("cancel", "unsubscribe", "manage", "pause", "billing", "support"))
             )
         return False
 
     @staticmethod
-    def _price_is_scenario_grounded(scenario: str, price_point: dict, texts: list[str], headings: list[str], buttons: list[str]) -> bool:
+    def _price_is_scenario_grounded(
+        scenario: str, price_point: dict, texts: list[str], headings: list[str], buttons: list[str]
+    ) -> bool:
         if scenario != "checkout_flow":
             return False
         context = " ".join(texts + headings + buttons + [str(price_point.get("label", ""))]).lower()
-        return any(term in context for term in ("price", "current price", "original price", "tax", "fee", "night", "reserve", "room", "deal", "availability", "book", "charges may apply"))
+        return any(
+            term in context
+            for term in (
+                "price",
+                "current price",
+                "original price",
+                "tax",
+                "fee",
+                "night",
+                "reserve",
+                "room",
+                "deal",
+                "availability",
+                "book",
+                "charges may apply",
+            )
+        )
 
     def _merge_unique_from_states(self, states: list[dict], key: str, limit: int) -> list[str]:
         values: list[str] = []
@@ -875,7 +987,9 @@ class PlaywrightAuditProvider(BrowserAuditProvider):
             if any("support" in control.lower() for control in interacted_controls):
                 indicators.append("Support detour likely required")
         elif scenario == "cookie_consent":
-            if any("settings" in control.lower() or "preferences" in control.lower() for control in interacted_controls):
+            if any(
+                "settings" in control.lower() or "preferences" in control.lower() for control in interacted_controls
+            ):
                 indicators.append("Preference layer required before decision")
         deduped: list[str] = []
         for item in indicators:

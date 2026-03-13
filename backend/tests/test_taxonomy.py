@@ -4,8 +4,6 @@ Tests for taxonomy module - verifies single source of truth for dark patterns.
 
 from __future__ import annotations
 
-import pytest
-
 from app.core import taxonomy
 
 
@@ -119,7 +117,7 @@ class TestSeverityLevels:
     def test_all_four_severity_levels_defined(self) -> None:
         """taxonomy has all 4 severity levels."""
         expected_severity = ["low", "medium", "high", "critical"]
-        assert taxonomy.SEVERITY_LEVELS == expected_severity
+        assert expected_severity == taxonomy.SEVERITY_LEVELS
 
     def test_severity_rank_order(self) -> None:
         """SEVERITY_RANK has correct ordering."""
@@ -208,7 +206,14 @@ class TestPatternFamilyCompatibility:
 
     def test_pattern_family_to_category_mapping_exists(self) -> None:
         """PATTERN_FAMILY_TO_CATEGORY maps all legacy families."""
-        expected_families = ["asymmetric_choice", "hidden_costs", "confirmshaming", "obstruction", "sneaking", "urgency"]
+        expected_families = [
+            "asymmetric_choice",
+            "hidden_costs",
+            "confirmshaming",
+            "obstruction",
+            "sneaking",
+            "urgency",
+        ]
         for family in expected_families:
             assert family in taxonomy.PATTERN_FAMILY_TO_CATEGORY
             assert taxonomy.PATTERN_FAMILY_TO_CATEGORY[family] in taxonomy.DARK_PATTERN_CATEGORIES
@@ -230,7 +235,7 @@ class TestEvidenceTypes:
     def test_evidence_types_defined(self) -> None:
         """EVIDENCE_TYPES has all expected types."""
         expected = ["nova_ai", "heuristic", "mock", "rule_based"]
-        assert taxonomy.EVIDENCE_TYPES == expected
+        assert expected == taxonomy.EVIDENCE_TYPES
 
     def test_evidence_type_labels_exist(self) -> None:
         """All evidence types have display labels."""
@@ -266,27 +271,32 @@ class TestTypeExports:
     def test_dark_pattern_category_type_exists(self) -> None:
         """DarkPatternCategory type exists and can be imported."""
         from app.core.taxonomy import DarkPatternCategory
+
         # Just verify it exists and is a type
         assert DarkPatternCategory is not None
 
     def test_scenario_type_exists(self) -> None:
         """ScenarioType type exists and can be imported."""
         from app.core.taxonomy import ScenarioType
+
         assert ScenarioType is not None
 
     def test_persona_type_exists(self) -> None:
         """PersonaType type exists and can be imported."""
         from app.core.taxonomy import PersonaType
+
         assert PersonaType is not None
 
     def test_severity_type_exists(self) -> None:
         """SeverityType type exists and can be imported."""
         from app.core.taxonomy import SeverityType
+
         assert SeverityType is not None
 
     def test_audit_status_type_exists(self) -> None:
         """AuditStatus type exists and can be imported."""
         from app.core.taxonomy import AuditStatus
+
         assert AuditStatus is not None
 
 
@@ -298,4 +308,5 @@ class TestNoHardcodedValues:
         # This is verified by the import in rule_engine.py
         # The test ensures the value matches
         from app.detectors.rule_engine import SEVERITY_RANK as RuleEngineSeverityRank
+
         assert RuleEngineSeverityRank == taxonomy.SEVERITY_RANK

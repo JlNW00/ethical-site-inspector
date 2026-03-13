@@ -28,7 +28,7 @@ def retry_with_backoff(
                 except exceptions as e:
                     last_exception = e
                     if attempt < max_retries:
-                        delay = min(base_delay * (2 ** attempt), max_delay)
+                        delay = min(base_delay * (2**attempt), max_delay)
                         logger.warning(
                             "retry_attempt",
                             function=func.__name__,
@@ -39,7 +39,9 @@ def retry_with_backoff(
                         )
                         time.sleep(delay)
             raise last_exception  # type: ignore[misc]
+
         return wrapper
+
     return decorator
 
 

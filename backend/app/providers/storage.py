@@ -21,7 +21,9 @@ class StorageProvider(ABC):
     def save_bytes(self, relative_key: str, payload: bytes, content_type: str) -> StorageObject:
         raise NotImplementedError
 
-    def save_text(self, relative_key: str, payload: str, content_type: str = "text/plain; charset=utf-8") -> StorageObject:
+    def save_text(
+        self, relative_key: str, payload: str, content_type: str = "text/plain; charset=utf-8"
+    ) -> StorageObject:
         return self.save_bytes(relative_key, payload.encode("utf-8"), content_type)
 
 

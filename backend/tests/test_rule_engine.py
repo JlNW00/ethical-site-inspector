@@ -1,4 +1,5 @@
 """Tests for app.detectors.rule_engine – build_rule_findings()."""
+
 from __future__ import annotations
 
 import os
@@ -17,6 +18,7 @@ from app.schemas.runtime import JourneyObservation, ObservationEvidence
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_observation(
     scenario: str = "cookie_consent",
@@ -57,6 +59,7 @@ def _make_observation(
 # Asymmetric choice (cookie_consent)
 # ---------------------------------------------------------------------------
 
+
 class TestAsymmetricChoice:
     def test_accept_without_reject_triggers_asymmetric(self):
         obs = _make_observation(
@@ -90,6 +93,7 @@ class TestAsymmetricChoice:
 # ---------------------------------------------------------------------------
 # Hidden costs (checkout_flow)
 # ---------------------------------------------------------------------------
+
 
 class TestHiddenCosts:
     def test_price_delta_triggers_hidden_costs(self):
@@ -167,6 +171,7 @@ class TestHiddenCosts:
 # Sneaking (pre-selected checkboxes in cookie_consent)
 # ---------------------------------------------------------------------------
 
+
 class TestSneaking:
     def test_preselected_checkboxes_trigger_sneaking(self):
         obs = _make_observation(
@@ -203,6 +208,7 @@ class TestSneaking:
 # ---------------------------------------------------------------------------
 # Clean observation (no patterns detected)
 # ---------------------------------------------------------------------------
+
 
 class TestCleanObservation:
     def test_clean_cookie_consent_returns_empty(self):

@@ -6,8 +6,9 @@ These tests use simple stubs for the Nova Act SDK, not the existing MockBrowserA
 
 from __future__ import annotations
 
-import pytest
 from unittest.mock import MagicMock, patch
+
+import pytest
 
 from app.core.taxonomy import (
     AUDIT_SCENARIOS,
@@ -23,8 +24,7 @@ from app.providers.nova_act_browser import (
     PricingComparisonObservation,
     SubscriptionCancellationObservation,
 )
-from app.providers.storage import StorageProvider, StorageObject
-
+from app.providers.storage import StorageObject, StorageProvider
 
 # =============================================================================
 # Test Fixtures
@@ -44,26 +44,21 @@ def mock_storage():
 
 
 @pytest.fixture
-def mock_nova_act_module():
-    """Create a mock Nova Act module."""
-    mock_module = MagicMock()
-    mock_module.BOOL_SCHEMA = {"type": "boolean"}
-    mock_module.STRING_SCHEMA = {"type": "string"}
-
-    # Mock the NovaAct class
-    mock_nova_instance = MagicMock()
-    mock_nova_instance.page = MagicMock()
-    mock_nova_instance.page.screenshot.return_value = b"fake_screenshot_data"
-    mock_nova_instance.page.url = "https://example.com/test"
-    mock_nova_instance.page.content.return_value = "<html><body>Test</body></html>"
+def mock_nova_instance():
+    """Create a mock NovaAct instance for use as context manager."""
+    mock_nova = MagicMock()
+    mock_nova.page = MagicMock()
+    mock_nova.page.screenshot.return_value = b"fake_screenshot_data"
+    mock_nova.page.url = "https://example.com/test"
+    mock_nova.page.content.return_value = "<html><body>Test</body></html>"
 
     # Mock act method
-    mock_nova_instance.act.return_value = MagicMock(
+    mock_nova.act.return_value = MagicMock(
         response="Action completed",
         num_steps=5,
     )
 
-    # Mock act_get method - returns parsed response
+    # Mock act_get method - returns parsed response based on prompt content
     def mock_act_get(prompt, schema=None):
         result = MagicMock()
         if schema and "cookie" in prompt.lower():
@@ -137,16 +132,8 @@ def mock_nova_act_module():
             result.parsed_response = True
         return result
 
-    mock_nova_instance.act_get.side_effect = mock_act_get
-
-    # Make NovaAct a context manager that returns our mock instance
-    mock_nova_class = MagicMock()
-    mock_nova_class.return_value.__enter__ = MagicMock(return_value=mock_nova_instance)
-    mock_nova_class.return_value.__exit__ = MagicMock(return_value=False)
-
-    mock_module.NovaAct = mock_nova_class
-
-    return mock_module
+    mock_nova.act_get.side_effect = mock_act_get
+    return mock_nova
 
 
 # =============================================================================
@@ -194,21 +181,25 @@ class TestNovaActAuditProviderInstantiation:
 class TestCookieConsentScenario:
     """Test cookie consent scenario with Nova Act."""
 
-    @patch("app.providers.nova_act_browser.NovaActAuditProvider._ensure_nova_act")
-    def test_cookie_consent_returns_observation(
-        self, mock_ensure, mock_storage, mock_nova_act_module
-    ):
+    @patch("app.providers.nova_act_browser.NovaAct")
+    def test_cookie_consent_returns_observation(self, mock_nova_class, mock_storage, mock_nova_instance):
         """Cookie consent should return JourneyObservation with evidence."""
-        mock_ensure.return_value = mock_nova_act_module
+        # Setup context manager
+        mock_nova_class.return_value.__enter__ = MagicMock(return_value=mock_nova_instance)
+        mock_nova_class.return_value.__exit__ = MagicMock(return_value=False)
 
-        provider = NovaActAuditProvider(mock_storage)
+        # Patch _ensure_nova_act to return the mock module
+        with patch.object(
+            NovaActAuditProvider, "_ensure_nova_act", return_value=MagicMock(BOOL_SCHEMA={"type": "boolean"})
+        ):
+            provider = NovaActAuditProvider(mock_storage)
 
-        result = provider._run_cookie_consent_scenario(
-            audit_id="test-audit",
-            target_url="https://example.com",
-            persona="privacy_sensitive",
-            nova_act=mock_nova_act_module,
-        )
+            result = provider._run_cookie_consent_scenario(
+                audit_id="test-audit",
+                target_url="https://example.com",
+                persona="privacy_sensitive",
+                nova_act=MagicMock(BOOL_SCHEMA={"type": "boolean"}),
+            )
 
         assert result.scenario == "cookie_consent"
         assert result.persona == "privacy_sensitive"
@@ -238,21 +229,23 @@ class TestCookieConsentScenario:
 class TestCheckoutFlowScenario:
     """Test checkout flow scenario with Nova Act."""
 
-    @patch("app.providers.nova_act_browser.NovaActAuditProvider._ensure_nova_act")
-    def test_checkout_flow_returns_observation(
-        self, mock_ensure, mock_storage, mock_nova_act_module
-    ):
+    @patch("app.providers.nova_act_browser.NovaAct")
+    def test_checkout_flow_returns_observation(self, mock_nova_class, mock_storage, mock_nova_instance):
         """Checkout flow should return JourneyObservation with price data."""
-        mock_ensure.return_value = mock_nova_act_module
+        mock_nova_class.return_value.__enter__ = MagicMock(return_value=mock_nova_instance)
+        mock_nova_class.return_value.__exit__ = MagicMock(return_value=False)
 
-        provider = NovaActAuditProvider(mock_storage)
+        with patch.object(
+            NovaActAuditProvider, "_ensure_nova_act", return_value=MagicMock(BOOL_SCHEMA={"type": "boolean"})
+        ):
+            provider = NovaActAuditProvider(mock_storage)
 
-        result = provider._run_checkout_flow_scenario(
-            audit_id="test-audit",
-            target_url="https://example.com",
-            persona="cost_sensitive",
-            nova_act=mock_nova_act_module,
-        )
+            result = provider._run_checkout_flow_scenario(
+                audit_id="test-audit",
+                target_url="https://example.com",
+                persona="cost_sensitive",
+                nova_act=MagicMock(BOOL_SCHEMA={"type": "boolean"}),
+            )
 
         assert result.scenario == "checkout_flow"
         assert result.persona == "cost_sensitive"
@@ -279,21 +272,23 @@ class TestCheckoutFlowScenario:
 class TestSubscriptionCancellationScenario:
     """Test subscription cancellation scenario with Nova Act."""
 
-    @patch("app.providers.nova_act_browser.NovaActAuditProvider._ensure_nova_act")
-    def test_cancellation_scenario_returns_observation(
-        self, mock_ensure, mock_storage, mock_nova_act_module
-    ):
+    @patch("app.providers.nova_act_browser.NovaAct")
+    def test_cancellation_scenario_returns_observation(self, mock_nova_class, mock_storage, mock_nova_instance):
         """Cancellation should return JourneyObservation with obstruction data."""
-        mock_ensure.return_value = mock_nova_act_module
+        mock_nova_class.return_value.__enter__ = MagicMock(return_value=mock_nova_instance)
+        mock_nova_class.return_value.__exit__ = MagicMock(return_value=False)
 
-        provider = NovaActAuditProvider(mock_storage)
+        with patch.object(
+            NovaActAuditProvider, "_ensure_nova_act", return_value=MagicMock(BOOL_SCHEMA={"type": "boolean"})
+        ):
+            provider = NovaActAuditProvider(mock_storage)
 
-        result = provider._run_subscription_cancellation_scenario(
-            audit_id="test-audit",
-            target_url="https://example.com",
-            persona="exit_intent",
-            nova_act=mock_nova_act_module,
-        )
+            result = provider._run_subscription_cancellation_scenario(
+                audit_id="test-audit",
+                target_url="https://example.com",
+                persona="exit_intent",
+                nova_act=MagicMock(BOOL_SCHEMA={"type": "boolean"}),
+            )
 
         assert result.scenario == "subscription_cancellation"
         assert result.persona == "exit_intent"
@@ -318,21 +313,23 @@ class TestSubscriptionCancellationScenario:
 class TestAccountDeletionScenario:
     """Test account deletion scenario with Nova Act."""
 
-    @patch("app.providers.nova_act_browser.NovaActAuditProvider._ensure_nova_act")
-    def test_deletion_scenario_returns_observation(
-        self, mock_ensure, mock_storage, mock_nova_act_module
-    ):
+    @patch("app.providers.nova_act_browser.NovaAct")
+    def test_deletion_scenario_returns_observation(self, mock_nova_class, mock_storage, mock_nova_instance):
         """Account deletion should return JourneyObservation with obstruction data."""
-        mock_ensure.return_value = mock_nova_act_module
+        mock_nova_class.return_value.__enter__ = MagicMock(return_value=mock_nova_instance)
+        mock_nova_class.return_value.__exit__ = MagicMock(return_value=False)
 
-        provider = NovaActAuditProvider(mock_storage)
+        with patch.object(
+            NovaActAuditProvider, "_ensure_nova_act", return_value=MagicMock(BOOL_SCHEMA={"type": "boolean"})
+        ):
+            provider = NovaActAuditProvider(mock_storage)
 
-        result = provider._run_account_deletion_scenario(
-            audit_id="test-audit",
-            target_url="https://example.com",
-            persona="privacy_sensitive",
-            nova_act=mock_nova_act_module,
-        )
+            result = provider._run_account_deletion_scenario(
+                audit_id="test-audit",
+                target_url="https://example.com",
+                persona="privacy_sensitive",
+                nova_act=MagicMock(BOOL_SCHEMA={"type": "boolean"}),
+            )
 
         assert result.scenario == "account_deletion"
         assert result.persona == "privacy_sensitive"
@@ -357,21 +354,23 @@ class TestAccountDeletionScenario:
 class TestNewsletterSignupScenario:
     """Test newsletter signup scenario with Nova Act."""
 
-    @patch("app.providers.nova_act_browser.NovaActAuditProvider._ensure_nova_act")
-    def test_newsletter_scenario_returns_observation(
-        self, mock_ensure, mock_storage, mock_nova_act_module
-    ):
+    @patch("app.providers.nova_act_browser.NovaAct")
+    def test_newsletter_scenario_returns_observation(self, mock_nova_class, mock_storage, mock_nova_instance):
         """Newsletter signup should return JourneyObservation with enrollment data."""
-        mock_ensure.return_value = mock_nova_act_module
+        mock_nova_class.return_value.__enter__ = MagicMock(return_value=mock_nova_instance)
+        mock_nova_class.return_value.__exit__ = MagicMock(return_value=False)
 
-        provider = NovaActAuditProvider(mock_storage)
+        with patch.object(
+            NovaActAuditProvider, "_ensure_nova_act", return_value=MagicMock(BOOL_SCHEMA={"type": "boolean"})
+        ):
+            provider = NovaActAuditProvider(mock_storage)
 
-        result = provider._run_newsletter_signup_scenario(
-            audit_id="test-audit",
-            target_url="https://example.com",
-            persona="privacy_sensitive",
-            nova_act=mock_nova_act_module,
-        )
+            result = provider._run_newsletter_signup_scenario(
+                audit_id="test-audit",
+                target_url="https://example.com",
+                persona="privacy_sensitive",
+                nova_act=MagicMock(BOOL_SCHEMA={"type": "boolean"}),
+            )
 
         assert result.scenario == "newsletter_signup"
         assert result.persona == "privacy_sensitive"
@@ -396,21 +395,23 @@ class TestNewsletterSignupScenario:
 class TestPricingComparisonScenario:
     """Test pricing comparison scenario with Nova Act."""
 
-    @patch("app.providers.nova_act_browser.NovaActAuditProvider._ensure_nova_act")
-    def test_pricing_scenario_returns_observation(
-        self, mock_ensure, mock_storage, mock_nova_act_module
-    ):
+    @patch("app.providers.nova_act_browser.NovaAct")
+    def test_pricing_scenario_returns_observation(self, mock_nova_class, mock_storage, mock_nova_instance):
         """Pricing comparison should return JourneyObservation with price data."""
-        mock_ensure.return_value = mock_nova_act_module
+        mock_nova_class.return_value.__enter__ = MagicMock(return_value=mock_nova_instance)
+        mock_nova_class.return_value.__exit__ = MagicMock(return_value=False)
 
-        provider = NovaActAuditProvider(mock_storage)
+        with patch.object(
+            NovaActAuditProvider, "_ensure_nova_act", return_value=MagicMock(BOOL_SCHEMA={"type": "boolean"})
+        ):
+            provider = NovaActAuditProvider(mock_storage)
 
-        result = provider._run_pricing_comparison_scenario(
-            audit_id="test-audit",
-            target_url="https://example.com",
-            persona="cost_sensitive",
-            nova_act=mock_nova_act_module,
-        )
+            result = provider._run_pricing_comparison_scenario(
+                audit_id="test-audit",
+                target_url="https://example.com",
+                persona="cost_sensitive",
+                nova_act=MagicMock(BOOL_SCHEMA={"type": "boolean"}),
+            )
 
         assert result.scenario == "pricing_comparison"
         assert result.persona == "cost_sensitive"
@@ -439,32 +440,36 @@ class TestPricingComparisonScenario:
 class TestFullAuditRun:
     """Test complete audit runs with multiple scenarios and personas."""
 
-    @patch("app.providers.nova_act_browser.NovaActAuditProvider._ensure_nova_act")
-    def test_run_audit_single_scenario_single_persona(
-        self, mock_ensure, mock_storage, mock_nova_act_module
-    ):
+    @patch("app.providers.nova_act_browser.NovaAct")
+    def test_run_audit_single_scenario_single_persona(self, mock_nova_class, mock_storage, mock_nova_instance):
         """Run audit with one scenario and one persona."""
-        mock_ensure.return_value = mock_nova_act_module
+        mock_nova_class.return_value.__enter__ = MagicMock(return_value=mock_nova_instance)
+        mock_nova_class.return_value.__exit__ = MagicMock(return_value=False)
 
-        provider = NovaActAuditProvider(mock_storage)
+        with patch.object(
+            NovaActAuditProvider, "_ensure_nova_act", return_value=MagicMock(BOOL_SCHEMA={"type": "boolean"})
+        ):
+            provider = NovaActAuditProvider(mock_storage)
 
-        progress_calls = []
+            progress_calls = []
 
-        def progress(phase, message, progress_pct, status, details):
-            progress_calls.append({
-                "phase": phase,
-                "message": message,
-                "progress": progress_pct,
-                "status": status,
-            })
+            def progress(phase, message, progress_pct, status, details):
+                progress_calls.append(
+                    {
+                        "phase": phase,
+                        "message": message,
+                        "progress": progress_pct,
+                        "status": status,
+                    }
+                )
 
-        result = provider.run_audit(
-            audit_id="test-audit-1",
-            target_url="https://example.com",
-            scenarios=["cookie_consent"],
-            personas=["privacy_sensitive"],
-            progress=progress,
-        )
+            result = provider.run_audit(
+                audit_id="test-audit-1",
+                target_url="https://example.com",
+                scenarios=["cookie_consent"],
+                personas=["privacy_sensitive"],
+                progress=progress,
+            )
 
         assert len(result.observations) == 1
         assert result.observations[0].scenario == "cookie_consent"
@@ -473,25 +478,27 @@ class TestFullAuditRun:
         assert "evidence_origin" in result.summary
         assert result.summary["observation_count"] == 1
 
-    @patch("app.providers.nova_act_browser.NovaActAuditProvider._ensure_nova_act")
-    def test_run_audit_multiple_scenarios(
-        self, mock_ensure, mock_storage, mock_nova_act_module
-    ):
+    @patch("app.providers.nova_act_browser.NovaAct")
+    def test_run_audit_multiple_scenarios(self, mock_nova_class, mock_storage, mock_nova_instance):
         """Run audit with multiple scenarios and personas."""
-        mock_ensure.return_value = mock_nova_act_module
+        mock_nova_class.return_value.__enter__ = MagicMock(return_value=mock_nova_instance)
+        mock_nova_class.return_value.__exit__ = MagicMock(return_value=False)
 
-        provider = NovaActAuditProvider(mock_storage)
+        with patch.object(
+            NovaActAuditProvider, "_ensure_nova_act", return_value=MagicMock(BOOL_SCHEMA={"type": "boolean"})
+        ):
+            provider = NovaActAuditProvider(mock_storage)
 
-        def progress(phase, message, progress_pct, status, details):
-            pass
+            def progress(phase, message, progress_pct, status, details):
+                pass
 
-        result = provider.run_audit(
-            audit_id="test-audit-multi",
-            target_url="https://example.com",
-            scenarios=["cookie_consent", "checkout_flow"],
-            personas=["privacy_sensitive", "cost_sensitive"],
-            progress=progress,
-        )
+            result = provider.run_audit(
+                audit_id="test-audit-multi",
+                target_url="https://example.com",
+                scenarios=["cookie_consent", "checkout_flow"],
+                personas=["privacy_sensitive", "cost_sensitive"],
+                progress=progress,
+            )
 
         # Should have 2 scenarios x 2 personas = 4 observations
         assert len(result.observations) == 4
@@ -532,25 +539,27 @@ class TestErrorHandling:
         assert error_obs.evidence.metadata.get("error") == "Connection timeout"
         assert error_obs.evidence.friction_indicators == ["Audit scenario failed"]
 
-    @patch("app.providers.nova_act_browser.NovaActAuditProvider._ensure_nova_act")
-    def test_invalid_scenario_returns_empty_result(
-        self, mock_ensure, mock_storage, mock_nova_act_module
-    ):
+    @patch("app.providers.nova_act_browser.NovaAct")
+    def test_invalid_scenario_returns_empty_result(self, mock_nova_class, mock_storage, mock_nova_instance):
         """Invalid scenarios should return empty result."""
-        mock_ensure.return_value = mock_nova_act_module
+        mock_nova_class.return_value.__enter__ = MagicMock(return_value=mock_nova_instance)
+        mock_nova_class.return_value.__exit__ = MagicMock(return_value=False)
 
-        provider = NovaActAuditProvider(mock_storage)
+        with patch.object(
+            NovaActAuditProvider, "_ensure_nova_act", return_value=MagicMock(BOOL_SCHEMA={"type": "boolean"})
+        ):
+            provider = NovaActAuditProvider(mock_storage)
 
-        def progress(phase, message, progress_pct, status, details):
-            pass
+            def progress(phase, message, progress_pct, status, details):
+                pass
 
-        result = provider.run_audit(
-            audit_id="test-audit",
-            target_url="https://example.com",
-            scenarios=["invalid_scenario"],
-            personas=["privacy_sensitive"],
-            progress=progress,
-        )
+            result = provider.run_audit(
+                audit_id="test-audit",
+                target_url="https://example.com",
+                scenarios=["invalid_scenario"],
+                personas=["privacy_sensitive"],
+                progress=progress,
+            )
 
         assert len(result.observations) == 0
         assert "error" in result.summary
@@ -602,21 +611,23 @@ class TestTaxonomyIntegration:
 class TestScreenshotCapture:
     """Test screenshot capture functionality."""
 
-    @patch("app.providers.nova_act_browser.NovaActAuditProvider._ensure_nova_act")
-    def test_screenshots_captured_during_scenario(
-        self, mock_ensure, mock_storage, mock_nova_act_module
-    ):
+    @patch("app.providers.nova_act_browser.NovaAct")
+    def test_screenshots_captured_during_scenario(self, mock_nova_class, mock_storage, mock_nova_instance):
         """Screenshots should be captured at key journey steps."""
-        mock_ensure.return_value = mock_nova_act_module
+        mock_nova_class.return_value.__enter__ = MagicMock(return_value=mock_nova_instance)
+        mock_nova_class.return_value.__exit__ = MagicMock(return_value=False)
 
-        provider = NovaActAuditProvider(mock_storage)
+        with patch.object(
+            NovaActAuditProvider, "_ensure_nova_act", return_value=MagicMock(BOOL_SCHEMA={"type": "boolean"})
+        ):
+            provider = NovaActAuditProvider(mock_storage)
 
-        result = provider._run_cookie_consent_scenario(
-            audit_id="test-audit",
-            target_url="https://example.com",
-            persona="privacy_sensitive",
-            nova_act=mock_nova_act_module,
-        )
+            result = provider._run_cookie_consent_scenario(
+                audit_id="test-audit",
+                target_url="https://example.com",
+                persona="privacy_sensitive",
+                nova_act=MagicMock(BOOL_SCHEMA={"type": "boolean"}),
+            )
 
         # Should have screenshots in evidence
         assert len(result.evidence.screenshot_urls) > 0
@@ -634,25 +645,27 @@ class TestScreenshotCapture:
 class TestParallelPersonaExecution:
     """Test parallel persona execution via ThreadPoolExecutor."""
 
-    @patch("app.providers.nova_act_browser.NovaActAuditProvider._ensure_nova_act")
-    def test_parallel_persona_execution(
-        self, mock_ensure, mock_storage, mock_nova_act_module
-    ):
+    @patch("app.providers.nova_act_browser.NovaAct")
+    def test_parallel_persona_execution(self, mock_nova_class, mock_storage, mock_nova_instance):
         """Multiple personas should run in parallel for same scenario."""
-        mock_ensure.return_value = mock_nova_act_module
+        mock_nova_class.return_value.__enter__ = MagicMock(return_value=mock_nova_instance)
+        mock_nova_class.return_value.__exit__ = MagicMock(return_value=False)
 
-        provider = NovaActAuditProvider(mock_storage, max_workers=3)
+        with patch.object(
+            NovaActAuditProvider, "_ensure_nova_act", return_value=MagicMock(BOOL_SCHEMA={"type": "boolean"})
+        ):
+            provider = NovaActAuditProvider(mock_storage, max_workers=3)
 
-        def progress(phase, message, progress_pct, status, details):
-            pass
+            def progress(phase, message, progress_pct, status, details):
+                pass
 
-        result = provider.run_audit(
-            audit_id="test-parallel",
-            target_url="https://example.com",
-            scenarios=["cookie_consent"],
-            personas=["privacy_sensitive", "cost_sensitive", "exit_intent"],
-            progress=progress,
-        )
+            result = provider.run_audit(
+                audit_id="test-parallel",
+                target_url="https://example.com",
+                scenarios=["cookie_consent"],
+                personas=["privacy_sensitive", "cost_sensitive", "exit_intent"],
+                progress=progress,
+            )
 
         # Should have 3 observations (one per persona)
         assert len(result.observations) == 3
@@ -670,21 +683,23 @@ class TestParallelPersonaExecution:
 class TestEvidencePayloadStructure:
     """Test that evidence payload matches expected structure."""
 
-    @patch("app.providers.nova_act_browser.NovaActAuditProvider._ensure_nova_act")
-    def test_evidence_has_required_metadata(
-        self, mock_ensure, mock_storage, mock_nova_act_module
-    ):
+    @patch("app.providers.nova_act_browser.NovaAct")
+    def test_evidence_has_required_metadata(self, mock_nova_class, mock_storage, mock_nova_instance):
         """Evidence should contain required metadata fields."""
-        mock_ensure.return_value = mock_nova_act_module
+        mock_nova_class.return_value.__enter__ = MagicMock(return_value=mock_nova_instance)
+        mock_nova_class.return_value.__exit__ = MagicMock(return_value=False)
 
-        provider = NovaActAuditProvider(mock_storage)
+        with patch.object(
+            NovaActAuditProvider, "_ensure_nova_act", return_value=MagicMock(BOOL_SCHEMA={"type": "boolean"})
+        ):
+            provider = NovaActAuditProvider(mock_storage)
 
-        result = provider._run_cookie_consent_scenario(
-            audit_id="test-audit",
-            target_url="https://example.com",
-            persona="privacy_sensitive",
-            nova_act=mock_nova_act_module,
-        )
+            result = provider._run_cookie_consent_scenario(
+                audit_id="test-audit",
+                target_url="https://example.com",
+                persona="privacy_sensitive",
+                nova_act=MagicMock(BOOL_SCHEMA={"type": "boolean"}),
+            )
 
         metadata = result.evidence.metadata
         required_fields = [
@@ -720,95 +735,104 @@ class TestValidationContractAssertions:
         provider = NovaActAuditProvider(mock_storage)
         assert isinstance(provider, BrowserAuditProvider)
 
-    @patch("app.providers.nova_act_browser.NovaActAuditProvider._ensure_nova_act")
-    def test_act_get_uses_pydantic_schemas(
-        self, mock_ensure, mock_storage, mock_nova_act_module
-    ):
+    @patch("app.providers.nova_act_browser.NovaAct")
+    def test_act_get_uses_pydantic_schemas(self, mock_nova_class, mock_storage, mock_nova_instance):
         """VAL-NOVA-011: act_get() uses Pydantic schemas for structured extraction."""
-        mock_ensure.return_value = mock_nova_act_module
+        mock_nova_class.return_value.__enter__ = MagicMock(return_value=mock_nova_instance)
+        mock_nova_class.return_value.__exit__ = MagicMock(return_value=False)
 
-        provider = NovaActAuditProvider(mock_storage)
+        with patch.object(
+            NovaActAuditProvider, "_ensure_nova_act", return_value=MagicMock(BOOL_SCHEMA={"type": "boolean"})
+        ):
+            provider = NovaActAuditProvider(mock_storage)
 
-        provider._run_cookie_consent_scenario(
-            audit_id="test-audit",
-            target_url="https://example.com",
-            persona="privacy_sensitive",
-            nova_act=mock_nova_act_module,
-        )
+            provider._run_cookie_consent_scenario(
+                audit_id="test-audit",
+                target_url="https://example.com",
+                persona="privacy_sensitive",
+                nova_act=MagicMock(BOOL_SCHEMA={"type": "boolean"}),
+            )
 
-        # Verify act_get was called with schema parameter
-        mock_nova_act_module.NovaAct.return_value.__enter__.return_value.act_get.assert_called()
+        # Verify act_get was called
+        assert mock_nova_instance.act_get.called
 
-    @patch("app.providers.nova_act_browser.NovaActAuditProvider._ensure_nova_act")
-    def test_screenshots_captured_at_key_steps(
-        self, mock_ensure, mock_storage, mock_nova_act_module
-    ):
+    @patch("app.providers.nova_act_browser.NovaAct")
+    def test_screenshots_captured_at_key_steps(self, mock_nova_class, mock_storage, mock_nova_instance):
         """VAL-NOVA-010: Screenshots captured at key journey steps."""
-        mock_ensure.return_value = mock_nova_act_module
+        mock_nova_class.return_value.__enter__ = MagicMock(return_value=mock_nova_instance)
+        mock_nova_class.return_value.__exit__ = MagicMock(return_value=False)
 
-        provider = NovaActAuditProvider(mock_storage)
+        with patch.object(
+            NovaActAuditProvider, "_ensure_nova_act", return_value=MagicMock(BOOL_SCHEMA={"type": "boolean"})
+        ):
+            provider = NovaActAuditProvider(mock_storage)
 
-        result = provider._run_cookie_consent_scenario(
-            audit_id="test-audit",
-            target_url="https://example.com",
-            persona="privacy_sensitive",
-            nova_act=mock_nova_act_module,
-        )
+            result = provider._run_cookie_consent_scenario(
+                audit_id="test-audit",
+                target_url="https://example.com",
+                persona="privacy_sensitive",
+                nova_act=MagicMock(BOOL_SCHEMA={"type": "boolean"}),
+            )
 
         # Screenshots should be in evidence
         assert len(result.evidence.screenshot_urls) > 0
         assert len(result.evidence.screenshot_paths) > 0
 
-    @patch("app.providers.nova_act_browser.NovaActAuditProvider._ensure_nova_act")
-    def test_returns_journey_observation_objects(
-        self, mock_ensure, mock_storage, mock_nova_act_module
-    ):
+    @patch("app.providers.nova_act_browser.NovaAct")
+    def test_returns_journey_observation_objects(self, mock_nova_class, mock_storage, mock_nova_instance):
         """VAL-NOVA-003 through VAL-NOVA-009: Returns JourneyObservation objects."""
-        mock_ensure.return_value = mock_nova_act_module
+        mock_nova_class.return_value.__enter__ = MagicMock(return_value=mock_nova_instance)
+        mock_nova_class.return_value.__exit__ = MagicMock(return_value=False)
 
-        provider = NovaActAuditProvider(mock_storage)
+        with patch.object(
+            NovaActAuditProvider, "_ensure_nova_act", return_value=MagicMock(BOOL_SCHEMA={"type": "boolean"})
+        ):
+            provider = NovaActAuditProvider(mock_storage)
 
-        scenarios = [
-            "cookie_consent",
-            "checkout_flow",
-            "subscription_cancellation",
-            "account_deletion",
-            "newsletter_signup",
-            "pricing_comparison",
-        ]
+            scenarios = [
+                "cookie_consent",
+                "checkout_flow",
+                "subscription_cancellation",
+                "account_deletion",
+                "newsletter_signup",
+                "pricing_comparison",
+            ]
 
-        for scenario in scenarios:
-            method = getattr(provider, f"_run_{scenario}_scenario")
-            result = method(
-                audit_id="test-audit",
-                target_url="https://example.com",
-                persona="privacy_sensitive",
-                nova_act=mock_nova_act_module,
-            )
+            for scenario in scenarios:
+                method = getattr(provider, f"_run_{scenario}_scenario")
+                result = method(
+                    audit_id="test-audit",
+                    target_url="https://example.com",
+                    persona="privacy_sensitive",
+                    nova_act=MagicMock(BOOL_SCHEMA={"type": "boolean"}),
+                )
 
-            from app.schemas.runtime import JourneyObservation
-            assert isinstance(result, JourneyObservation)
-            assert result.scenario == scenario
+                from app.schemas.runtime import JourneyObservation
 
-    @patch("app.providers.nova_act_browser.NovaActAuditProvider._ensure_nova_act")
-    def test_multiple_personas_tested_for_same_url(
-        self, mock_ensure, mock_storage, mock_nova_act_module
-    ):
+                assert isinstance(result, JourneyObservation)
+                assert result.scenario == scenario
+
+    @patch("app.providers.nova_act_browser.NovaAct")
+    def test_multiple_personas_tested_for_same_url(self, mock_nova_class, mock_storage, mock_nova_instance):
         """VAL-NOVA-012: Multiple personas tested for same URL."""
-        mock_ensure.return_value = mock_nova_act_module
+        mock_nova_class.return_value.__enter__ = MagicMock(return_value=mock_nova_instance)
+        mock_nova_class.return_value.__exit__ = MagicMock(return_value=False)
 
-        provider = NovaActAuditProvider(mock_storage)
+        with patch.object(
+            NovaActAuditProvider, "_ensure_nova_act", return_value=MagicMock(BOOL_SCHEMA={"type": "boolean"})
+        ):
+            provider = NovaActAuditProvider(mock_storage)
 
-        def progress(phase, message, progress_pct, status, details):
-            pass
+            def progress(phase, message, progress_pct, status, details):
+                pass
 
-        result = provider.run_audit(
-            audit_id="test-multi-persona",
-            target_url="https://example.com",
-            scenarios=["cookie_consent"],
-            personas=["privacy_sensitive", "cost_sensitive", "exit_intent"],
-            progress=progress,
-        )
+            result = provider.run_audit(
+                audit_id="test-multi-persona",
+                target_url="https://example.com",
+                scenarios=["cookie_consent"],
+                personas=["privacy_sensitive", "cost_sensitive", "exit_intent"],
+                progress=progress,
+            )
 
         # Should have observations for each persona
         assert len(result.observations) == 3

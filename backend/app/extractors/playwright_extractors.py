@@ -37,7 +37,18 @@ TRUST_KEYWORDS = (
 )
 
 SCENARIO_KEYWORDS = {
-    "cookie_consent": ("cookie", "consent", "privacy", "tracking", "preferences", "settings", "accept", "reject", "decline", "essential"),
+    "cookie_consent": (
+        "cookie",
+        "consent",
+        "privacy",
+        "tracking",
+        "preferences",
+        "settings",
+        "accept",
+        "reject",
+        "decline",
+        "essential",
+    ),
     "checkout_flow": (
         "price",
         "availability",
@@ -55,7 +66,17 @@ SCENARIO_KEYWORDS = {
         "select",
         "pay",
     ),
-    "cancellation_flow": ("cancel", "unsubscribe", "manage", "billing", "support", "help", "pause", "retention", "leave"),
+    "cancellation_flow": (
+        "cancel",
+        "unsubscribe",
+        "manage",
+        "billing",
+        "support",
+        "help",
+        "pause",
+        "retention",
+        "leave",
+    ),
 }
 
 
@@ -223,7 +244,9 @@ def extract_checkbox_states(page: Page) -> dict[str, bool]:
                     except Exception:
                         label = ""
                 if not label:
-                    label = _safe_attr(checkbox, "aria-label") or _safe_attr(checkbox, "name") or f"checkbox_{counter + 1}"
+                    label = (
+                        _safe_attr(checkbox, "aria-label") or _safe_attr(checkbox, "name") or f"checkbox_{counter + 1}"
+                    )
                 states[_normalize_text(label)[:100]] = checkbox.is_checked()
                 counter += 1
             except Exception:
@@ -374,7 +397,9 @@ def extract_dom_excerpt(page: Page, limit: int = 3_500) -> str:
     return " ".join(excerpts)[:limit]
 
 
-def capture_screenshot(page: Page, storage: StorageProvider, relative_key: str, full_page: bool = True) -> tuple[str | None, str]:
+def capture_screenshot(
+    page: Page, storage: StorageProvider, relative_key: str, full_page: bool = True
+) -> tuple[str | None, str]:
     payload = page.screenshot(full_page=full_page, type="png")
     saved = storage.save_bytes(relative_key, payload, "image/png")
     return saved.absolute_path, saved.public_url

@@ -1,4 +1,5 @@
 """Shared fixtures for backend unit tests."""
+
 from __future__ import annotations
 
 import os
@@ -80,6 +81,7 @@ def test_client(db_engine):
     # Monkey-patch SessionLocal in health module so the readiness endpoint
     # hits the in-memory DB instead of the production engine.
     import app.api.routes.health as health_mod
+
     original_session_local = health_mod.SessionLocal
     health_mod.SessionLocal = TestingSession
     try:

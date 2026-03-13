@@ -1,4 +1,5 @@
 """Tests for app.providers.storage – LocalStorageProvider."""
+
 from __future__ import annotations
 
 import os

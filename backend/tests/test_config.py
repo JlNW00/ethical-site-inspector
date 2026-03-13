@@ -1,4 +1,5 @@
 """Tests for app.core.config – Settings class behaviour."""
+
 from __future__ import annotations
 
 import os
@@ -17,6 +18,7 @@ from app.core.config import Settings
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_settings(**overrides) -> Settings:
     """Construct a Settings instance with explicit overrides (env-var aliases).
@@ -41,6 +43,7 @@ def _make_settings(**overrides) -> Settings:
 # Settings defaults
 # ---------------------------------------------------------------------------
 
+
 class TestSettingsDefaults:
     def test_app_name_default(self):
         s = _make_settings()
@@ -58,6 +61,7 @@ class TestSettingsDefaults:
 # ---------------------------------------------------------------------------
 # effective_mode logic
 # ---------------------------------------------------------------------------
+
 
 class TestEffectiveMode:
     def test_auto_no_browser_no_nova_returns_mock(self):
@@ -116,6 +120,7 @@ class TestEffectiveMode:
 # nova_ready property
 # ---------------------------------------------------------------------------
 
+
 class TestNovaReady:
     def test_nova_ready_true_when_both_keys_present(self):
         s = _make_settings(AWS_ACCESS_KEY_ID="AKID", AWS_SECRET_ACCESS_KEY="secret")
@@ -137,6 +142,7 @@ class TestNovaReady:
 # ---------------------------------------------------------------------------
 # s3_ready property
 # ---------------------------------------------------------------------------
+
 
 class TestS3Ready:
     def test_s3_ready_true_when_bucket_and_endpoint_set(self):

@@ -213,9 +213,7 @@ class AuditOrchestrator:
 
     def get_audit(self, db: Session, audit_id: str) -> Audit:
         statement = (
-            select(Audit)
-            .where(Audit.id == audit_id)
-            .options(selectinload(Audit.events), selectinload(Audit.findings))
+            select(Audit).where(Audit.id == audit_id).options(selectinload(Audit.events), selectinload(Audit.findings))
         )
         audit = db.scalar(statement)
         if audit is None:
@@ -253,10 +251,14 @@ class AuditOrchestrator:
         for finding in finding_models:
             persona_buckets[finding.persona]["finding_count"] += 1
             persona_buckets[finding.persona]["notable_patterns"][finding.pattern_family] += 1
-            persona_buckets[finding.persona]["example"] = persona_buckets[finding.persona]["example"] or finding.evidence_excerpt
+            persona_buckets[finding.persona]["example"] = (
+                persona_buckets[finding.persona]["example"] or finding.evidence_excerpt
+            )
             scenario_buckets[finding.scenario]["finding_count"] += 1
             scenario_buckets[finding.scenario]["patterns"][finding.pattern_family] += 1
-            scenario_buckets[finding.scenario]["example"] = scenario_buckets[finding.scenario]["example"] or finding.evidence_excerpt
+            scenario_buckets[finding.scenario]["example"] = (
+                scenario_buckets[finding.scenario]["example"] or finding.evidence_excerpt
+            )
 
         persona_comparison = []
         for persona, bucket in persona_buckets.items():
@@ -338,7 +340,7 @@ class AuditOrchestrator:
         return (
             f"{evidence_origin_label} evidence on {site_host} showed the clearest trust risk in "
             f"{riskiest_scenario.replace('_', ' ')}. The strongest observed signal was "
-            f"\"{top_finding.evidence_excerpt[:160]}\", and persona comparisons still showed materially different friction across the run."
+            f'"{top_finding.evidence_excerpt[:160]}", and persona comparisons still showed materially different friction across the run.'
         )
 
     @staticmethod

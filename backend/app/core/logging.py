@@ -9,7 +9,9 @@ from typing import Any
 import structlog
 
 SENSITIVE_PATTERNS = [
-    re.compile(r"(AWS_SECRET_ACCESS_KEY|AWS_ACCESS_KEY_ID|AWS_SESSION_TOKEN|DATABASE_URL|SECRET)\s*=\s*\S+", re.IGNORECASE),
+    re.compile(
+        r"(AWS_SECRET_ACCESS_KEY|AWS_ACCESS_KEY_ID|AWS_SESSION_TOKEN|DATABASE_URL|SECRET)\s*=\s*\S+", re.IGNORECASE
+    ),
     re.compile(r"(password|token|secret|key|credential)\s*[:=]\s*\S+", re.IGNORECASE),
 ]
 

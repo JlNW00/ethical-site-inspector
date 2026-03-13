@@ -59,7 +59,10 @@ class ReportService:
             ],
             "persona_paths": self._persona_paths(findings),
             "finding_labels": {finding.id: self._evidence_label(finding) for finding in findings},
-            "finding_paths": {finding.id: self._pretty_path(finding.evidence_payload.get("interacted_controls", [])) for finding in findings},
+            "finding_paths": {
+                finding.id: self._pretty_path(finding.evidence_payload.get("interacted_controls", []))
+                for finding in findings
+            },
             "finding_excerpts": {finding.id: self._display_excerpt(finding) for finding in findings},
         }
 
@@ -87,7 +90,9 @@ class ReportService:
             "high": "High risk: trust friction was repeatedly observed in the audited journeys.",
             "critical": "Critical risk: the audited journeys repeatedly added friction before commitment or exit.",
         }
-        return summaries.get(risk_level, "Risk level reflects how consistently friction or pressure appeared in the audited paths.")
+        return summaries.get(
+            risk_level, "Risk level reflects how consistently friction or pressure appeared in the audited paths."
+        )
 
     def _persona_paths(self, findings: list[Finding]) -> dict[str, str]:
         persona_paths: dict[str, str] = {}
@@ -145,4 +150,4 @@ class ReportService:
 
     @staticmethod
     def _trim(value: str, limit: int) -> str:
-        return value if len(value) <= limit else f"{value[:limit - 1].rstrip()}…"
+        return value if len(value) <= limit else f"{value[: limit - 1].rstrip()}…"
