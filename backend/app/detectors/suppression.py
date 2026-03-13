@@ -109,10 +109,8 @@ def should_suppress(
         # If the price increase is due to taxes/shipping, it may be legitimate
         # Check if all price changes are explained by legitimate fees
         all_legitimate = all(any(term in label for term in legitimate_fee_terms) for label in price_labels)
-        if all_legitimate and len(price_labels) >= 2:
-            # Check if confidence is low (indicating heuristic-only detection)
-            if confidence <= 0.75:
-                return True
+        if all_legitimate and len(price_labels) >= 2 and confidence <= 0.75:
+            return True
 
     return False
 
