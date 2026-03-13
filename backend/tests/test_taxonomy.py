@@ -307,6 +307,6 @@ class TestNoHardcodedValues:
         """SEVERITY_RANK should be imported from taxonomy in rule_engine."""
         # This is verified by the import in rule_engine.py
         # The test ensures the value matches
-        from app.detectors.rule_engine import SEVERITY_RANK as RuleEngineSeverityRank
+        from app.detectors.rule_engine import SEVERITY_RANK as rule_engine_severity_rank
 
-        assert RuleEngineSeverityRank == taxonomy.SEVERITY_RANK
+        assert rule_engine_severity_rank == taxonomy.SEVERITY_RANK

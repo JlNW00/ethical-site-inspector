@@ -186,21 +186,23 @@ class TestAuditLifecycleCreateRunComplete:
 
         from app.services.audit_orchestrator import AuditOrchestrator
 
-        SessionLocal = sessionmaker(bind=db_engine)
-        orchestrator = AuditOrchestrator(SessionLocal)
+        session_local = sessionmaker(bind=db_engine)
+        orchestrator = AuditOrchestrator(session_local)
 
         # Stub the providers
         stub_provider = SimpleStubBrowserProvider([sample_observation])
         stub_classifier = SimpleStubClassifierProvider()
 
-        with patch("app.services.audit_orchestrator.get_browser_provider", return_value=stub_provider):
-            with patch("app.services.audit_orchestrator.get_classifier_provider", return_value=stub_classifier):
-                with patch("app.services.audit_orchestrator.get_fallback_browser_provider", return_value=stub_provider):
-                    with patch(
-                        "app.services.report_service.ReportService.generate_report",
-                        return_value=("C:/report.html", "/reports/test.html"),
-                    ):
-                        yield orchestrator, stub_provider
+        with (
+            patch("app.services.audit_orchestrator.get_browser_provider", return_value=stub_provider),
+            patch("app.services.audit_orchestrator.get_classifier_provider", return_value=stub_classifier),
+            patch("app.services.audit_orchestrator.get_fallback_browser_provider", return_value=stub_provider),
+            patch(
+                "app.services.report_service.ReportService.generate_report",
+                return_value=("C:/report.html", "/reports/test.html"),
+            ),
+        ):
+            yield orchestrator, stub_provider
 
     def test_create_audit_stores_correct_data(self, db_session, orchestrator_with_stub):
         """Audit creation should store all input data correctly."""
@@ -371,24 +373,26 @@ class TestAuditLifecycleCreateRunFail:
 
         from app.services.audit_orchestrator import AuditOrchestrator
 
-        SessionLocal = sessionmaker(bind=db_engine)
-        orchestrator = AuditOrchestrator(SessionLocal)
+        session_local = sessionmaker(bind=db_engine)
+        orchestrator = AuditOrchestrator(session_local)
 
         # Stub providers - browser fails, fallback succeeds
         failing_provider = FailingStubBrowserProvider()
         fallback_provider = SimpleStubBrowserProvider([])
         stub_classifier = SimpleStubClassifierProvider()
 
-        with patch("app.services.audit_orchestrator.get_browser_provider", return_value=failing_provider):
-            with patch("app.services.audit_orchestrator.get_classifier_provider", return_value=stub_classifier):
-                with patch(
-                    "app.services.audit_orchestrator.get_fallback_browser_provider", return_value=fallback_provider
-                ):
-                    with patch(
-                        "app.services.report_service.ReportService.generate_report",
-                        return_value=("C:/report.html", "/reports/test.html"),
-                    ):
-                        yield orchestrator, failing_provider, fallback_provider
+        with (
+            patch("app.services.audit_orchestrator.get_browser_provider", return_value=failing_provider),
+            patch("app.services.audit_orchestrator.get_classifier_provider", return_value=stub_classifier),
+            patch(
+                "app.services.audit_orchestrator.get_fallback_browser_provider", return_value=fallback_provider
+            ),
+            patch(
+                "app.services.report_service.ReportService.generate_report",
+                return_value=("C:/report.html", "/reports/test.html"),
+            ),
+        ):
+            yield orchestrator, failing_provider, fallback_provider
 
     def test_failed_audit_uses_fallback_provider(self, db_session, orchestrator_with_failing_stub):
         """When primary provider fails, fallback provider should be used."""
@@ -457,20 +461,22 @@ class TestAuditLifecycleMultipleScenariosPersonas:
 
         from app.services.audit_orchestrator import AuditOrchestrator
 
-        SessionLocal = sessionmaker(bind=db_engine)
-        orchestrator = AuditOrchestrator(SessionLocal)
+        session_local = sessionmaker(bind=db_engine)
+        orchestrator = AuditOrchestrator(session_local)
 
         stub_provider = SimpleStubBrowserProvider(multiple_observations)
         stub_classifier = SimpleStubClassifierProvider()
 
-        with patch("app.services.audit_orchestrator.get_browser_provider", return_value=stub_provider):
-            with patch("app.services.audit_orchestrator.get_classifier_provider", return_value=stub_classifier):
-                with patch("app.services.audit_orchestrator.get_fallback_browser_provider", return_value=stub_provider):
-                    with patch(
-                        "app.services.report_service.ReportService.generate_report",
-                        return_value=("C:/report.html", "/reports/test.html"),
-                    ):
-                        yield orchestrator, stub_provider
+        with (
+            patch("app.services.audit_orchestrator.get_browser_provider", return_value=stub_provider),
+            patch("app.services.audit_orchestrator.get_classifier_provider", return_value=stub_classifier),
+            patch("app.services.audit_orchestrator.get_fallback_browser_provider", return_value=stub_provider),
+            patch(
+                "app.services.report_service.ReportService.generate_report",
+                return_value=("C:/report.html", "/reports/test.html"),
+            ),
+        ):
+            yield orchestrator, stub_provider
 
     def test_multiple_scenarios_create_multiple_observations(self, db_session, orchestrator_with_multiple_observations):
         """Multiple scenarios should result in multiple observations."""
@@ -584,8 +590,8 @@ class TestAuditLifecycleErrorHandling:
 
         from app.services.audit_orchestrator import AuditOrchestrator
 
-        SessionLocal = sessionmaker(bind=db_session.bind)
-        orchestrator = AuditOrchestrator(SessionLocal)
+        session_local = sessionmaker(bind=db_session.bind)
+        orchestrator = AuditOrchestrator(session_local)
 
         with pytest.raises(ValueError, match="Audit non-existent-id not found"):
             orchestrator.get_audit(db_session, "non-existent-id")
@@ -596,8 +602,8 @@ class TestAuditLifecycleErrorHandling:
 
         from app.services.audit_orchestrator import AuditOrchestrator
 
-        SessionLocal = sessionmaker(bind=db_session.bind)
-        orchestrator = AuditOrchestrator(SessionLocal)
+        session_local = sessionmaker(bind=db_session.bind)
+        orchestrator = AuditOrchestrator(session_local)
 
         audit = Audit(
             target_url="https://example.com",
