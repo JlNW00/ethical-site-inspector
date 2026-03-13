@@ -177,10 +177,18 @@ export function ReportPage() {
               </a>
             ) : null}
             {auditId ? (
+              <Link className="btn btn-primary" to={`/audits/${auditId}/diff`}>
+                Compare Personas
+              </Link>
+            ) : null}
+            {auditId ? (
               <Link className="btn btn-secondary" to={`/audits/${auditId}/run`}>
                 Back to run log
               </Link>
             ) : null}
+            <Link className="btn btn-secondary" to="/history">
+              Back to History
+            </Link>
           </div>
         </div>
         <div className="hero-score">

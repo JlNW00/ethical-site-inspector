@@ -37,6 +37,7 @@ export interface Finding {
     price_points?: Array<{ label: string; value: number }>;
     friction_indicators?: string[];
     activity_log?: string[];
+    interacted_controls?: string[];
   };
   confidence: number;
   trust_impact: number;
