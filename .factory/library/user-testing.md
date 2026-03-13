@@ -39,3 +39,41 @@ Testing surface, validation approach, and resource classification.
 - Nova Act live audits take 30-120 seconds per scenario — testing with real Nova Act is slow
 - For UI validation, mock/seeded data in the database may be needed
 - Cookie consent testing depends on the target site actually having a cookie banner
+
+## Flow Validator Guidance: API/Code Inspection
+
+### Testing Approach
+For nova-act-core milestone assertions, the primary testing surface is:
+1. **Backend API** at http://127.0.0.1:8000 - verify endpoints return expected data structures
+2. **Code inspection** - verify code structure, imports, and patterns via file reading
+3. **Backend test suite** - verify all tests pass via pytest
+
+### Services Running
+- Backend API: http://127.0.0.1:8000 (already started, health check passing)
+- Frontend: http://127.0.0.1:5173 (already started)
+
+### Seeded Demo Audit
+- ID: 48fcd4cc-a0a4-454f-8444-4b3b302dd595 (mock mode, completed)
+- Use GET /api/audits/{id} and GET /api/audits/{id}/findings to inspect seeded data
+
+### Key Backend Files
+- taxonomy.py: `C:\EthicalSiteInspector\backend\app\core\taxonomy.py`
+- nova_act_browser.py: `C:\EthicalSiteInspector\backend\app\providers\nova_act_browser.py`
+- provider_registry.py: `C:\EthicalSiteInspector\backend\app\services\provider_registry.py`
+- health.py: `C:\EthicalSiteInspector\backend\app\api\routes\health.py`
+
+### Isolation Rules
+- Do NOT modify any application code
+- Do NOT start/stop services (they are already running)
+- Use Python urllib or similar for API calls (curl on Windows uses PowerShell Invoke-WebRequest which has different syntax)
+- Write reports to assigned output directories only
+
+### API Call Pattern (Windows-compatible)
+```python
+C:\EthicalSiteInspector\backend\.venv\Scripts\python.exe -c "import urllib.request, json; r = urllib.request.urlopen('http://127.0.0.1:8000/api/health'); print(json.loads(r.read().decode()))"
+```
+
+### Backend Test Pattern
+```
+cd C:\EthicalSiteInspector\backend && .venv\Scripts\python.exe -m pytest tests/ -v --tb=short -x
+```

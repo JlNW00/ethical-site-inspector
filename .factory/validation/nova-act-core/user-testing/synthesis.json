@@ -1,0 +1,42 @@
+{
+  "milestone": "nova-act-core",
+  "round": 1,
+  "status": "pass",
+  "assertionsSummary": {
+    "total": 13,
+    "passed": 13,
+    "failed": 0,
+    "blocked": 0
+  },
+  "passedAssertions": [
+    "VAL-NOVA-001",
+    "VAL-NOVA-002",
+    "VAL-NOVA-003",
+    "VAL-NOVA-004",
+    "VAL-NOVA-005",
+    "VAL-NOVA-006",
+    "VAL-NOVA-007",
+    "VAL-NOVA-008",
+    "VAL-NOVA-009",
+    "VAL-NOVA-010",
+    "VAL-NOVA-011",
+    "VAL-NOVA-012",
+    "VAL-NOVA-013"
+  ],
+  "failedAssertions": [],
+  "blockedAssertions": [],
+  "appliedUpdates": [
+    {
+      "target": "user-testing.md",
+      "description": "Added 'Flow Validator Guidance: API/Code Inspection' section with testing approach, service URLs, seeded audit info, isolation rules, and API/test command patterns for Windows",
+      "source": "setup"
+    }
+  ],
+  "previousRound": null,
+  "flowReports": [
+    ".factory/validation/nova-act-core/user-testing/flows/api-registry.json",
+    ".factory/validation/nova-act-core/user-testing/flows/code-structure.json",
+    ".factory/validation/nova-act-core/user-testing/flows/audit-functionality.json"
+  ],
+  "testingApproach": "Three flow validator subagents tested 13 assertions in parallel: (1) API/Registry group verified readiness endpoint and backend test suite, (2) Code Structure group verified taxonomy single source of truth and Pydantic act_get() patterns, (3) Audit Functionality group verified all 6 scenario implementations, screenshot capture, and parallel persona execution through code inspection and API calls."
+}
