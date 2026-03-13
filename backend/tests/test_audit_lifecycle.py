@@ -626,3 +626,260 @@ class TestAuditLifecycleErrorHandling:
         assert len(events) == 1
         assert events[0].phase == "test"
         assert events[0].message == "Test event"
+
+
+# =============================================================================
+# Terminal Failure State Tests (VAL-STAB-001, VAL-STAB-002, VAL-STAB-003)
+# =============================================================================
+
+
+class CompleteFailStubBrowserProvider:
+    """Stub that fails completely to test terminal failure states."""
+
+    def run_audit(self, audit_id: str, target_url: str, scenarios: list[str], personas: list[str], progress):
+        """Always raise an exception that cannot be recovered."""
+        raise RuntimeError("Simulated unrecoverable browser provider failure")
+
+
+class TestTerminalFailureStates:
+    """Test that failed audits never get stuck in 'running' state (VAL-STAB-001)."""
+
+    @pytest.fixture
+    def orchestrator_with_complete_failure(self, db_engine):
+        """Create an orchestrator where both primary and fallback fail."""
+        from sqlalchemy.orm import sessionmaker
+
+        from app.services.audit_orchestrator import AuditOrchestrator
+
+        session_local = sessionmaker(bind=db_engine)
+        orchestrator = AuditOrchestrator(session_local)
+
+        # Stub providers - both primary and fallback fail
+        failing_provider = CompleteFailStubBrowserProvider()
+        stub_classifier = SimpleStubClassifierProvider()
+
+        with (
+            patch("app.services.audit_orchestrator.get_browser_provider", return_value=failing_provider),
+            patch("app.services.audit_orchestrator.get_classifier_provider", return_value=stub_classifier),
+            patch(
+                "app.services.audit_orchestrator.get_fallback_browser_provider",
+                return_value=failing_provider,  # Fallback also fails
+            ),
+        ):
+            yield orchestrator, failing_provider
+
+    def test_audit_reaches_failed_state_on_exception(self, db_session, orchestrator_with_complete_failure):
+        """VAL-STAB-001: Failed audits have status='failed' with error summary."""
+        orchestrator, _ = orchestrator_with_complete_failure
+
+        from pydantic import HttpUrl
+
+        from app.schemas.audit import AuditCreateRequest
+
+        payload = AuditCreateRequest(
+            target_url=HttpUrl("https://test-site.com"),
+            scenarios=["cookie_consent"],
+            personas=["privacy_sensitive"],
+        )
+        audit = orchestrator.create_audit(db_session, payload, "test_mode")
+        audit_id = audit.id
+
+        # Run audit - should handle exception gracefully
+        orchestrator.run_audit(audit_id)
+        time.sleep(0.5)
+
+        # Refresh audit
+        db_session.refresh(audit)
+
+        # Audit should be in failed state, not stuck in running
+        assert audit.status == "failed", f"Expected status='failed', got status='{audit.status}'"
+        assert audit.completed_at is not None, "Failed audit should have completed_at timestamp"
+        assert audit.summary is not None, "Failed audit should have error summary"
+        assert "error" in audit.summary.lower() or "failed" in audit.summary.lower(), "Summary should indicate failure"
+
+    def test_terminal_error_event_emitted(self, db_session, orchestrator_with_complete_failure):
+        """VAL-STAB-002: Terminal error event emitted with failure details."""
+        orchestrator, _ = orchestrator_with_complete_failure
+
+        from pydantic import HttpUrl
+
+        from app.schemas.audit import AuditCreateRequest
+
+        payload = AuditCreateRequest(
+            target_url=HttpUrl("https://test-site.com"),
+            scenarios=["cookie_consent"],
+            personas=["privacy_sensitive"],
+        )
+        audit = orchestrator.create_audit(db_session, payload, "test_mode")
+        audit_id = audit.id
+
+        orchestrator.run_audit(audit_id)
+        time.sleep(0.5)
+
+        # Check for terminal error event
+        error_events = (
+            db_session.query(AuditEvent)
+            .filter(AuditEvent.audit_id == audit_id, AuditEvent.phase == "error")
+            .all()
+        )
+
+        assert len(error_events) >= 1, "Should have at least one error event with phase='error'"
+        error_event = error_events[0]
+        assert error_event.status == "error", "Error event should have status='error'"
+        assert "exception" in error_event.message.lower() or "failed" in error_event.message.lower(), \
+            "Error message should indicate failure"
+        assert error_event.details is not None, "Error event should have details"
+        assert "error_type" in error_event.details, "Error details should contain error_type"
+
+
+class TestPartialScenarioFailure:
+    """Test partial completion scenarios (VAL-STAB-003)."""
+
+    @pytest.fixture
+    def orchestrator_with_partial_failure(self, db_engine):
+        """Create an orchestrator where some scenarios fail, some succeed."""
+        from sqlalchemy.orm import sessionmaker
+
+        from app.services.audit_orchestrator import AuditOrchestrator
+
+        session_local = sessionmaker(bind=db_engine)
+        orchestrator = AuditOrchestrator(session_local)
+
+        # Stub that returns observations for some scenarios but not others
+        class PartialFailStubBrowserProvider:
+            def __init__(self):
+                self.run_audit_called = False
+
+            def run_audit(self, audit_id, target_url, scenarios, personas, progress):
+                self.run_audit_called = True
+                from app.schemas.runtime import BrowserRunResult, JourneyObservation, ObservationEvidence
+
+                observations = []
+                # Only return observations for cookie_consent, fail others
+                for scenario in scenarios:
+                    if scenario == "cookie_consent":
+                        for persona in personas:
+                            observations.append(
+                                JourneyObservation(
+                                    scenario=scenario,
+                                    persona=persona,
+                                    target_url=target_url,
+                                    final_url=target_url,
+                                    evidence=ObservationEvidence(
+                                        screenshot_urls=[],
+                                        screenshot_paths=[],
+                                        button_labels=["Accept"],
+                                        checkbox_states={},
+                                        price_points=[],
+                                        text_snippets=["Test"],
+                                        headings=[],
+                                        page_title="Test",
+                                        dom_excerpt="Test",
+                                        step_count=1,
+                                        friction_indicators=[],
+                                        activity_log=["Test"],
+                                        metadata={
+                                            "source": "stub",
+                                            "scenario_state_found": True,
+                                            "action_count": 1,
+                                        },
+                                    ),
+                                )
+                            )
+
+                return BrowserRunResult(
+                    observations=observations,
+                    summary={
+                        "mode": "stub",
+                        "observation_count": len(observations),
+                        "failed_scenarios": [s for s in scenarios if s != "cookie_consent"],
+                        "status": "completed",
+                        "partial_failure": True,
+                    },
+                )
+
+        stub_provider = PartialFailStubBrowserProvider()
+        stub_classifier = SimpleStubClassifierProvider()
+
+        with (
+            patch("app.services.audit_orchestrator.get_browser_provider", return_value=stub_provider),
+            patch("app.services.audit_orchestrator.get_classifier_provider", return_value=stub_classifier),
+            patch("app.services.audit_orchestrator.get_fallback_browser_provider", return_value=stub_provider),
+            patch(
+                "app.services.report_service.ReportService.generate_report",
+                return_value=("C:/report.html", "/reports/test.html"),
+            ),
+        ):
+            yield orchestrator, stub_provider
+
+    def test_partial_completion_marked_completed(self, db_session, orchestrator_with_partial_failure):
+        """VAL-STAB-003: Some scenarios fail, others succeed -> status='completed'."""
+        orchestrator, stub_provider = orchestrator_with_partial_failure
+
+        from pydantic import HttpUrl
+
+        from app.schemas.audit import AuditCreateRequest
+
+        payload = AuditCreateRequest(
+            target_url=HttpUrl("https://test-site.com"),
+            scenarios=["cookie_consent", "checkout_flow", "subscription_cancellation"],
+            personas=["privacy_sensitive"],
+        )
+        audit = orchestrator.create_audit(db_session, payload, "test_mode")
+        audit_id = audit.id
+
+        orchestrator.run_audit(audit_id)
+        time.sleep(0.5)
+
+        db_session.refresh(audit)
+
+        # Partial completion should result in completed status
+        assert audit.status == "completed", f"Expected status='completed' for partial failure, got '{audit.status}'"
+
+
+class TestScenarioTimeouts:
+    """Test configurable timeouts per Nova Act scenario."""
+
+    def test_default_scenario_timeouts(self):
+        """Test that default scenario timeouts are defined."""
+        from app.providers.nova_act_browser import NovaActAuditProvider
+
+        # Check default timeouts are defined
+        assert NovaActAuditProvider.DEFAULT_SCENARIO_TIMEOUT == 120
+        assert "cookie_consent" in NovaActAuditProvider.SCENARIO_TIMEOUTS
+        assert "checkout_flow" in NovaActAuditProvider.SCENARIO_TIMEOUTS
+        assert NovaActAuditProvider.SCENARIO_TIMEOUTS["checkout_flow"] == 180  # Longer timeout
+
+    def test_custom_scenario_timeouts(self):
+        """Test that custom scenario timeouts can be provided."""
+        from unittest.mock import MagicMock
+
+        from app.providers.nova_act_browser import NovaActAuditProvider
+
+        mock_storage = MagicMock()
+        custom_timeouts = {"cookie_consent": 60, "checkout_flow": 300}
+
+        provider = NovaActAuditProvider(
+            storage=mock_storage,
+            timeout=120,
+            scenario_timeouts=custom_timeouts,
+        )
+
+        # Custom timeouts should override defaults
+        assert provider.scenario_timeouts["cookie_consent"] == 60
+        assert provider.scenario_timeouts["checkout_flow"] == 300
+        # Other scenarios should keep defaults
+        assert provider.scenario_timeouts["subscription_cancellation"] == 120
+
+    def test_get_scenario_timeout_method(self):
+        """Test _get_scenario_timeout returns correct timeout per scenario."""
+        from unittest.mock import MagicMock
+
+        from app.providers.nova_act_browser import NovaActAuditProvider
+
+        mock_storage = MagicMock()
+        provider = NovaActAuditProvider(storage=mock_storage)
+
+        assert provider._get_scenario_timeout("cookie_consent") == 120
+        assert provider._get_scenario_timeout("checkout_flow") == 180
+        assert provider._get_scenario_timeout("unknown_scenario") == 120  # Default fallback

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import Counter, defaultdict
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 from threading import Thread
 from typing import Any
 
@@ -52,10 +52,61 @@ class AuditOrchestrator:
         Thread(target=self.run_audit, args=(audit_id, mode_override), daemon=True).start()
 
     def run_audit(self, audit_id: str, mode_override: str | None = None) -> None:
+        """Run the full audit lifecycle with terminal failure handling.
+
+        The entire run_audit method is wrapped in a top-level try/except to ensure
+        that failed audits always reach a terminal state (status='failed') with
+        proper error events and summaries, never getting stuck in 'running' state.
+        """
+        try:
+            self._run_audit_internal(audit_id, mode_override)
+        except Exception as exc:
+            # Terminal failure handling: ensure audit reaches failed state
+            self._handle_audit_failure(audit_id, exc)
+
+    def _handle_audit_failure(self, audit_id: str, exc: Exception) -> None:
+        """Handle terminal audit failure: set status='failed', emit error event, persist error summary."""
+        error_message = f"Audit failed with unhandled exception: {exc.__class__.__name__}: {exc!s}"
+        error_summary = f"The audit could not complete due to an error: {exc.__class__.__name__}. {str(exc)[:200]}"
+
+        try:
+            with self.session_factory() as db:
+                audit = self.get_audit(db, audit_id)
+                audit.status = "failed"
+                audit.completed_at = datetime.now(UTC)
+                audit.summary = error_summary
+
+                # Emit terminal error event
+                db.add(
+                    AuditEvent(
+                        audit_id=audit.id,
+                        phase="error",
+                        status="error",
+                        message=error_message,
+                        progress=100,
+                        details={
+                            "error_type": exc.__class__.__name__,
+                            "error_message": str(exc)[:500],
+                            "audit_id": audit_id,
+                        },
+                    )
+                )
+                db.commit()
+        except Exception as inner_exc:
+            # Last resort: if we can't even update the database, log the error
+            import logging
+
+            logger = logging.getLogger(__name__)
+            logger.critical(
+                f"Failed to update audit {audit_id} status to failed: {inner_exc}. Original error: {exc}"
+            )
+
+    def _run_audit_internal(self, audit_id: str, mode_override: str | None = None) -> None:
+        """Internal audit execution logic (separated for top-level exception handling)."""
         with self.session_factory() as db:
             audit = self.get_audit(db, audit_id)
             audit.status = "running"
-            audit.started_at = datetime.now(timezone.utc)
+            audit.started_at = datetime.now(UTC)
             if mode_override:
                 audit.mode = mode_override
             db.add(
@@ -169,7 +220,7 @@ class AuditOrchestrator:
             audit.trust_score = trust_score
             audit.risk_level = risk_level
             audit.status = "completed"
-            audit.completed_at = datetime.now(timezone.utc)
+            audit.completed_at = datetime.now(UTC)
             audit.findings.clear()
             db.add_all(finding_models)
             db.flush()
@@ -290,7 +341,10 @@ class AuditOrchestrator:
             fallback = {
                 "cookie_consent": "The consent journey captured a trust-impacting choice imbalance.",
                 "checkout_flow": "The checkout journey required additional offer, detail, or reserve steps after intent was established.",
-                "cancellation_flow": "The cancellation journey captured friction before a clean exit path.",
+                "subscription_cancellation": "The cancellation journey captured friction before a clean exit path.",
+                "account_deletion": "The account deletion journey captured friction before a clean exit path.",
+                "newsletter_signup": "The newsletter signup journey captured potential dark enrollment patterns.",
+                "pricing_comparison": "The pricing comparison journey captured potential deceptive pricing patterns.",
             }.get(scenario, "Journey shows trust-impacting friction.")
             headline = AuditOrchestrator._headline_from_example(bucket["example"], fallback)
             scenario_breakdown.append(

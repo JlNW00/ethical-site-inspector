@@ -176,7 +176,7 @@ def build_rule_findings(observation: JourneyObservation) -> list[RuleFindingDraf
         )
 
     if action_count >= 2 or (
-        observation.scenario == "cancellation_flow"
+        observation.scenario == "subscription_cancellation"
         and action_count >= 1
         and any(
             "support" in item.lower() or "pause" in item.lower() for item in metadata.get("interacted_controls", [])
@@ -213,7 +213,7 @@ def build_rule_findings(observation: JourneyObservation) -> list[RuleFindingDraf
     )
     if (
         urgency_quote
-        and observation.scenario in {"checkout_flow", "cancellation_flow"}
+        and observation.scenario in {"checkout_flow", "subscription_cancellation"}
         and _quote_is_scenario_grounded(observation.scenario, urgency_quote)
     ):
         add_or_merge(
@@ -331,7 +331,7 @@ def _quote_is_scenario_grounded(scenario: str, quote: str) -> bool:
             term in lower_quote
             for term in ("price", "night", "deal", "offer", "reserve", "availability", "room", "book")
         )
-    if scenario == "cancellation_flow":
+    if scenario == "subscription_cancellation":
         return any(term in lower_quote for term in ("cancel", "leave", "stay", "pause", "subscription"))
     return any(term in lower_quote for term in ("cookie", "consent", "privacy", "tracking"))
 

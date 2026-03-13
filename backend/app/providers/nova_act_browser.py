@@ -10,7 +10,7 @@ from __future__ import annotations
 import itertools
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Any, Callable
+from typing import Any, Callable, ClassVar
 from urllib.parse import urlparse
 
 from pydantic import BaseModel, Field
@@ -152,6 +152,19 @@ class NovaActAuditProvider(BrowserAuditProvider):
     via ThreadPoolExecutor.
     """
 
+    # Default timeout per scenario (in seconds)
+    DEFAULT_SCENARIO_TIMEOUT: int = 120
+
+    # Per-scenario timeout overrides (can be customized)
+    SCENARIO_TIMEOUTS: ClassVar[dict[str, int]] = {
+        "cookie_consent": 120,
+        "checkout_flow": 180,  # Checkout can take longer
+        "subscription_cancellation": 120,
+        "account_deletion": 120,
+        "newsletter_signup": 90,  # Usually quicker
+        "pricing_comparison": 120,
+    }
+
     def __init__(
         self,
         storage: StorageProvider,
@@ -159,14 +172,24 @@ class NovaActAuditProvider(BrowserAuditProvider):
         tty: bool = False,
         timeout: int = 120,
         max_workers: int = 3,
+        scenario_timeouts: dict[str, int] | None = None,
     ):
         self.storage = storage
         self.headless = headless
         self.tty = tty
         self.timeout = timeout
         self.max_workers = max_workers
+        # Allow custom scenario timeouts to override defaults
+        if scenario_timeouts:
+            self.scenario_timeouts = {**self.SCENARIO_TIMEOUTS, **scenario_timeouts}
+        else:
+            self.scenario_timeouts = self.SCENARIO_TIMEOUTS.copy()
         if not NOVA_ACT_AVAILABLE:
             logger.warning("Nova Act SDK not available. Provider will run in degraded mode.")
+
+    def _get_scenario_timeout(self, scenario: str) -> int:
+        """Get the timeout for a specific scenario."""
+        return self.scenario_timeouts.get(scenario, self.DEFAULT_SCENARIO_TIMEOUT)
 
     def _ensure_nova_act(self) -> Any:
         """Ensure Nova Act SDK is available."""
@@ -220,6 +243,8 @@ class NovaActAuditProvider(BrowserAuditProvider):
 
         total_combinations = len(valid_scenarios) * len(valid_personas)
         completed = 0
+        failed_scenarios: list[str] = []
+        successful_observations: list[JourneyObservation] = []
 
         for scenario in valid_scenarios:
             scenario_observations = self._run_scenario_with_personas(
@@ -231,19 +256,57 @@ class NovaActAuditProvider(BrowserAuditProvider):
                 progress=progress,
                 base_progress=int((completed / total_combinations) * 50),
             )
+
+            # Check if this scenario had any successful observations (not error observations)
+            scenario_success_count = sum(
+                1 for obs in scenario_observations if not obs.evidence.metadata.get("error")
+            )
+            scenario_failed_count = len(scenario_observations) - scenario_success_count
+
+            if scenario_success_count == 0 and scenario_failed_count > 0:
+                # All personas for this scenario failed
+                failed_scenarios.append(scenario)
+                logger.error(f"Scenario {scenario} failed for all {len(valid_personas)} personas")
+            else:
+                successful_observations.extend(scenario_observations)
+
             observations.extend(scenario_observations)
             completed += len(valid_personas)
 
+        # Determine overall success based on partial completion rules:
+        # - If ALL scenarios fail -> mark as failed
+        # - If some succeed -> mark as completed (partial results)
+        all_scenarios_failed = len(failed_scenarios) == len(valid_scenarios)
+        some_scenarios_succeeded = len(failed_scenarios) < len(valid_scenarios)
+
+        summary: dict[str, Any] = {
+            "mode": "nova_act",
+            "evidence_origin": "nova_act",
+            "evidence_origin_label": "Nova Act AI-driven browser automation",
+            "observation_count": len(observations),
+            "scenarios": valid_scenarios,
+            "personas": valid_personas,
+            "failed_scenarios": failed_scenarios,
+            "successful_observation_count": len(successful_observations),
+        }
+
+        if all_scenarios_failed:
+            summary["status"] = "failed"
+            summary["error"] = f"All scenarios failed: {', '.join(failed_scenarios)}"
+            logger.error(f"Audit {audit_id}: All scenarios failed ({', '.join(failed_scenarios)})")
+        elif some_scenarios_succeeded and failed_scenarios:
+            summary["status"] = "completed"
+            summary["partial_failure"] = True
+            summary["warning"] = f"Partial completion: {len(failed_scenarios)} scenario(s) failed"
+            logger.warning(
+                f"Audit {audit_id}: Partial completion - {len(failed_scenarios)}/{len(valid_scenarios)} scenarios failed"
+            )
+        else:
+            summary["status"] = "completed"
+
         return BrowserRunResult(
             observations=observations,
-            summary={
-                "mode": "nova_act",
-                "evidence_origin": "nova_act",
-                "evidence_origin_label": "Nova Act AI-driven browser automation",
-                "observation_count": len(observations),
-                "scenarios": valid_scenarios,
-                "personas": valid_personas,
-            },
+            summary=summary,
         )
 
     def _run_scenario_with_personas(
@@ -256,9 +319,11 @@ class NovaActAuditProvider(BrowserAuditProvider):
         progress: ProgressCallback,
         base_progress: int,
     ) -> list[JourneyObservation]:
-        """Run a single scenario across multiple personas in parallel."""
+        """Run a single scenario across multiple personas in parallel with per-scenario timeouts."""
         observations: list[JourneyObservation] = []
         total = len(personas)
+        scenario_timeout = self._get_scenario_timeout(scenario)
+        failed_personas: list[str] = []
 
         # Use ThreadPoolExecutor for parallel persona testing
         with ThreadPoolExecutor(max_workers=min(self.max_workers, len(personas))) as executor:
@@ -285,7 +350,8 @@ class NovaActAuditProvider(BrowserAuditProvider):
                         {"scenario": scenario, "persona": persona},
                     )
 
-                    observation = future.result(timeout=self.timeout + 30)
+                    # Use scenario-specific timeout
+                    observation = future.result(timeout=scenario_timeout)
                     observations.append(observation)
 
                     progress(
@@ -300,10 +366,33 @@ class NovaActAuditProvider(BrowserAuditProvider):
                             "buttons": observation.evidence.button_labels[:3],
                         },
                     )
+                except TimeoutError as te:
+                    logger.error(f"Timeout in {scenario}/{persona} after {scenario_timeout}s: {te}")
+                    failed_personas.append(persona)
+                    # Create a fallback observation with timeout info
+                    observations.append(
+                        self._error_observation(
+                            target_url, scenario, persona, f"Scenario timed out after {scenario_timeout} seconds"
+                        )
+                    )
+                    progress(
+                        "browser",
+                        f"Timeout for {scenario.replace('_', ' ')} / {persona.replace('_', ' ')} - skipping",
+                        base_progress + int((index / total) * 50),
+                        "warning",
+                        {"scenario": scenario, "persona": persona, "timeout_seconds": scenario_timeout},
+                    )
                 except Exception as e:
                     logger.error(f"Error in {scenario}/{persona}: {e}")
+                    failed_personas.append(persona)
                     # Create a fallback observation with error info
                     observations.append(self._error_observation(target_url, scenario, persona, str(e)))
+
+        # Log summary of failures for this scenario
+        if failed_personas:
+            logger.warning(
+                f"Scenario {scenario}: {len(failed_personas)}/{total} personas failed ({', '.join(failed_personas)})"
+            )
 
         return observations
 

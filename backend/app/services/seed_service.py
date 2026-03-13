@@ -23,7 +23,7 @@ def ensure_seeded_demo(session_factory) -> str | None:
         orchestrator = AuditOrchestrator(session_factory)
         payload = AuditCreateRequest(
             target_url="https://demo.ethicalsiteinspector.local",
-            scenarios=["cookie_consent", "checkout_flow", "cancellation_flow"],
+            scenarios=["cookie_consent", "checkout_flow", "subscription_cancellation"],
             personas=["privacy_sensitive", "cost_sensitive", "exit_intent"],
         )
         audit = orchestrator.create_audit(
