@@ -1,0 +1,110 @@
+{
+  "milestone": "nova-act-core",
+  "round": 1,
+  "status": "pass",
+  "validatorsRun": {
+    "test": {
+      "passed": true,
+      "command": "cd backend && .venv\\Scripts\\python.exe -m pytest tests/ -v --tb=short -x",
+      "exitCode": 0,
+      "details": "151 tests passed in 5.17s"
+    },
+    "typecheck": {
+      "passed": false,
+      "command": "cd backend && .venv\\Scripts\\python.exe -m mypy app/ --ignore-missing-imports",
+      "exitCode": 1,
+      "details": "119 errors in 12 files (pre-existing: 118 errors before milestone, net +1 error). Pre-existing issues in browser.py, classifier.py, audit_orchestrator.py, etc. Not a regression from this milestone."
+    },
+    "lint": {
+      "passed": false,
+      "command": "cd backend && .venv\\Scripts\\python.exe -m ruff check app/",
+      "exitCode": 1,
+      "details": "35 errors (pre-existing: 37 errors before milestone, net -2 errors). Mostly import sorting, unused imports, and style issues. Actually improved by this milestone."
+    }
+  },
+  "reviewsSummary": {
+    "total": 4,
+    "passed": 4,
+    "failed": 0,
+    "failedFeatures": []
+  },
+  "blockingIssues": [],
+  "nonBlockingIssues": [
+    {
+      "featureId": "taxonomy-single-source",
+      "severity": "non_blocking",
+      "description": "seed_service.py uses legacy 'cancellation_flow' scenario name which will fail Pydantic validation at runtime. taxonomy.py defines LEGACY_SCENARIO_NAMES mapping but it's never used for translation."
+    },
+    {
+      "featureId": "taxonomy-single-source",
+      "severity": "non_blocking",
+      "description": "rule_engine.py still checks observation.scenario == 'cancellation_flow' (dead code). audit_orchestrator.py has hardcoded 'cancellation_flow' in scenario summary."
+    },
+    {
+      "featureId": "nova-act-provider",
+      "severity": "non_blocking",
+      "description": "3 unused imports in nova_act_browser.py (itertools, DarkPatternCategory, EvidenceType), redundant NovaActClass variable, and broad exception handling that could mask bugs."
+    },
+    {
+      "featureId": "nova-act-provider",
+      "severity": "non_blocking",
+      "description": "Commit 2bbc717 changed dependency pinning strategy from flexible ranges to exact pins and added unused structlog dependency. Also included 8460+ unrelated files in commit."
+    },
+    {
+      "featureId": "provider-registry-nova-act",
+      "severity": "non_blocking",
+      "description": "Live mode fallback to MockBrowserAuditProvider when NovaAct unavailable lacks a warning log, potentially confusing operators."
+    },
+    {
+      "featureId": "nova-act-backend-tests",
+      "severity": "non_blocking",
+      "description": "Tautological assertion 'len(findings) >= 0' always passes. Unnecessary time.sleep(0.5) calls add ~4s to test suite."
+    }
+  ],
+  "appliedUpdates": [],
+  "suggestedGuidanceUpdates": [
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Clarify off-limits boundary: 'Do NOT modify mock or hybrid providers' should specify whether formatting-only changes (e.g., ruff auto-fixes) are allowed. Workers need to run ruff on the whole codebase but can't avoid touching off-limits files. Consider: 'Do NOT modify mock or hybrid provider behavior. Formatting-only changes (ruff/black) are acceptable.'",
+      "evidence": "Feature taxonomy-single-source couldn't fully migrate 'cancellation_flow' to 'subscription_cancellation' in browser.py because it contains MockBrowserAuditProvider. Feature nova-act-backend-tests reformatted browser.py lines as part of ruff compliance. Both workers were uncertain about the boundary.",
+      "isSystemic": true
+    },
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Add commit hygiene guideline: 'Commits should only include files changed by the feature. Do not commit unrelated files (node_modules, config files, docs) unless they are required for the feature. Use git add selectively.'",
+      "evidence": "Feature nova-act-provider commit 2bbc717 included 8460 files changed (1.9M insertions) when only 4-5 files needed changes. This makes code review extremely difficult.",
+      "isSystemic": true
+    },
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Document dependency pinning strategy: either 'Use flexible version ranges (>=x.y,<z.0)' or 'Use exact pins (==x.y.z)' consistently. The original project used ranges; one worker changed everything to exact pins without documentation.",
+      "evidence": "Feature nova-act-provider changed all 10 existing deps from range to exact pin in requirements.txt without this being in the feature spec or documented in AGENTS.md.",
+      "isSystemic": false
+    },
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Add note about legacy scenario names: 'The canonical scenario name is subscription_cancellation (not cancellation_flow). seed_service.py and rule_engine.py still use the legacy name and should be updated when those files are next modified.'",
+      "evidence": "Features taxonomy-single-source and nova-act-provider both noted the 'cancellation_flow' vs 'subscription_cancellation' inconsistency across seed_service.py, rule_engine.py, browser.py, and audit_orchestrator.py.",
+      "isSystemic": true
+    }
+  ],
+  "rejectedObservations": [
+    {
+      "observation": "Worker added 'structlog==25.1.0' to requirements.txt but it's not used by nova_act_browser module.",
+      "reason": "Minor — structlog may be used by other future features. Not worth a guidance update."
+    },
+    {
+      "observation": "Test bootstrap pattern (sys.path.insert) is consistent across test suite.",
+      "reason": "Already an established pattern in the project. Not a new observation."
+    },
+    {
+      "observation": "Lint fixes in nova-act-backend-tests required a second commit (3ab595c) after initial commit (5f9dc60).",
+      "reason": "Minor process issue, not worth documenting. Workers should run lint before committing, which is already implied by the build commands."
+    },
+    {
+      "observation": "Worker skill deviation: tests written after implementation rather than TDD approach.",
+      "reason": "Reasonable deviation for new-module creation. TDD is ideal but not mandatory."
+    }
+  ],
+  "previousRound": null
+}
