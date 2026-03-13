@@ -53,8 +53,39 @@ For nova-act-core milestone assertions, the primary testing surface is:
 - Frontend: http://127.0.0.1:5173 (already started)
 
 ### Seeded Demo Audit
-- ID: 48fcd4cc-a0a4-454f-8444-4b3b302dd595 (mock mode, completed)
+- ID: 87a270b4-ab32-4068-92df-204ddca23e00 (mock mode, completed)
 - Use GET /api/audits/{id} and GET /api/audits/{id}/findings to inspect seeded data
+
+## Flow Validator Guidance: Live Stability
+
+### Testing Approach
+For live-stability milestone assertions, the primary testing surfaces are:
+1. **Backend API** at http://127.0.0.1:8000 - verify failure handling via API calls
+2. **Code inspection** - verify timeout configuration, exception handling patterns
+3. **Backend test suite** - verify all tests pass via pytest (VAL-STAB-004)
+
+### Assertions to Verify
+- VAL-STAB-001: Failed audits reach terminal state (status="failed" with error details)
+- VAL-STAB-002: Error events emitted on failure (terminal event with phase="error")
+- VAL-STAB-003: Timeout handling for long scenarios (configurable timeouts, graceful termination)
+- VAL-STAB-004: Backend test suite passes (all tests green)
+
+### Key Backend Files for Stability
+- audit_orchestrator.py: `C:\EthicalSiteInspector\backend\app\services\audit_orchestrator.py` - main run_audit() method with exception handling
+- audits.py: `C:\EthicalSiteInspector\backend\app\api\routes\audits.py` - API endpoints
+- nova_act_browser.py: `C:\EthicalSiteInspector\backend\app\providers\nova_act_browser.py` - Nova Act provider with timeout configuration
+
+### Testing Strategy for Failure States
+- Create an audit via POST /api/audits with an unreachable/invalid URL to trigger failures
+- Use mode=mock to avoid external Nova Act dependency for testing
+- Check GET /api/audits/{id} for status="failed" and error details
+- Check events array for phase="error" entries
+- Inspect code for timeout configuration and graceful handling
+
+### Backend Test Command
+```
+cd C:\EthicalSiteInspector\backend && .venv\Scripts\python.exe -m pytest tests/ -v --tb=short
+```
 
 ### Key Backend Files
 - taxonomy.py: `C:\EthicalSiteInspector\backend\app\core\taxonomy.py`
