@@ -25,7 +25,7 @@
 ## Frontend Pages
 - Home / Submit: http://127.0.0.1:5173/
 - History: http://127.0.0.1:5173/history
-- Run Page: http://127.0.0.1:5173/audits/{id}
+- Run Page: http://127.0.0.1:5173/audits/{id}/run (NOTE: route is /audits/:id/run, NOT /audits/:id)
 - Report Page: http://127.0.0.1:5173/audits/{id}/report
 - Persona Diff: http://127.0.0.1:5173/audits/{id}/diff
 - Compare: http://127.0.0.1:5173/compare?a={id1}&b={id2}
