@@ -2,11 +2,19 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
 import { api } from "../api/client";
-import type { Audit, Finding } from "../api/types";
+import type { Audit, AuditEvent, Finding } from "../api/types";
 import { FindingCard } from "../components/FindingCard";
 import { Layout } from "../components/Layout";
 import { ProgressMeter } from "../components/ProgressMeter";
 import { titleize } from "../lib/format";
+
+interface ScreenshotEntry {
+  url: string;
+  scenario: string;
+  persona: string;
+  step: string;
+  timestamp: string;
+}
 
 function targetHost(targetUrl?: string, fallback?: string) {
   if (fallback) {
@@ -57,6 +65,69 @@ function trimText(value: string, limit = 80) {
   return value.length <= limit ? value : `${value.slice(0, limit - 1).trimEnd()}…`;
 }
 
+function parseStepFromUrl(url: string): { scenario: string; persona: string; step: string } {
+  // URL format: .../{scenario}_{persona}_{step}.png or similar
+  const parts = url.split("/").pop()?.replace(/\.[^.]+$/, "").split("_") ?? [];
+  // Try to extract scenario, persona, step from filename
+  if (parts.length >= 3) {
+    return {
+      scenario: parts[0] ?? "unknown",
+      persona: parts[1] ?? "unknown",
+      step: parts.slice(2).join("_") ?? "unknown",
+    };
+  }
+  return { scenario: "unknown", persona: "unknown", step: "unknown" };
+}
+
+function formatStepName(step: string): string {
+  return step.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function extractScreenshotsFromFindings(findings: Finding[]): ScreenshotEntry[] {
+  const entries: ScreenshotEntry[] = [];
+  const seenUrls = new Set<string>();
+
+  for (const finding of findings) {
+    const urls = finding.evidence_payload.screenshot_urls ?? [];
+    for (const url of urls) {
+      if (seenUrls.has(url)) continue;
+      seenUrls.add(url);
+      const { step } = parseStepFromUrl(url);
+      entries.push({
+        url,
+        scenario: finding.scenario,
+        persona: finding.persona,
+        step,
+        timestamp: finding.created_at,
+      });
+    }
+  }
+
+  // Sort by timestamp
+  return entries.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+}
+
+function extractScreenshotsFromEvents(events: AuditEvent[]): ScreenshotEntry[] {
+  const entries: ScreenshotEntry[] = [];
+  const seenUrls = new Set<string>();
+
+  for (const event of events) {
+    const details = event.details as { screenshot_url?: string; scenario?: string; persona?: string; step?: string } | undefined;
+    if (details?.screenshot_url && !seenUrls.has(details.screenshot_url)) {
+      seenUrls.add(details.screenshot_url);
+      entries.push({
+        url: details.screenshot_url,
+        scenario: details.scenario ?? "audit",
+        persona: details.persona ?? "default",
+        step: details.step ?? event.phase,
+        timestamp: event.created_at,
+      });
+    }
+  }
+
+  return entries.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+}
+
 function extractQuoted(value: string) {
   const parts = value.split('"');
   return parts.length >= 3 ? parts[1] : value;
@@ -85,23 +156,34 @@ export function ReportPage() {
   const [audit, setAudit] = useState<Audit | null>(null);
   const [findings, setFindings] = useState<Finding[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [expandedImage, setExpandedImage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!auditId) {
+      setLoading(false);
       return;
     }
 
     let cancelled = false;
     void (async () => {
       try {
-        const [nextAudit, findingsResponse] = await Promise.all([api.getAudit(auditId), api.getFindings(auditId)]);
+        const [nextAudit, findingsResponse] = await Promise.all([
+          api.getAudit(auditId),
+          api.getFindings(auditId),
+        ]);
         if (!cancelled) {
           setAudit(nextAudit);
           setFindings(findingsResponse.findings);
+          setError(null);
         }
       } catch (err) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : "Unable to load report");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
         }
       }
     })();
@@ -119,6 +201,21 @@ export function ReportPage() {
       return accumulator;
     }, {});
   }, [findings]);
+
+  const screenshotTimeline = useMemo(() => {
+    const fromFindings = extractScreenshotsFromFindings(findings);
+    const fromEvents = extractScreenshotsFromEvents(audit?.events ?? []);
+    // Combine and dedupe by URL
+    const seen = new Set<string>();
+    const combined: ScreenshotEntry[] = [];
+    for (const entry of [...fromEvents, ...fromFindings]) {
+      if (!seen.has(entry.url)) {
+        seen.add(entry.url);
+        combined.push(entry);
+      }
+    }
+    return combined.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+  }, [findings, audit?.events]);
 
   const personaPaths = useMemo(() => {
     return findings.reduce<Record<string, string>>((accumulator, finding) => {
@@ -141,6 +238,95 @@ export function ReportPage() {
   const heroOverview = audit
     ? `${findings.length} evidence-backed findings were generated across ${audit.selected_scenarios.length} scenarios and ${audit.selected_personas.length} personas. ${riskSummary(audit.risk_level)}`
     : "A decision-ready trust report combining persona journeys, captured evidence, and remediation guidance.";
+
+  if (loading) {
+    return (
+      <Layout mode="loading" signals={["loading report"]}>
+        <section className="hero-panel">
+          <div>
+            <div className="brand-kicker">Trust-risk report</div>
+            <h1>Trust Audit Report</h1>
+            <div className="hero-pills">
+              <span className="signal-pill">Loading...</span>
+            </div>
+          </div>
+          <div className="hero-score">
+            <div className="hero-score-label">Trust Score</div>
+            <div className="hero-score-value">-- / 100</div>
+            <div style={{ marginTop: 18 }}>
+              <ProgressMeter value={0} />
+            </div>
+          </div>
+        </section>
+        <section className="content-panel">
+          <div className="empty-state">Loading report data...</div>
+        </section>
+      </Layout>
+    );
+  }
+
+  // Show error state for failed audits
+  if (audit?.status === "failed") {
+    return (
+      <Layout mode={audit?.mode ?? "live"} signals={["audit failed"]}>
+        <section className="hero-panel">
+          <div>
+            <div className="brand-kicker">Trust-risk report</div>
+            <h1>Audit Failed</h1>
+            <p className="hero-copy">
+              This audit encountered an error during execution and could not complete successfully.
+            </p>
+            <div className="hero-pills">
+              <span className="signal-pill">{hostLabel}</span>
+              <span className="signal-pill">{audit?.mode} mode</span>
+              <span className="signal-pill">failed</span>
+            </div>
+            <p className="muted" style={{ marginTop: 16 }}>
+              Target URL: {audit?.target_url} | Failed: {formatTimestamp(audit?.updated_at)}
+            </p>
+            <div className="action-row" style={{ marginTop: 24 }}>
+              {auditId ? (
+                <Link className="btn btn-secondary" to={`/audits/${auditId}/run`}>
+                  View Run Log
+                </Link>
+              ) : null}
+              <Link className="btn btn-secondary" to="/history">
+                Back to History
+              </Link>
+            </div>
+          </div>
+          <div className="hero-score">
+            <div className="hero-score-label">Status</div>
+            <div className="hero-score-value" style={{ fontSize: "48px", color: "var(--critical)" }}>
+              Failed
+            </div>
+            <div className="severity-pill severity-critical">error</div>
+          </div>
+        </section>
+
+        <section className="content-panel">
+          <div className="section-header">
+            <div>
+              <h2 className="section-title">Error Details</h2>
+              <p className="section-subtitle">Information about why the audit failed.</p>
+            </div>
+          </div>
+          <div className="subgrid">
+            <div className="summary-card" style={{ borderLeft: "3px solid var(--critical)" }}>
+              <div className="metric-label">Error Message</div>
+              <p style={{ marginTop: 12 }}>{audit?.summary ?? "An unexpected error occurred during the audit execution."}</p>
+            </div>
+            {error ? (
+              <div className="summary-card" style={{ borderLeft: "3px solid var(--high)" }}>
+                <div className="metric-label">Load Error</div>
+                <p style={{ marginTop: 12 }}>{error}</p>
+              </div>
+            ) : null}
+          </div>
+        </section>
+      </Layout>
+    );
+  }
 
   return (
     <Layout
@@ -174,6 +360,11 @@ export function ReportPage() {
             {auditId ? (
               <a className="btn btn-primary" href={api.getReportUrl(auditId)} target="_blank" rel="noreferrer">
                 Open HTML report
+              </a>
+            ) : null}
+            {auditId ? (
+              <a className="btn btn-primary" href={api.getPdfUrl(auditId)} target="_blank" rel="noreferrer">
+                Download PDF
               </a>
             ) : null}
             {auditId ? (
@@ -301,6 +492,111 @@ export function ReportPage() {
           </div>
         </section>
       </div>
+
+      {/* Screenshot Timeline Section */}
+      <section className="content-panel">
+        <div className="section-header">
+          <div>
+            <h2 className="section-title">Screenshot Timeline</h2>
+            <p className="section-subtitle">Chronological evidence captured during the audit journey.</p>
+          </div>
+        </div>
+        {screenshotTimeline.length > 0 ? (
+          <div className="timeline">
+            {screenshotTimeline.map((entry, index) => (
+              <div key={`${entry.url}-${index}`} className="timeline-item">
+                <div>
+                  <div className="timeline-phase">Step {index + 1}</div>
+                  <div className="timeline-message">{formatStepName(entry.step)}</div>
+                  <div className="timeline-details">
+                    {titleize(entry.scenario)} | {titleize(entry.persona)}
+                    <br />
+                    {formatTimestamp(entry.timestamp)}
+                  </div>
+                </div>
+                <div>
+                  <button
+                    onClick={() => setExpandedImage(entry.url)}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      padding: 0,
+                      cursor: "pointer",
+                      display: "block",
+                    }}
+                    aria-label={`View screenshot: ${formatStepName(entry.step)}`}
+                  >
+                    <img
+                      src={entry.url}
+                      alt={`${formatStepName(entry.step)} - ${entry.scenario}`}
+                      className="evidence-thumb"
+                      style={{ margin: 0 }}
+                    />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="empty-state">
+            No screenshots available. Screenshots are captured during audit execution and will appear here once the audit is complete.
+          </div>
+        )}
+      </section>
+
+      {/* Expanded Image Modal */}
+      {expandedImage && (
+        <div
+          onClick={() => setExpandedImage(null)}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") setExpandedImage(null);
+          }}
+          role="dialog"
+          aria-modal="true"
+          tabIndex={0}
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.9)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            cursor: "pointer",
+          }}
+        >
+          <img
+            src={expandedImage}
+            alt="Expanded screenshot"
+            style={{
+              maxWidth: "90%",
+              maxHeight: "90%",
+              borderRadius: "12px",
+              boxShadow: "0 20px 60px rgba(0, 0, 0, 0.5)",
+            }}
+          />
+          <button
+            onClick={() => setExpandedImage(null)}
+            style={{
+              position: "absolute",
+              top: "20px",
+              right: "20px",
+              background: "rgba(255, 255, 255, 0.1)",
+              border: "1px solid rgba(255, 255, 255, 0.3)",
+              color: "#fff",
+              padding: "12px 20px",
+              borderRadius: "8px",
+              cursor: "pointer",
+              fontSize: "16px",
+            }}
+          >
+            ✕ Close
+          </button>
+        </div>
+      )}
 
       <section className="content-panel">
         <div className="section-header">

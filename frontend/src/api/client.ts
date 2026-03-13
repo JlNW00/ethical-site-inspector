@@ -29,6 +29,7 @@ export const api = {
   getFindings: (auditId: string) => request<FindingsResponse>(`/api/audits/${auditId}/findings`),
   getReadiness: () => request<Readiness>("/api/readiness"),
   getReportUrl: (auditId: string) => `${API_BASE_URL}/api/audits/${auditId}/report`,
+  getPdfUrl: (auditId: string) => `${API_BASE_URL}/api/audits/${auditId}/report/pdf`,
   getAudits: (params?: { status?: string; url_contains?: string }) => {
     const searchParams = new URLSearchParams();
     if (params?.status) searchParams.append("status", params.status);
