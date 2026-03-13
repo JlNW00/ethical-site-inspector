@@ -13,6 +13,8 @@ from app.core.database import SessionLocal, get_db
 from app.models import Audit, Finding
 from app.schemas.audit import AuditCreateRequest, AuditRead, FindingsResponse
 from app.services.audit_orchestrator import AuditOrchestrator
+from app.services.pdf_service import generate_pdf_from_html
+
 
 
 router = APIRouter(prefix="/audits", tags=["audits"])
@@ -89,4 +91,43 @@ def get_report(audit_id: str, db: Session = Depends(get_db)) -> Response:
         report_path,
         media_type="text/html",
         filename=f"ethical-site-inspector-{audit.id}.html",
+    )
+
+
+@router.get("/{audit_id}/report/pdf")
+def get_report_pdf(audit_id: str, db: Session = Depends(get_db)) -> Response:
+    """Generate and download a PDF version of the audit report.
+
+    Returns a PDF file containing:
+    - Trust score
+    - Risk level
+    - Executive summary
+    - Scenario breakdowns
+    - Findings with severity
+
+    Content-Type: application/pdf
+    Content-Disposition: attachment with filename
+    """
+    audit = db.scalar(select(Audit).where(Audit.id == audit_id))
+    if audit is None:
+        raise HTTPException(status_code=404, detail="Audit not found")
+    if not audit.report_path:
+        raise HTTPException(status_code=404, detail="Report not generated yet")
+
+    report_path = Path(audit.report_path)
+    if not report_path.exists():
+        raise HTTPException(status_code=404, detail="Report file missing")
+
+    try:
+        html_content = report_path.read_text(encoding="utf-8")
+        pdf_bytes = generate_pdf_from_html(html_content)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"PDF generation failed: {e}") from e
+
+    filename = f"ethical-site-inspector-{audit.id}.pdf"
+
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )

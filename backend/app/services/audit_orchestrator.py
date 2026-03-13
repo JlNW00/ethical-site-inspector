@@ -97,9 +97,7 @@ class AuditOrchestrator:
             import logging
 
             logger = logging.getLogger(__name__)
-            logger.critical(
-                f"Failed to update audit {audit_id} status to failed: {inner_exc}. Original error: {exc}"
-            )
+            logger.critical(f"Failed to update audit {audit_id} status to failed: {inner_exc}. Original error: {exc}")
 
     def _run_audit_internal(self, audit_id: str, mode_override: str | None = None) -> None:
         """Internal audit execution logic (separated for top-level exception handling)."""

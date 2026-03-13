@@ -258,9 +258,7 @@ class NovaActAuditProvider(BrowserAuditProvider):
             )
 
             # Check if this scenario had any successful observations (not error observations)
-            scenario_success_count = sum(
-                1 for obs in scenario_observations if not obs.evidence.metadata.get("error")
-            )
+            scenario_success_count = sum(1 for obs in scenario_observations if not obs.evidence.metadata.get("error"))
             scenario_failed_count = len(scenario_observations) - scenario_success_count
 
             if scenario_success_count == 0 and scenario_failed_count > 0:
