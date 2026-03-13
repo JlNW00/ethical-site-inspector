@@ -1,64 +1,23 @@
 {
   "milestone": "ui-demo",
-  "round": 1,
-  "status": "fail",
+  "round": 2,
+  "status": "pass",
   "assertionsSummary": {
-    "total": 14,
-    "passed": 13,
-    "failed": 1,
+    "total": 1,
+    "passed": 1,
+    "failed": 0,
     "blocked": 0
   },
-  "passedAssertions": [
-    "VAL-UI-001",
-    "VAL-UI-002",
-    "VAL-UI-003",
-    "VAL-UI-004",
-    "VAL-UI-005",
-    "VAL-UI-006",
-    "VAL-UI-007",
-    "VAL-UI-008",
-    "VAL-UI-010",
-    "VAL-UI-011",
-    "VAL-UI-012",
-    "VAL-UI-013",
-    "VAL-UI-014"
-  ],
-  "failedAssertions": [
-    {
-      "id": "VAL-UI-009",
-      "reason": "PDF generation fails with HTTP 500: 'Invalid color value <css function: var(--line)>'. The backend PDF renderer cannot resolve CSS custom properties (var(--line)) used in the HTML report template. The Download PDF button exists and links correctly to /api/audits/{id}/report/pdf, but the backend endpoint returns 500."
-    }
-  ],
+  "passedAssertions": ["VAL-UI-009"],
+  "failedAssertions": [],
   "blockedAssertions": [],
   "appliedUpdates": [
     {
       "target": "user-testing.md",
-      "description": "Added 'Flow Validator Guidance: Web Browser (ui-demo)' section with available test data, page routes, audit IDs for testing, isolation rules, and agent-browser session naming conventions",
+      "description": "Created user-testing.md with service URLs, startup commands, seed data info, PDF export details, frontend page routes, concurrency settings, and flow validator guidance for web browser testing",
       "source": "setup"
     }
   ],
   "previousRound": null,
-  "flowReports": [
-    ".factory/validation/ui-demo/user-testing/flows/history-nav.json",
-    ".factory/validation/ui-demo/user-testing/flows/report-evidence.json",
-    ".factory/validation/ui-demo/user-testing/flows/interactive-flows.json",
-    ".factory/validation/ui-demo/user-testing/flows/states-polish.json"
-  ],
-  "frictions": [
-    {
-      "description": "Mock audits complete almost instantly, making it hard to capture intermediate progress states (30%, 50%). Verified via CSS inspection instead.",
-      "affectedAssertions": ["VAL-UI-014"]
-    },
-    {
-      "description": "agent-browser fill command fails with URLs containing forward slashes on Windows. Workaround: use JavaScript eval with base64 encoding.",
-      "affectedAssertions": ["VAL-UI-014"]
-    },
-    {
-      "description": "No 'failed' status audits exist in database. Error states verified via non-existent audit navigation (404) and code inspection of failed-state handlers.",
-      "affectedAssertions": ["VAL-UI-011"]
-    }
-  ],
-  "testedAt": "2026-03-13T08:00:00Z",
-  "concurrencyUsed": 4,
-  "testingTool": "agent-browser"
+  "notes": "Re-run after fix-pdf-css-variables feature fixed the CSS var() resolution issue. VAL-UI-009 now passes: PDF endpoint returns HTTP 200 with valid %PDF-1.4 content (6169 bytes), Download PDF button visible on report page. All other ui-demo assertions (VAL-UI-001 through VAL-UI-014 except VAL-UI-009) were already passed in the previous user-testing round."
 }
