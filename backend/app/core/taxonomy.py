@@ -274,17 +274,26 @@ def get_all_severity_levels() -> list[str]:
 
 def get_regulations_for_category(category: str) -> list[str]:
     """Get applicable regulations for a given dark pattern category."""
-    return list(REGULATORY_MAPPING.get(category, []))  # type: ignore[arg-type]
+    # Cast category to DarkPatternCategory if valid
+    if category in DARK_PATTERN_CATEGORIES:
+        result = REGULATORY_MAPPING.get(category)  # type: ignore[arg-type,call-overload]
+        if result:
+            return list(result)
+    return []
 
 
 def get_regulations_for_pattern_family(pattern_family: str) -> list[str]:
     """Get applicable regulations for a legacy pattern family (backward compatibility)."""
-    return list(PATTERN_FAMILY_REGULATORY_MAPPING.get(pattern_family, []))
+    # Pattern families are legacy strings, not Literal types
+    result = PATTERN_FAMILY_REGULATORY_MAPPING.get(pattern_family, [])  # type: ignore[arg-type,call-overload]
+    if result:
+        return list(result)
+    return []
 
 
 def category_to_pattern_family(category: str) -> str | None:
     """Map a dark pattern category to a legacy pattern family (if applicable)."""
-    reverse_map = {v: k for k, v in PATTERN_FAMILY_TO_CATEGORY.items()}
+    reverse_map: dict[str, str] = {v: k for k, v in PATTERN_FAMILY_TO_CATEGORY.items()}  # type: ignore[misc]
     return reverse_map.get(category)
 
 
@@ -320,4 +329,9 @@ def compare_severity(severity1: SeverityType, severity2: SeverityType) -> int:
 
 def get_relevant_categories_for_scenario(scenario: str) -> list[str]:
     """Get dark pattern categories relevant to a given scenario."""
-    return list(SCENARIO_RELEVANT_CATEGORIES.get(scenario, []))  # type: ignore[arg-type]
+    # Cast scenario to ScenarioType if valid
+    if scenario in AUDIT_SCENARIOS:
+        result = SCENARIO_RELEVANT_CATEGORIES.get(scenario)  # type: ignore[arg-type,call-overload]
+        if result:
+            return list(result)
+    return []

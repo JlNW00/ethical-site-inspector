@@ -34,8 +34,8 @@ try:
 except ImportError:
     NOVA_ACT_AVAILABLE = False
     NovaAct = None  # type: ignore[misc,assignment]
-    BOOL_SCHEMA = {"type": "boolean"}  # type: ignore[misc]
-    STRING_SCHEMA = {"type": "string"}  # type: ignore[misc]
+    BOOL_SCHEMA = {"type": "boolean"}
+    STRING_SCHEMA = {"type": "string"}
 
 
 # =============================================================================

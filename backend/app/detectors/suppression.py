@@ -191,10 +191,11 @@ def calculate_confidence(
     from app.core.taxonomy import (
         CONFIDENCE_THRESHOLDS,
         EVIDENCE_TYPE_CONFIDENCE,
+        EVIDENCE_TYPES,
     )
 
-    # Base confidence from evidence type
-    base_confidence = EVIDENCE_TYPE_CONFIDENCE.get(evidence_type, 0.50)
+    # Base confidence from evidence type (cast to valid type if valid)
+    base_confidence = EVIDENCE_TYPE_CONFIDENCE.get(evidence_type, 0.50) if evidence_type in EVIDENCE_TYPES else 0.50  # type: ignore[arg-type,call-overload]
 
     # Nova AI evidence gets high confidence
     if evidence_type == "nova_ai" or has_ai_evidence:
