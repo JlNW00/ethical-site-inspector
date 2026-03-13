@@ -10,9 +10,11 @@ from app.api.routes.audits import router as audits_router
 from app.api.routes.health import router as health_router
 from app.core.config import get_settings
 from app.core.database import SessionLocal
+from app.core.logging import configure_logging
+from app.middleware.request_id import RequestIDMiddleware
 from app.services.seed_service import ensure_seeded_demo
 
-
+configure_logging()
 settings = get_settings()
 
 
@@ -31,6 +33,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(RequestIDMiddleware)
 
 app.mount("/artifacts", StaticFiles(directory=settings.local_storage_root), name="artifacts")
 app.include_router(health_router, prefix=settings.api_prefix)

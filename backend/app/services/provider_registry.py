@@ -3,6 +3,7 @@ from __future__ import annotations
 from app.core.config import Settings, get_settings
 from app.providers.browser import BrowserAuditProvider, MockBrowserAuditProvider, PlaywrightAuditProvider
 from app.providers.classifier import ClassifierProvider, LiveNovaClassifierProvider, MockClassifierProvider
+from app.providers.nova_act_browser import NovaActAuditProvider, NOVA_ACT_AVAILABLE
 from app.providers.storage import LocalStorageProvider, S3StorageProvider, StorageProvider
 
 
@@ -25,6 +26,8 @@ def get_browser_provider(mode: str | None = None, settings: Settings | None = No
     config = settings or get_settings()
     effective_mode = mode or config.effective_mode
     storage = get_storage_provider(config)
+    if effective_mode == "live" and NOVA_ACT_AVAILABLE:
+        return NovaActAuditProvider(storage)
     if effective_mode in {"hybrid", "live"}:
         return PlaywrightAuditProvider(storage)
     return MockBrowserAuditProvider(storage)

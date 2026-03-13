@@ -1,0 +1,39 @@
+graph TB
+    subgraph Frontend["Frontend (React + Vite)"]
+        SP[SubmitPage] --> API[API Client]
+        RP[RunPage] --> API
+        RPT[ReportPage] --> API
+    end
+
+    subgraph Backend["Backend (FastAPI)"]
+        API --> HR[Health Routes]
+        API --> AR[Audit Routes]
+        AR --> AO[AuditOrchestrator]
+        AO --> BP[BrowserProvider]
+        AO --> RE[RuleEngine / Detectors]
+        AO --> CP[ClassifierProvider]
+        AO --> RS[ReportService]
+        RS --> ST[StorageProvider]
+    end
+
+    subgraph Providers["Provider Implementations"]
+        BP --> MBP[MockBrowserProvider]
+        BP --> PBP[PlaywrightProvider]
+        CP --> MCP[MockClassifier]
+        CP --> NCP[NovaClassifier]
+        ST --> LSP[LocalStorage]
+        ST --> S3P[S3Storage]
+    end
+
+    subgraph External["External Services"]
+        PBP --> BW[Browser / Chromium]
+        NCP --> BK[AWS Bedrock Nova]
+        S3P --> S3[AWS S3]
+    end
+
+    subgraph Data["Data Layer"]
+        AO --> DB[(SQLite / Postgres)]
+        DB --> AU[Audits Table]
+        DB --> FI[Findings Table]
+        DB --> AE[AuditEvents Table]
+    end

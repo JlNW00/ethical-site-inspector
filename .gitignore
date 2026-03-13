@@ -14,3 +14,19 @@ frontend/dist/
 backend/.pytest_cache/
 playwright-report/
 frontend/tsconfig.tsbuildinfo
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Coverage
+htmlcov/
+.coverage
+coverage/
+lcov.info
