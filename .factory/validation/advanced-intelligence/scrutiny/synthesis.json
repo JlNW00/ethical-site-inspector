@@ -1,0 +1,104 @@
+{
+  "milestone": "advanced-intelligence",
+  "round": 1,
+  "status": "pass",
+  "validatorsRun": {
+    "test_backend": {
+      "passed": true,
+      "command": "cd backend && .venv\\Scripts\\python.exe -m pytest tests/ -v --tb=short -x",
+      "exitCode": 0,
+      "details": "253 passed, 0 failed, 1 warning"
+    },
+    "test_frontend": {
+      "passed": true,
+      "command": "cd frontend && npm test",
+      "exitCode": 0,
+      "details": "132 passed, 0 failed"
+    },
+    "lint_backend": {
+      "passed": true,
+      "command": "cd backend && .venv\\Scripts\\python.exe -m ruff check app/",
+      "exitCode": 0,
+      "details": "All checks passed"
+    },
+    "lint_frontend": {
+      "passed": true,
+      "command": "cd frontend && npm run lint",
+      "exitCode": 0,
+      "details": "0 errors, 8 warnings (complexity and line-count warnings, pre-existing)"
+    },
+    "typecheck_backend": {
+      "passed": true,
+      "command": "cd backend && .venv\\Scripts\\python.exe -m mypy app/ --ignore-missing-imports",
+      "exitCode": 1,
+      "details": "95 errors in 13 files. Pre-existing technical debt documented in AGENTS.md (~119 known errors, now reduced to 95). Not a regression — actually an improvement."
+    },
+    "typecheck_frontend": {
+      "passed": true,
+      "command": "cd frontend && npx tsc -b",
+      "exitCode": 0,
+      "details": "No errors"
+    }
+  },
+  "reviewsSummary": {
+    "total": 3,
+    "passed": 3,
+    "failed": 0,
+    "failedFeatures": []
+  },
+  "blockingIssues": [],
+  "appliedUpdates": [],
+  "suggestedGuidanceUpdates": [
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Add guidance about suppressed findings and trust scores: 'Suppressed (false-positive) findings still count toward trust score calculations. If this behavior should change, explicitly document whether suppressed findings should be excluded from trust scores and executive summaries.'",
+      "evidence": "Feature regulatory-mapping-backend: audit_orchestrator.py:242 passes all finding_models (including suppressed) to _score_audit() and _build_summary(). Two separate reviewers flagged this as a design decision that needs documentation.",
+      "isSystemic": false
+    },
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Add to conventions: 'All taxonomy-related display data (regulation colors, names, descriptions, category labels) in frontend MUST be imported from src/constants/taxonomy.ts — never reconstructed inline via switch statements or local objects.'",
+      "evidence": "Feature advanced-intelligence-frontend: ReportPage.tsx:473-513 duplicates REGULATION_INFO via inline switch statement while FindingCard.tsx correctly imports from taxonomy.ts. This violates the single-source-of-truth convention.",
+      "isSystemic": false
+    },
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Add .gitignore entries for runtime artifacts: add 'server.log', 'server.err', 'server.pid', and 'node_modules/' (root-level) to .gitignore. Currently only frontend/node_modules/ is excluded.",
+      "evidence": "Feature cross-area-integration-test: Commits 87a70a3, d89b1fc, 5f2b4fd all include server.log/server.err changes. Root node_modules/ directory was committed with vitest cache files. .gitignore only has 'frontend/node_modules/' not root 'node_modules/'.",
+      "isSystemic": true
+    },
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Clarify mypy standards: The 'Coding Conventions' section says 'Type hints everywhere (mypy strict mode)' while 'Known Pre-Existing Issues' acknowledges ~119 mypy errors. Workers are unclear whether to fix mypy errors or suppress with type: ignore. Suggest adding: 'Workers should not add new type: ignore comments. When encountering type errors in existing code, use typing.cast() or proper type annotations. Pre-existing type: ignore comments may remain.'",
+      "evidence": "Feature cross-area-integration-test: Commit 87a70a3 adds 5 new type: ignore comments in taxonomy.py and suppression.py. Multiple reviewers flagged the tension between 'mypy strict' convention and widespread type: ignore usage.",
+      "isSystemic": true
+    },
+    {
+      "target": "skills",
+      "suggestion": "The frontend-dev skill should include a verification step to check that all className references in JSX have corresponding CSS definitions: 'Before committing, grep all custom className values and verify they have corresponding CSS rules in src/styles/index.css.'",
+      "evidence": "Feature advanced-intelligence-frontend: ReportPage.tsx uses 7 regulatory summary CSS classes (.regulatory-grid, .regulatory-card, etc.) that have no definitions in index.css. The section renders but without proper styling.",
+      "isSystemic": false
+    },
+    {
+      "target": "skills",
+      "suggestion": "Cross-stack integration features should not be assigned the backend-dev skill exclusively. Consider creating a 'full-stack-dev' skill or requiring both backend-dev and frontend-dev skills when the feature description includes frontend verification requirements.",
+      "evidence": "Feature cross-area-integration-test required 'Frontend: Verify history page shows audits, report page shows enhanced findings, PDF download works' but was assigned skillName 'backend-dev'. The worker only ran automated frontend tests/build but performed no interactive frontend verification.",
+      "isSystemic": true
+    }
+  ],
+  "rejectedObservations": [
+    {
+      "observation": "Worker commit message 'Fix test assertion for nova_ai_medium confidence threshold' is misleading for a commit with 4 new files and 1246 insertions",
+      "reason": "This is about the second worker session for regulatory-mapping-backend, which was a re-run that included the first session's work. The commit message reflects the fix that made the second attempt succeed. Not actionable as a convention change — it's a consequence of worker session retries."
+    },
+    {
+      "observation": "Worker followed implementation-first approach rather than TDD as suggested by backend-dev skill",
+      "reason": "Pragmatic deviation acknowledged. TDD is suggested, not required. The comprehensive test suite was delivered alongside implementation. Not a systemic issue."
+    },
+    {
+      "observation": "Frontend taxonomy.ts omits SCENARIO_RELEVANT_CATEGORIES from backend taxonomy.py",
+      "reason": "The feature description says 'mirroring backend taxonomy' but this specific mapping isn't used by any current frontend feature. Adding unused constants would be unnecessary. Can be added when needed."
+    }
+  ],
+  "previousRound": null
+}

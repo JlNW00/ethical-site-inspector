@@ -1,0 +1,62 @@
+{
+  "featureId": "regulatory-mapping-backend",
+  "reviewedAt": "2026-03-13T10:35:00.000Z",
+  "commitId": "a7b565c",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The implementation comprehensively covers all feature requirements: regulatory_categories field populated from taxonomy mapping, confidence scoring (Nova AI > 0.75, heuristic <= 0.75), evidence_type in evidence_payload, false-positive suppression in suppression.py, Alembic migration for new columns, FindingRead schema updates, suppressed_count in metrics, and 75+ tests. The code follows project conventions (taxonomy imports, ABC pattern, Pydantic schemas) and integrates cleanly into the existing orchestrator pipeline. All pattern families in rule_engine.py have corresponding entries in PATTERN_FAMILY_REGULATORY_MAPPING. A few non-blocking design concerns noted below.",
+    "issues": [
+      {
+        "file": "backend/app/services/audit_orchestrator.py",
+        "line": 242,
+        "severity": "non_blocking",
+        "description": "_score_audit() receives all finding_models including suppressed ones. Suppressed findings (identified as false positives) still deduct from the trust score, potentially leading to artificially low trust scores. Consider filtering to active findings: `active_findings = [f for f in finding_models if not f.suppressed]` before calling _score_audit()."
+      },
+      {
+        "file": "backend/app/services/audit_orchestrator.py",
+        "line": 243,
+        "severity": "non_blocking",
+        "description": "_build_summary() may select a suppressed finding as the top_finding (max by trust_impact/confidence), leading to misleading executive summaries that highlight a pattern identified as a false positive."
+      },
+      {
+        "file": "backend/alembic/versions/20260313_0002_add_regulatory_mapping_and_suppression.py",
+        "line": 12,
+        "severity": "non_blocking",
+        "description": "Unused import: `from sqlalchemy.dialects import sqlite` is imported but never used in the migration file."
+      },
+      {
+        "file": "backend/app/detectors/suppression.py",
+        "line": 256,
+        "severity": "non_blocking",
+        "description": "get_regulatory_categories() is a thin wrapper around taxonomy.get_regulations_for_pattern_family() but the orchestrator calls taxonomy directly (line 219). This creates two paths to the same data. Consider removing the wrapper or having the orchestrator use it consistently."
+      },
+      {
+        "file": "backend/app/services/audit_orchestrator.py",
+        "line": 197,
+        "severity": "non_blocking",
+        "description": "has_heuristic_evidence is hardcoded to True for all findings. While technically correct (all findings come from the rule engine), it means the heuristic branch in calculate_confidence() always applies to non-nova_ai findings, making the parameter somewhat redundant."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "The worker's commit message 'Fix test assertion for nova_ai_medium confidence threshold (>= instead of >)' is misleading for a commit that introduces 4 entirely new files with 1246 insertions. AGENTS.md states 'Keep commits focused and descriptive' but doesn't give guidance on commit messages accurately reflecting scope. The feature likely needed multiple commits during the first failed worker session, and the second session squashed everything into one fix-titled commit.",
+      "evidence": "git show a7b565c --stat shows 4 new files, 1246 insertions, but message implies a small fix"
+    },
+    {
+      "area": "conventions",
+      "observation": "No guidance in AGENTS.md about whether suppressed (false-positive) findings should be excluded from trust score calculations and executive summaries. The current implementation counts them, which is a design decision that should be documented.",
+      "evidence": "audit_orchestrator.py:242 passes all finding_models (including suppressed) to _score_audit() and _build_summary()"
+    },
+    {
+      "area": "skills",
+      "observation": "Worker followed the backend-dev skill procedure: read feature description, examined existing code, implemented, ran tests. The skill says 'Write Tests First (TDD)' but the transcript shows implementation and tests were created together in the same commit. The deviation was pragmatic given the feature scope.",
+      "evidence": "Transcript skeleton shows Read calls for existing files followed by implementation. handoff.skillFeedback.followedProcedure is true."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "PASS. The regulatory-mapping-backend feature is well-implemented, covering all 7 expected behaviors from the feature description: (1) regulatory_categories populated from taxonomy, (2) confidence scoring with Nova AI > 0.75 and heuristic <= 0.75, (3) evidence_type in evidence_payload, (4) suppression rules for known false positives, (5) FindingRead schema updated, (6) Alembic migration for new columns, (7) comprehensive tests. Five non-blocking issues found: suppressed findings still affecting trust scores/summaries, unused import in migration, redundant wrapper function, hardcoded heuristic flag, and misleading commit message. None are blocking — the feature meets all validation contract requirements (VAL-ADV-001, VAL-ADV-003, VAL-ADV-005, VAL-ADV-007)."
+}

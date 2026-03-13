@@ -1,0 +1,44 @@
+{
+  "featureId": "advanced-intelligence-frontend",
+  "reviewedAt": "2026-03-13T10:19:00.000Z",
+  "commitId": "5f2b4fd",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The implementation covers all six requirements from the feature description: FindingCard regulatory badges, confidence percentage, evidence source label, suppressed finding styling, ReportPage executive summary with suppressed count, regulatory summary section, types.ts updates, taxonomy.ts creation, tests, and build passing. The taxonomy.ts file correctly mirrors the backend taxonomy.py with matching categories, scenarios, personas, severity levels, regulations, regulatory mappings, evidence types, and confidence thresholds. Two non-blocking issues were found: (1) missing CSS class definitions for the regulatory summary section in ReportPage, and (2) ReportPage duplicates REGULATION_INFO via a switch statement instead of importing from taxonomy.ts.",
+    "issues": [
+      {
+        "file": "frontend/src/styles/index.css",
+        "line": 0,
+        "severity": "non_blocking",
+        "description": "Missing CSS class definitions for ReportPage regulatory summary section. The classes .regulatory-grid, .regulatory-card, .regulatory-header, .regulatory-badge, .regulatory-fullname, .regulatory-description, and .regulatory-count are used in ReportPage.tsx (lines 471-533) but have no corresponding CSS rules in index.css. The section will render but without proper styling (layout, spacing, colors, etc.)."
+      },
+      {
+        "file": "frontend/src/pages/ReportPage.tsx",
+        "line": 473,
+        "severity": "non_blocking",
+        "description": "Regulatory summary section duplicates REGULATION_INFO via an inline switch statement (lines 473-513) instead of importing from constants/taxonomy.ts. This violates the DRY principle and the 'taxonomy as single source of truth' convention documented in AGENTS.md. The REGULATION_INFO constant is already imported and used in FindingCard.tsx. If regulation info changes, ReportPage.tsx would need a separate update."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "Worker duplicated REGULATION_INFO in ReportPage.tsx via a switch statement instead of importing from taxonomy.ts, despite AGENTS.md clearly stating 'Import pattern categories from a shared constants file that mirrors the backend taxonomy'. The convention could be strengthened to explicitly mention that ALL taxonomy-related display data (including regulation colors, names, descriptions) must be imported from taxonomy.ts, not reconstructed inline.",
+      "evidence": "frontend/src/pages/ReportPage.tsx:473-513 uses switch(reg) to build regulation info objects. Meanwhile frontend/src/components/FindingCard.tsx:3 correctly imports { REGULATION_INFO } from '../constants/taxonomy'."
+    },
+    {
+      "area": "skills",
+      "observation": "The frontend-dev skill does not mention ensuring CSS classes are defined for all className references in JSX. The worker created the regulatory summary section with 7 custom CSS classes but did not define them in index.css. A verification step like 'grep all className references and ensure they have CSS definitions' could prevent this.",
+      "evidence": "ReportPage.tsx uses .regulatory-grid, .regulatory-card, .regulatory-header, .regulatory-badge, .regulatory-fullname, .regulatory-description, .regulatory-count — none found in index.css."
+    },
+    {
+      "area": "conventions",
+      "observation": "The frontend taxonomy.ts omits SCENARIO_RELEVANT_CATEGORIES which exists in the backend taxonomy.py. While not explicitly required by this feature, the feature description says 'mirroring backend taxonomy' and AGENTS.md says 'frontend MUST have a mirrored constants file that stays in sync'. This mapping could be useful for frontend scenario-to-regulation display logic.",
+      "evidence": "backend/app/core/taxonomy.py has SCENARIO_RELEVANT_CATEGORIES mapping 6 scenarios to relevant categories. frontend/src/constants/taxonomy.ts does not include this mapping."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "The advanced-intelligence-frontend feature is well-implemented and passes review. All six requirements are met: FindingCard shows regulatory badges (color-coded pills), confidence percentage, evidence source label, and suppressed finding styling; ReportPage shows suppressed count in executive summary and has a regulatory summary section; types.ts has regulatory_categories and suppressed fields; taxonomy.ts mirrors backend taxonomy with comprehensive constants and helpers; 43 new tests (9 FindingCard + 34 taxonomy) all pass; and the build succeeds. Two non-blocking issues were identified: (1) missing CSS definitions for 7 regulatory summary classes in index.css (the section renders but without custom styling), and (2) ReportPage duplicates REGULATION_INFO inline instead of importing from taxonomy.ts. Neither issue blocks functionality but both should be addressed for code quality."
+}
