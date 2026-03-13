@@ -856,6 +856,114 @@ input {
   background: rgba(249, 115, 22, 0.08);
 }
 
+/* Compare Page Styles */
+.compare-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+}
+
+.compare-column {
+  border: 1px solid var(--line);
+  background: rgba(248, 251, 255, 0.06);
+  backdrop-filter: blur(22px);
+  border-radius: 24px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.compare-column:hover {
+  border-color: rgba(105, 162, 255, 0.4);
+  box-shadow: 0 8px 32px rgba(29, 78, 216, 0.12);
+}
+
+.compare-column-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.compare-column-title {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 24px;
+  margin: 0;
+  color: #dce8f7;
+}
+
+.compare-metric-card {
+  padding: 16px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--line-soft);
+}
+
+.compare-score-value {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 36px;
+  margin-top: 8px;
+  color: #dce8f7;
+}
+
+.scenario-compare-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.scenario-compare-card {
+  padding: 18px;
+  border-radius: 18px;
+  border: 1px solid var(--line-soft);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.scenario-compare-title {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 18px;
+  margin: 0 0 12px 0;
+  color: rgba(220, 232, 247, 0.9);
+}
+
+.scenario-compare-counts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.scenario-count {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.scenario-count-label {
+  font-size: 12px;
+  color: rgba(220, 232, 247, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.scenario-count-value {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 28px;
+  color: #dce8f7;
+}
+
+.scenario-delta {
+  font-size: 14px;
+  font-weight: 600;
+  padding-top: 8px;
+  border-top: 1px solid var(--line-soft);
+  margin-top: 4px;
+}
+
 @media (max-width: 780px) {
   .app-shell {
     padding-inline: 16px;
@@ -886,5 +994,22 @@ input {
 
   .persona-column {
     padding: 18px;
+  }
+
+  .compare-columns {
+    grid-template-columns: 1fr;
+  }
+
+  .compare-column {
+    padding: 18px;
+  }
+
+  .compare-column-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .scenario-compare-counts {
+    grid-template-columns: 1fr;
   }
 }
