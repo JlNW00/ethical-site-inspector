@@ -111,3 +111,8 @@ export interface CreateAuditRequest {
   scenarios: string[];
   personas: string[];
 }
+
+export interface AuditListParams {
+  status?: string;
+  url_contains?: string;
+}

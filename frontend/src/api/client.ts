@@ -29,4 +29,11 @@ export const api = {
   getFindings: (auditId: string) => request<FindingsResponse>(`/api/audits/${auditId}/findings`),
   getReadiness: () => request<Readiness>("/api/readiness"),
   getReportUrl: (auditId: string) => `${API_BASE_URL}/api/audits/${auditId}/report`,
+  getAudits: (params?: { status?: string; url_contains?: string }) => {
+    const searchParams = new URLSearchParams();
+    if (params?.status) searchParams.append("status", params.status);
+    if (params?.url_contains) searchParams.append("url_contains", params.url_contains);
+    const query = searchParams.toString();
+    return request<Audit[]>(`/api/audits${query ? `?${query}` : ""}`);
+  },
 };
