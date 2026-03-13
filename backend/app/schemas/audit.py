@@ -97,6 +97,15 @@ class FindingsResponse(BaseModel):
     findings: list[FindingRead]
 
 
+class AuditListResponse(BaseModel):
+    """Response schema for the list audits endpoint.
+
+    Returns a list of AuditRead objects sorted by created_at descending.
+    """
+
+    audits: list[AuditRead]
+
+
 class HealthResponse(BaseModel):
     status: HealthStatus
     timestamp: datetime
@@ -124,5 +133,6 @@ PersonaSummary.model_rebuild()
 ScenarioSummary.model_rebuild()
 AuditRead.model_rebuild()
 FindingsResponse.model_rebuild()
+AuditListResponse.model_rebuild()
 HealthResponse.model_rebuild()
 ReadinessResponse.model_rebuild()

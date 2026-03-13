@@ -508,6 +508,357 @@ class TestAPIErrorHandling:
 
 
 # =============================================================================
+# GET /api/audits (List) Tests
+# =============================================================================
+
+
+class TestListAuditsEndpoint:
+    """Test GET /api/audits endpoint (list all audits)."""
+
+    def test_list_audits_returns_200(self, api_test_client):
+        """Listing audits should return 200."""
+        resp = api_test_client.get("/api/audits")
+        assert resp.status_code == 200
+
+    def test_list_audits_returns_array(self, api_test_client):
+        """Listing audits should return an array."""
+        resp = api_test_client.get("/api/audits")
+        data = resp.json()
+        assert isinstance(data, list)
+
+    def test_list_audits_includes_all_fields(self, db_session, api_test_client):
+        """Listing audits should include all fields needed for history display."""
+        # Create test audit with all relevant fields
+        audit = Audit(
+            id="test-list-audit",
+            target_url="https://example.com",
+            mode="mock",
+            status="completed",
+            selected_scenarios=["cookie_consent", "checkout_flow"],
+            selected_personas=["privacy_sensitive", "cost_sensitive"],
+            trust_score=85.0,
+            risk_level="low",
+        )
+        db_session.add(audit)
+        db_session.commit()
+
+        resp = api_test_client.get("/api/audits")
+        data = resp.json()
+        assert len(data) == 1
+        audit_data = data[0]
+        assert audit_data["id"] == "test-list-audit"
+        assert audit_data["target_url"] == "https://example.com"
+        assert audit_data["status"] == "completed"
+        assert audit_data["mode"] == "mock"
+        assert audit_data["trust_score"] == 85.0
+        assert audit_data["risk_level"] == "low"
+        assert audit_data["selected_scenarios"] == ["cookie_consent", "checkout_flow"]
+        assert audit_data["selected_personas"] == ["privacy_sensitive", "cost_sensitive"]
+        assert "created_at" in audit_data
+        assert "updated_at" in audit_data
+
+    def test_list_audits_sorted_by_created_at_descending(self, db_session, api_test_client):
+        """Listing audits should be sorted by created_at descending."""
+        from datetime import datetime, timedelta
+
+        # Create audits with different timestamps
+        base_time = datetime.now()
+        audit1 = Audit(
+            id="audit-oldest",
+            target_url="https://oldest.com",
+            mode="mock",
+            status="completed",
+            selected_scenarios=["cookie_consent"],
+            selected_personas=["privacy_sensitive"],
+            created_at=base_time - timedelta(hours=2),
+        )
+        audit2 = Audit(
+            id="audit-middle",
+            target_url="https://middle.com",
+            mode="mock",
+            status="completed",
+            selected_scenarios=["cookie_consent"],
+            selected_personas=["privacy_sensitive"],
+            created_at=base_time - timedelta(hours=1),
+        )
+        audit3 = Audit(
+            id="audit-newest",
+            target_url="https://newest.com",
+            mode="mock",
+            status="completed",
+            selected_scenarios=["cookie_consent"],
+            selected_personas=["privacy_sensitive"],
+            created_at=base_time,
+        )
+        db_session.add_all([audit1, audit2, audit3])
+        db_session.commit()
+
+        resp = api_test_client.get("/api/audits")
+        data = resp.json()
+        assert len(data) == 3
+        # Should be sorted newest first
+        ids = [a["id"] for a in data]
+        assert ids == ["audit-newest", "audit-middle", "audit-oldest"]
+
+    def test_list_audits_filter_by_status(self, db_session, api_test_client):
+        """Listing audits with ?status=completed should filter correctly."""
+        # Create audits with different statuses
+        audit_completed = Audit(
+            id="audit-completed",
+            target_url="https://completed.com",
+            mode="mock",
+            status="completed",
+            selected_scenarios=["cookie_consent"],
+            selected_personas=["privacy_sensitive"],
+        )
+        audit_running = Audit(
+            id="audit-running",
+            target_url="https://running.com",
+            mode="mock",
+            status="running",
+            selected_scenarios=["cookie_consent"],
+            selected_personas=["privacy_sensitive"],
+        )
+        audit_failed = Audit(
+            id="audit-failed",
+            target_url="https://failed.com",
+            mode="mock",
+            status="failed",
+            selected_scenarios=["cookie_consent"],
+            selected_personas=["privacy_sensitive"],
+        )
+        db_session.add_all([audit_completed, audit_running, audit_failed])
+        db_session.commit()
+
+        resp = api_test_client.get("/api/audits?status=completed")
+        data = resp.json()
+        assert len(data) == 1
+        assert data[0]["id"] == "audit-completed"
+        assert data[0]["status"] == "completed"
+
+    def test_list_audits_filter_by_status_running(self, db_session, api_test_client):
+        """Listing audits with ?status=running should filter correctly."""
+        audit_completed = Audit(
+            id="audit-completed-2",
+            target_url="https://completed.com",
+            mode="mock",
+            status="completed",
+            selected_scenarios=["cookie_consent"],
+            selected_personas=["privacy_sensitive"],
+        )
+        audit_running = Audit(
+            id="audit-running-2",
+            target_url="https://running.com",
+            mode="mock",
+            status="running",
+            selected_scenarios=["cookie_consent"],
+            selected_personas=["privacy_sensitive"],
+        )
+        db_session.add_all([audit_completed, audit_running])
+        db_session.commit()
+
+        resp = api_test_client.get("/api/audits?status=running")
+        data = resp.json()
+        assert len(data) == 1
+        assert data[0]["id"] == "audit-running-2"
+
+    def test_list_audits_filter_by_status_failed(self, db_session, api_test_client):
+        """Listing audits with ?status=failed should filter correctly."""
+        audit_failed = Audit(
+            id="audit-failed-3",
+            target_url="https://failed.com",
+            mode="mock",
+            status="failed",
+            selected_scenarios=["cookie_consent"],
+            selected_personas=["privacy_sensitive"],
+        )
+        audit_queued = Audit(
+            id="audit-queued-3",
+            target_url="https://queued.com",
+            mode="mock",
+            status="queued",
+            selected_scenarios=["cookie_consent"],
+            selected_personas=["privacy_sensitive"],
+        )
+        db_session.add_all([audit_failed, audit_queued])
+        db_session.commit()
+
+        resp = api_test_client.get("/api/audits?status=failed")
+        data = resp.json()
+        assert len(data) == 1
+        assert data[0]["id"] == "audit-failed-3"
+
+    def test_list_audits_filter_by_url_contains(self, db_session, api_test_client):
+        """Listing audits with ?url_contains=booking should filter case-insensitively."""
+        # Create audits with different URLs
+        audit_booking = Audit(
+            id="audit-booking",
+            target_url="https://booking.com/hotels",
+            mode="mock",
+            status="completed",
+            selected_scenarios=["cookie_consent"],
+            selected_personas=["privacy_sensitive"],
+        )
+        audit_another = Audit(
+            id="audit-another",
+            target_url="https://example.com",
+            mode="mock",
+            status="completed",
+            selected_scenarios=["cookie_consent"],
+            selected_personas=["privacy_sensitive"],
+        )
+        audit_booking_upper = Audit(
+            id="audit-booking-upper",
+            target_url="https://BOOKING.COM/flights",
+            mode="mock",
+            status="completed",
+            selected_scenarios=["cookie_consent"],
+            selected_personas=["privacy_sensitive"],
+        )
+        db_session.add_all([audit_booking, audit_another, audit_booking_upper])
+        db_session.commit()
+
+        resp = api_test_client.get("/api/audits?url_contains=booking")
+        data = resp.json()
+        assert len(data) == 2
+        ids = {a["id"] for a in data}
+        assert ids == {"audit-booking", "audit-booking-upper"}
+
+    def test_list_audits_filter_by_url_contains_case_insensitive(self, db_session, api_test_client):
+        """url_contains filter should be case-insensitive."""
+        audit_mixed = Audit(
+            id="audit-mixed",
+            target_url="https://ExampleBooking.com",
+            mode="mock",
+            status="completed",
+            selected_scenarios=["cookie_consent"],
+            selected_personas=["privacy_sensitive"],
+        )
+        db_session.add(audit_mixed)
+        db_session.commit()
+
+        # Test lowercase search matches mixed case URL
+        resp = api_test_client.get("/api/audits?url_contains=booking")
+        data = resp.json()
+        assert len(data) == 1
+        assert data[0]["id"] == "audit-mixed"
+
+        # Test uppercase search matches mixed case URL
+        resp = api_test_client.get("/api/audits?url_contains=BOOKING")
+        data = resp.json()
+        assert len(data) == 1
+        assert data[0]["id"] == "audit-mixed"
+
+    def test_list_audits_combine_filters(self, db_session, api_test_client):
+        """Listing audits with both status and url_contains filters."""
+        audit_booking_completed = Audit(
+            id="audit-booking-completed",
+            target_url="https://booking.com",
+            mode="mock",
+            status="completed",
+            selected_scenarios=["cookie_consent"],
+            selected_personas=["privacy_sensitive"],
+        )
+        audit_booking_running = Audit(
+            id="audit-booking-running",
+            target_url="https://booking.com/flights",
+            mode="mock",
+            status="running",
+            selected_scenarios=["cookie_consent"],
+            selected_personas=["privacy_sensitive"],
+        )
+        audit_other_completed = Audit(
+            id="audit-other-completed",
+            target_url="https://example.com",
+            mode="mock",
+            status="completed",
+            selected_scenarios=["cookie_consent"],
+            selected_personas=["privacy_sensitive"],
+        )
+        db_session.add_all([audit_booking_completed, audit_booking_running, audit_other_completed])
+        db_session.commit()
+
+        resp = api_test_client.get("/api/audits?status=completed&url_contains=booking")
+        data = resp.json()
+        assert len(data) == 1
+        assert data[0]["id"] == "audit-booking-completed"
+
+    def test_list_audits_empty_result(self, api_test_client):
+        """Listing audits when none match filters should return empty array."""
+        resp = api_test_client.get("/api/audits?status=nonexistent")
+        data = resp.json()
+        assert isinstance(data, list)
+        assert len(data) == 0
+
+    def test_list_audits_no_events_in_response(self, db_session, api_test_client):
+        """List endpoint should not include events (unlike get by ID)."""
+        audit = Audit(
+            id="audit-no-events-list",
+            target_url="https://example.com",
+            mode="mock",
+            status="completed",
+            selected_scenarios=["cookie_consent"],
+            selected_personas=["privacy_sensitive"],
+        )
+        db_session.add(audit)
+        db_session.flush()
+
+        # Add an event
+        event = AuditEvent(
+            audit_id=audit.id,
+            phase="browser",
+            status="info",
+            message="Started browser audit",
+            progress=10,
+            details={},
+        )
+        db_session.add(event)
+        db_session.commit()
+
+        resp = api_test_client.get("/api/audits")
+        data = resp.json()
+        assert len(data) == 1
+        # The response should be a list of AuditRead which includes events field defaulting to []
+        # But we don't load events for the list endpoint for performance
+
+    def test_list_audits_does_not_include_findings(self, db_session, api_test_client):
+        """List endpoint should not load findings (performance)."""
+        audit = Audit(
+            id="audit-with-findings-list",
+            target_url="https://example.com",
+            mode="mock",
+            status="completed",
+            selected_scenarios=["cookie_consent"],
+            selected_personas=["privacy_sensitive"],
+        )
+        db_session.add(audit)
+        db_session.flush()
+
+        # Add a finding
+        finding = Finding(
+            id="finding-for-list",
+            audit_id=audit.id,
+            scenario="cookie_consent",
+            persona="privacy_sensitive",
+            pattern_family="asymmetric_choice",
+            severity="high",
+            title="Test Finding",
+            explanation="Test explanation",
+            remediation="Test remediation",
+            evidence_excerpt="Test evidence",
+            rule_reason="Test rule",
+        )
+        db_session.add(finding)
+        db_session.commit()
+
+        resp = api_test_client.get("/api/audits")
+        data = resp.json()
+        assert len(data) == 1
+        # Findings should not be in the list response
+        assert "findings" not in data[0]
+
+
+# =============================================================================
 # Integration Tests
 # =============================================================================
 

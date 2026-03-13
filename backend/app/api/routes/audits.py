@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from fastapi.responses import FileResponse
-from sqlalchemy import select
+from sqlalchemy import desc, func, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.core.config import get_settings
@@ -16,6 +17,34 @@ from app.services.audit_orchestrator import AuditOrchestrator
 
 router = APIRouter(prefix="/audits", tags=["audits"])
 orchestrator = AuditOrchestrator(SessionLocal)
+
+
+@router.get("", response_model=list[AuditRead])
+def list_audits(
+    db: Session = Depends(get_db),
+    status: Annotated[str | None, Query(description="Filter by audit status")] = None,
+    url_contains: Annotated[str | None, Query(description="Case-insensitive URL search")] = None,
+) -> list[Audit]:
+    """List all audits with optional filtering.
+
+    Returns an array of audits sorted by created_at descending.
+    Supports optional query params:
+    - status: Filter by status (completed, running, failed, queued)
+    - url_contains: Case-insensitive search in target_url
+    """
+    # Build base query - select only columns we need (no events/findings for list)
+    statement = select(Audit).order_by(desc(Audit.created_at))
+
+    # Apply status filter if provided
+    if status:
+        statement = statement.where(Audit.status == status)
+
+    # Apply URL contains filter if provided (case-insensitive)
+    if url_contains:
+        statement = statement.where(func.lower(Audit.target_url).contains(func.lower(url_contains)))
+
+    audits = db.scalars(statement).all()
+    return list(audits)
 
 
 @router.post("", response_model=AuditRead, status_code=status.HTTP_202_ACCEPTED)
