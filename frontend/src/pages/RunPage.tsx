@@ -79,7 +79,8 @@ export function RunPage() {
           <div className="brand-kicker">Audit run console</div>
           <h1>{audit ? audit.target_url : "Preparing audit run..."}</h1>
           <p className="hero-copy">
-            Live progress across scenarios, persona variants, and evidence capture. Judges should be able to see the agentic run behavior directly.
+            Live progress across scenarios, persona variants, and evidence capture. Judges should be able to see the
+            agentic run behavior directly.
           </p>
           <div className="hero-pills">
             {(audit?.selected_scenarios ?? []).map((scenario) => (
@@ -111,11 +112,7 @@ export function RunPage() {
               <Link className="btn btn-secondary" to="/history">
                 Back to History
               </Link>
-              <button
-                className="btn btn-primary"
-                type="button"
-                onClick={() => window.location.reload()}
-              >
+              <button className="btn btn-primary" type="button" onClick={() => window.location.reload()}>
                 Retry
               </button>
             </div>
@@ -128,20 +125,13 @@ export function RunPage() {
           <div className="error-state">
             <div className="error-state-icon">❌</div>
             <h3 className="error-state-title">Audit Failed</h3>
-            <p className="error-state-message">
-              The audit encountered an error and could not complete successfully.
-            </p>
-            {audit.summary && (
-              <p className="error-state-details">Details: {audit.summary}</p>
-            )}
+            <p className="error-state-message">The audit encountered an error and could not complete successfully.</p>
+            {audit.summary && <p className="error-state-details">Details: {audit.summary}</p>}
             <div className="action-row" style={{ marginTop: 16 }}>
               <Link className="btn btn-secondary" to="/history">
                 Back to History
               </Link>
-              <Link
-                className="btn btn-primary"
-                to={`/audits/${audit.id}/report`}
-              >
+              <Link className="btn btn-primary" to={`/audits/${audit.id}/report`}>
                 View Error Report
               </Link>
             </div>
@@ -186,7 +176,9 @@ export function RunPage() {
             <div className="metric-card">
               <div className="metric-label">Final trust score</div>
               <div className="metric-value">{audit?.trust_score ?? "--"}</div>
-              <div className="muted">{audit?.status === "completed" ? `${audit.risk_level} risk` : "Calculated after classification"}</div>
+              <div className="muted">
+                {audit?.status === "completed" ? `${audit.risk_level} risk` : "Calculated after classification"}
+              </div>
             </div>
           </div>
         </section>
@@ -198,7 +190,9 @@ export function RunPage() {
             <div className="section-header">
               <div>
                 <h2 className="section-title">Activity timeline</h2>
-                <p className="section-subtitle">A granular event feed showing progress, captured artifacts, and reasoning milestones.</p>
+                <p className="section-subtitle">
+                  A granular event feed showing progress, captured artifacts, and reasoning milestones.
+                </p>
               </div>
             </div>
             <div className="timeline">
@@ -239,7 +233,9 @@ export function RunPage() {
                 ))}
               </div>
             ) : (
-              <div className="empty-state">Evidence will appear once a scenario run completes its first capture step.</div>
+              <div className="empty-state">
+                Evidence will appear once a scenario run completes its first capture step.
+              </div>
             )}
           </section>
         </div>

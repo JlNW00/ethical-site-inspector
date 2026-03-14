@@ -78,7 +78,9 @@ input {
   font-weight: 500;
   padding: 8px 0;
   border-bottom: 2px solid transparent;
-  transition: color 160ms ease, border-color 160ms ease;
+  transition:
+    color 160ms ease,
+    border-color 160ms ease;
 }
 
 .nav-link:hover {
@@ -360,11 +362,18 @@ input {
   border: 1px solid var(--line);
   background: rgba(255, 255, 255, 0.06);
   cursor: pointer;
-  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    background 160ms ease;
 }
 
 .choice-card {
-  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    background 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .choice-card:hover {
@@ -412,7 +421,11 @@ input {
   border-radius: 18px;
   border: 1px solid transparent;
   cursor: pointer;
-  transition: transform 0.2s ease, opacity 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    opacity 0.2s ease,
+    background 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .btn-primary:hover:not(:disabled) {
@@ -746,7 +759,10 @@ input {
   backdrop-filter: blur(22px);
   border-radius: 20px;
   padding: 18px;
-  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    background 160ms ease;
 }
 
 .audit-card:hover {
@@ -763,7 +779,10 @@ input {
 .timeline-card,
 .evidence-card,
 .finding-card {
-  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .metric-card:hover,
@@ -775,7 +794,9 @@ input {
 }
 
 .hero-panel {
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
 }
 
 .hero-panel:hover {
@@ -784,7 +805,11 @@ input {
 
 /* Filter tabs with transitions */
 .filter-tab {
-  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.15s ease;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.15s ease;
 }
 
 .filter-tab:hover {
@@ -873,7 +898,10 @@ input {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  transition: background 0.3s ease, color 0.3s ease, transform 0.2s ease;
+  transition:
+    background 0.3s ease,
+    color 0.3s ease,
+    transform 0.2s ease;
 }
 
 .status-badge:hover {
@@ -954,7 +982,9 @@ input {
   display: flex;
   flex-direction: column;
   gap: 20px;
-  transition: border-color 160ms ease, box-shadow 160ms ease;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
 }
 
 .persona-column:hover {
@@ -1124,7 +1154,9 @@ input {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  transition: border-color 160ms ease, box-shadow 160ms ease;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
 }
 
 .compare-column:hover {

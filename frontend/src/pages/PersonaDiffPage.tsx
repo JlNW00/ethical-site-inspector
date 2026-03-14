@@ -90,10 +90,7 @@ export function PersonaDiffPage() {
     let cancelled = false;
     void (async () => {
       try {
-        const [nextAudit, findingsResponse] = await Promise.all([
-          api.getAudit(auditId),
-          api.getFindings(auditId),
-        ]);
+        const [nextAudit, findingsResponse] = await Promise.all([api.getAudit(auditId), api.getFindings(auditId)]);
         if (!cancelled) {
           setAudit(nextAudit);
           setFindings(findingsResponse.findings);
@@ -127,7 +124,7 @@ export function PersonaDiffPage() {
 
       // Extract path from first finding with interacted_controls
       const findingWithPath = personaFindings.find(
-        (f) => (f.evidence_payload as { interacted_controls?: string[] }).interacted_controls?.length
+        (f) => (f.evidence_payload as { interacted_controls?: string[] }).interacted_controls?.length,
       );
       const interactedControls =
         (findingWithPath?.evidence_payload as { interacted_controls?: string[] })?.interacted_controls ?? [];
@@ -176,9 +173,7 @@ export function PersonaDiffPage() {
     const allPatterns = new Set(findingSets.flatMap((s) => Array.from(s)));
 
     allPatterns.forEach((pattern) => {
-      const personasWithPattern = personaData.filter((p) =>
-        p.findings.some((f) => f.pattern_family === pattern)
-      );
+      const personasWithPattern = personaData.filter((p) => p.findings.some((f) => f.pattern_family === pattern));
       if (personasWithPattern.length > 0 && personasWithPattern.length < personaData.length) {
         diffs.push({
           type: "pattern",
@@ -189,9 +184,7 @@ export function PersonaDiffPage() {
     });
 
     // Check for price differences
-    const priceDeltas = personaData
-      .map((p) => p.comparison?.price_delta ?? 0)
-      .filter((d) => d !== 0);
+    const priceDeltas = personaData.map((p) => p.comparison?.price_delta ?? 0).filter((d) => d !== 0);
     if (priceDeltas.length > 0) {
       const maxDelta = Math.max(...priceDeltas.map(Math.abs));
       diffs.push({
@@ -216,9 +209,7 @@ export function PersonaDiffPage() {
     }
 
     // Check for friction index differences
-    const frictionIndices = personaData
-      .map((p) => p.comparison?.friction_index ?? 0)
-      .filter((f) => f > 0);
+    const frictionIndices = personaData.map((p) => p.comparison?.friction_index ?? 0).filter((f) => f > 0);
     if (frictionIndices.length >= 2) {
       const maxFriction = Math.max(...frictionIndices);
       const minFriction = Math.min(...frictionIndices);
@@ -283,11 +274,13 @@ export function PersonaDiffPage() {
           <div className="brand-kicker">Persona Comparison</div>
           <h1>Compare Persona Experiences</h1>
           <p className="hero-copy">
-            Side-by-side comparison of how different user personas experience the site.
-            Highlighted differences show where treatment varies based on user behavior and intent.
+            Side-by-side comparison of how different user personas experience the site. Highlighted differences show
+            where treatment varies based on user behavior and intent.
           </p>
           <div className="hero-pills">
-            <span className="signal-pill">{audit?.metrics.site_host ?? (audit?.target_url ? new URL(audit.target_url).host : "Unknown")}</span>
+            <span className="signal-pill">
+              {audit?.metrics.site_host ?? (audit?.target_url ? new URL(audit.target_url).host : "Unknown")}
+            </span>
             <span className="signal-pill">{personaData.length} personas</span>
             <span className="signal-pill">{audit?.selected_scenarios.length ?? 0} scenarios</span>
             <span className="signal-pill">{differences.length} differences</span>
@@ -392,8 +385,7 @@ export function PersonaDiffPage() {
                       <span
                         className={`signal-pill ${persona.comparison.price_delta < 0 ? "price-lower" : "price-higher"}`}
                       >
-                        {persona.comparison.price_delta > 0 ? "+" : ""}
-                        ${persona.comparison.price_delta.toFixed(2)}
+                        {persona.comparison.price_delta > 0 ? "+" : ""}${persona.comparison.price_delta.toFixed(2)}
                       </span>
                     )}
                   </div>

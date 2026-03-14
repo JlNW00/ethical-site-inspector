@@ -143,7 +143,10 @@ const mockFindingsA: Finding[] = [
     evidence_payload: {
       source: "rule_engine",
       site_host: "example.com",
-      matched_prices: [{ label: "Subtotal", value: 50 }, { label: "Total", value: 65 }],
+      matched_prices: [
+        { label: "Subtotal", value: 50 },
+        { label: "Total", value: 65 },
+      ],
     },
     confidence: 0.85,
     trust_impact: -10,
@@ -169,7 +172,10 @@ const mockFindingsB: Finding[] = [
     evidence_payload: {
       source: "rule_engine",
       site_host: "example.com",
-      matched_prices: [{ label: "Subtotal", value: 50 }, { label: "Total", value: 78 }],
+      matched_prices: [
+        { label: "Subtotal", value: 50 },
+        { label: "Total", value: 78 },
+      ],
     },
     confidence: 0.92,
     trust_impact: -20,
@@ -206,7 +212,7 @@ function renderComparePage() {
   return render(
     <BrowserRouter>
       <ComparePage />
-    </BrowserRouter>
+    </BrowserRouter>,
   );
 }
 

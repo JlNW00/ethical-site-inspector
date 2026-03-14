@@ -18,7 +18,7 @@ export const DARK_PATTERN_CATEGORIES = [
   "social_proof_manipulation",
 ] as const;
 
-export type DarkPatternCategory = typeof DARK_PATTERN_CATEGORIES[number];
+export type DarkPatternCategory = (typeof DARK_PATTERN_CATEGORIES)[number];
 
 // Legacy pattern families for backward compatibility
 export const PATTERN_FAMILIES = [
@@ -30,7 +30,7 @@ export const PATTERN_FAMILIES = [
   "urgency",
 ] as const;
 
-export type PatternFamily = typeof PATTERN_FAMILIES[number];
+export type PatternFamily = (typeof PATTERN_FAMILIES)[number];
 
 // Mapping from legacy pattern families to new dark pattern categories
 export const PATTERN_FAMILY_TO_CATEGORY: Record<PatternFamily, DarkPatternCategory> = {
@@ -55,19 +55,15 @@ export const AUDIT_SCENARIOS = [
   "pricing_comparison",
 ] as const;
 
-export type ScenarioType = typeof AUDIT_SCENARIOS[number];
+export type ScenarioType = (typeof AUDIT_SCENARIOS)[number];
 
 // =============================================================================
 // Persona Definitions
 // =============================================================================
 
-export const PERSONA_DEFINITIONS = [
-  "privacy_sensitive",
-  "cost_sensitive",
-  "exit_intent",
-] as const;
+export const PERSONA_DEFINITIONS = ["privacy_sensitive", "cost_sensitive", "exit_intent"] as const;
 
-export type PersonaType = typeof PERSONA_DEFINITIONS[number];
+export type PersonaType = (typeof PERSONA_DEFINITIONS)[number];
 
 export const PERSONA_DESCRIPTIONS: Record<PersonaType, string> = {
   privacy_sensitive: "User focused on privacy protections, data minimization, and consent transparency",
@@ -81,7 +77,7 @@ export const PERSONA_DESCRIPTIONS: Record<PersonaType, string> = {
 
 export const SEVERITY_LEVELS = ["low", "medium", "high", "critical"] as const;
 
-export type SeverityType = typeof SEVERITY_LEVELS[number];
+export type SeverityType = (typeof SEVERITY_LEVELS)[number];
 
 export const SEVERITY_RANK: Record<SeverityType, number> = {
   low: 1,
@@ -96,7 +92,7 @@ export const SEVERITY_RANK: Record<SeverityType, number> = {
 
 export const AUDIT_STATUSES = ["queued", "running", "completed", "failed"] as const;
 
-export type AuditStatusType = typeof AUDIT_STATUSES[number];
+export type AuditStatusType = (typeof AUDIT_STATUSES)[number];
 
 // =============================================================================
 // Regulatory Mappings
@@ -104,7 +100,7 @@ export type AuditStatusType = typeof AUDIT_STATUSES[number];
 
 export const REGULATIONS = ["FTC", "GDPR", "DSA", "CPRA"] as const;
 
-export type RegulationType = typeof REGULATIONS[number];
+export type RegulationType = (typeof REGULATIONS)[number];
 
 // Regulatory category display info
 export interface RegulationInfo {
@@ -167,7 +163,7 @@ export const PATTERN_FAMILY_REGULATORY_MAPPING: Record<PatternFamily, Regulation
 
 export const EVIDENCE_TYPES = ["nova_ai", "heuristic", "mock", "rule_based"] as const;
 
-export type EvidenceType = typeof EVIDENCE_TYPES[number];
+export type EvidenceType = (typeof EVIDENCE_TYPES)[number];
 
 export const EVIDENCE_TYPE_LABELS: Record<EvidenceType, string> = {
   nova_ai: "Nova AI evidence",
@@ -281,10 +277,7 @@ export function isHighConfidence(confidence: number, evidenceType: EvidenceType)
   return confidence >= CONFIDENCE_THRESHOLDS.heuristic_high;
 }
 
-export function getConfidenceQuality(
-  confidence: number,
-  evidenceType: EvidenceType
-): "high" | "medium" | "low" {
+export function getConfidenceQuality(confidence: number, evidenceType: EvidenceType): "high" | "medium" | "low" {
   if (isHighConfidence(confidence, evidenceType)) return "high";
   if (evidenceType === "nova_ai" && confidence >= CONFIDENCE_THRESHOLDS.nova_ai_medium) {
     return "medium";

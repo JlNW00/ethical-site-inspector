@@ -244,10 +244,7 @@ describe("HistoryPage", () => {
   });
 
   it("navigates to compare page with selected audit IDs", async () => {
-    const audits = [
-      createMockAudit({ id: "audit-1" }),
-      createMockAudit({ id: "audit-2" }),
-    ];
+    const audits = [createMockAudit({ id: "audit-1" }), createMockAudit({ id: "audit-2" })];
     mockGetAudits.mockResolvedValue(audits);
 
     renderHistoryPage();

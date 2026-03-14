@@ -11,7 +11,7 @@ describe("Layout", () => {
         <Layout mode="live" signals={["test signal"]}>
           <div>Test Content</div>
         </Layout>
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     expect(screen.getByText("EthicalSiteInspector")).toBeInTheDocument();
@@ -27,7 +27,7 @@ describe("Layout", () => {
         <Layout mode="live">
           <div>Content</div>
         </Layout>
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     const homeLink = screen.getByText("Home");
@@ -40,7 +40,7 @@ describe("Layout", () => {
         <Layout mode="live">
           <div>Content</div>
         </Layout>
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     const historyLink = screen.getByText("History");
@@ -59,7 +59,7 @@ describe("Layout", () => {
         >
           <div>Report Content</div>
         </Layout>
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     // Use getAllByText since "History" appears in both nav and breadcrumbs
@@ -72,13 +72,10 @@ describe("Layout", () => {
   it("renders back link when provided", () => {
     render(
       <MemoryRouter initialEntries={["/audits/123/report"]}>
-        <Layout
-          mode="live"
-          backLink={{ to: "/history", label: "Back to History" }}
-        >
+        <Layout mode="live" backLink={{ to: "/history", label: "Back to History" }}>
           <div>Content</div>
         </Layout>
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     const backLink = screen.getByText("Back to History");
@@ -91,7 +88,7 @@ describe("Layout", () => {
         <Layout mode="live" signals={["running", "test scenario"]}>
           <div>Content</div>
         </Layout>
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     expect(screen.getByText(/live.*mode/i)).toBeInTheDocument();
@@ -104,9 +101,16 @@ describe("Layout", () => {
       <MemoryRouter initialEntries={["/history"]}>
         <Routes>
           <Route path="/" element={<div>Home Page</div>} />
-          <Route path="/history" element={<Layout mode="live"><div>History Page</div></Layout>} />
+          <Route
+            path="/history"
+            element={
+              <Layout mode="live">
+                <div>History Page</div>
+              </Layout>
+            }
+          />
         </Routes>
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     const homeLink = screen.getByText("Home");
@@ -119,7 +123,7 @@ describe("Layout", () => {
         <Layout mode="live">
           <div>Content</div>
         </Layout>
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     const historyLink = screen.getByText("History");
@@ -134,7 +138,7 @@ describe("Navigation flow", () => {
         <Layout mode="live">
           <div>Content</div>
         </Layout>
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     const historyLink = screen.getByText("History");
@@ -148,7 +152,7 @@ describe("Navigation flow", () => {
         <Layout mode="live">
           <div>Content</div>
         </Layout>
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     const homeLink = screen.getByText("Home");

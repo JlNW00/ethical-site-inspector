@@ -77,9 +77,7 @@ export function HistoryPage() {
   const filteredAudits = useMemo(() => {
     return audits.filter((audit) => {
       const matchesStatus = statusFilter === "all" || audit.status === statusFilter;
-      const matchesUrl =
-        urlSearch === "" ||
-        audit.target_url.toLowerCase().includes(urlSearch.toLowerCase());
+      const matchesUrl = urlSearch === "" || audit.target_url.toLowerCase().includes(urlSearch.toLowerCase());
       return matchesStatus && matchesUrl;
     });
   }, [audits, statusFilter, urlSearch]);
@@ -139,8 +137,8 @@ export function HistoryPage() {
           <div className="brand-kicker">Audit History</div>
           <h1>View and manage past audits</h1>
           <p className="hero-copy">
-            Browse previous audits, filter by status, search by URL, rerun previous
-            configurations, or compare results side-by-side.
+            Browse previous audits, filter by status, search by URL, rerun previous configurations, or compare results
+            side-by-side.
           </p>
           <div className="hero-pills">
             <span className="signal-pill">{audits.length} total audits</span>
@@ -153,9 +151,7 @@ export function HistoryPage() {
             {audits.length > 0 ? formatTimestamp(audits[0]?.updated_at).split(",")[0] : "--"}
           </div>
           <div className="hero-score-subtitle">
-            {audits.length > 0
-              ? `Last updated ${relativeTime(audits[0]?.updated_at ?? "")}`
-              : "No audits recorded yet"}
+            {audits.length > 0 ? `Last updated ${relativeTime(audits[0]?.updated_at ?? "")}` : "No audits recorded yet"}
           </div>
         </div>
       </section>
@@ -215,8 +211,7 @@ export function HistoryPage() {
           <div>
             <h2 className="section-title">Audit History</h2>
             <p className="section-subtitle">
-              Click any audit row to view its full report. Use checkboxes to select
-              audits for comparison.
+              Click any audit row to view its full report. Use checkboxes to select audits for comparison.
             </p>
           </div>
         </div>
@@ -232,11 +227,7 @@ export function HistoryPage() {
         ) : (
           <div className="audit-list">
             {filteredAudits.map((audit) => (
-              <article
-                key={audit.id}
-                data-testid="audit-row"
-                className="audit-card"
-              >
+              <article key={audit.id} data-testid="audit-row" className="audit-card">
                 <div className="audit-card-row">
                   <div className="audit-select">
                     <input
@@ -259,9 +250,7 @@ export function HistoryPage() {
                     }}
                   >
                     <div className="audit-header">
-                      <span className={getStatusBadgeClass(audit.status)}>
-                        {audit.status}
-                      </span>
+                      <span className={getStatusBadgeClass(audit.status)}>{audit.status}</span>
                       <span className="audit-url" title={audit.target_url}>
                         {audit.target_url}
                       </span>
@@ -279,18 +268,14 @@ export function HistoryPage() {
                         <span className="metric-value" style={{ fontSize: "24px" }}>
                           {audit.selected_scenarios.length}
                         </span>
-                        <span className="muted">
-                          {audit.selected_scenarios.map(titleize).join(", ")}
-                        </span>
+                        <span className="muted">{audit.selected_scenarios.map(titleize).join(", ")}</span>
                       </div>
                       <div className="audit-metric">
                         <span className="metric-label">Personas</span>
                         <span className="metric-value" style={{ fontSize: "24px" }}>
                           {audit.selected_personas.length}
                         </span>
-                        <span className="muted">
-                          {audit.selected_personas.map(titleize).join(", ")}
-                        </span>
+                        <span className="muted">{audit.selected_personas.map(titleize).join(", ")}</span>
                       </div>
                       <div className="audit-metric">
                         <span className="metric-label">Created</span>

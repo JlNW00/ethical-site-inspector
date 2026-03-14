@@ -325,8 +325,8 @@ describe("ReportPage", () => {
 
     await waitFor(() => {
       // Look for trust score in hero-score-value which should be unique
-      const heroScore = document.querySelector('.hero-score-value');
-      expect(heroScore?.textContent).toContain('85');
+      const heroScore = document.querySelector(".hero-score-value");
+      expect(heroScore?.textContent).toContain("85");
     });
 
     // Check for low risk text

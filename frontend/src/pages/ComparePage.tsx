@@ -180,7 +180,7 @@ export function ComparePage() {
           <div className="brand-kicker">Audit Comparison</div>
           <h1>Compare Two Audits</h1>
           <p className="hero-copy">
-            Side-by-side comparison of trust scores, risk levels, and findings across two audits of {" "}
+            Side-by-side comparison of trust scores, risk levels, and findings across two audits of{" "}
             {auditA.audit.target_url}.
           </p>
           <div className="hero-pills">
@@ -218,7 +218,9 @@ export function ComparePage() {
                 : "Both audits have the same trust score"}
           </div>
           <div style={{ marginTop: 12 }}>
-            <span className="muted">{auditA.audit.trust_score ?? "--"} → {auditB.audit.trust_score ?? "--"}</span>
+            <span className="muted">
+              {auditA.audit.trust_score ?? "--"} → {auditB.audit.trust_score ?? "--"}
+            </span>
           </div>
         </div>
       </section>
@@ -360,9 +362,7 @@ export function ComparePage() {
         <div className="section-header">
           <div>
             <h2 className="section-title">Scenario Breakdown</h2>
-            <p className="section-subtitle">
-              Finding counts per scenario for each audit.
-            </p>
+            <p className="section-subtitle">Finding counts per scenario for each audit.</p>
           </div>
         </div>
 
@@ -407,9 +407,7 @@ export function ComparePage() {
         <div className="section-header">
           <div>
             <h2 className="section-title">Key Differences</h2>
-            <p className="section-subtitle">
-              Summary of the most significant changes between the two audits.
-            </p>
+            <p className="section-subtitle">Summary of the most significant changes between the two audits.</p>
           </div>
         </div>
 
@@ -466,9 +464,7 @@ export function ComparePage() {
               </span>
             </div>
             <div className="muted">
-              {auditA.audit.risk_level === auditB.audit.risk_level
-                ? "Risk level unchanged"
-                : "Risk level changed"}
+              {auditA.audit.risk_level === auditB.audit.risk_level ? "Risk level unchanged" : "Risk level changed"}
             </div>
           </div>
         </div>

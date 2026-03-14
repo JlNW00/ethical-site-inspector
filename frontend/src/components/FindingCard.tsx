@@ -102,7 +102,9 @@ export function FindingCard({ finding }: FindingCardProps) {
       <div className="action-row">
         <span className={`severity-pill severity-${finding.severity}`}>{finding.severity}</span>
         <span className="signal-pill">{titleize(finding.pattern_family)}</span>
-        <span className="signal-pill confidence-pill">{formatConfidenceAsPercentage(finding.confidence)} confidence</span>
+        <span className="signal-pill confidence-pill">
+          {formatConfidenceAsPercentage(finding.confidence)} confidence
+        </span>
         <span className="signal-pill source-pill">{sourceLabel}</span>
         {isSuppressed && <span className="signal-pill suppressed-pill">Likely false positive</span>}
       </div>

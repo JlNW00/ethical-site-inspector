@@ -335,21 +335,13 @@ describe("PersonaDiffPage", () => {
       createMockFinding({
         persona: "privacy_sensitive",
         evidence_payload: {
-          interacted_controls: [
-            "Clicked Accept Cookies",
-            "Viewed Privacy Policy",
-            "Closed Banner",
-          ],
+          interacted_controls: ["Clicked Accept Cookies", "Viewed Privacy Policy", "Closed Banner"],
         },
       }),
       createMockFinding({
         persona: "cost_sensitive",
         evidence_payload: {
-          interacted_controls: [
-            "Clicked Accept Cookies",
-            "Viewed Pricing",
-            "Clicked Checkout",
-          ],
+          interacted_controls: ["Clicked Accept Cookies", "Viewed Pricing", "Clicked Checkout"],
         },
       }),
     ];
@@ -401,9 +393,7 @@ describe("PersonaDiffPage", () => {
       id: "audit-123",
       selected_personas: ["privacy_sensitive", "cost_sensitive"],
     });
-    const findings = [
-      createMockFinding({ persona: "privacy_sensitive", title: "Only privacy finding" }),
-    ];
+    const findings = [createMockFinding({ persona: "privacy_sensitive", title: "Only privacy finding" })];
 
     mockGetAudit.mockResolvedValue(audit);
     mockGetFindings.mockResolvedValue({ audit_id: "audit-123", findings });

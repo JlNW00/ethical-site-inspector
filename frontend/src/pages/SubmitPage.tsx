@@ -112,8 +112,8 @@ export function SubmitPage() {
           <div className="brand-kicker">Agentic trust audit for live websites</div>
           <h1>Evidence-backed UX trust reports built for Amazon Nova.</h1>
           <p className="hero-copy">
-            EthicalSiteInspector simulates live journeys, captures screenshots and DOM evidence, compares outcomes across
-            personas, and produces a decision-ready trust-risk report with remediation guidance.
+            EthicalSiteInspector simulates live journeys, captures screenshots and DOM evidence, compares outcomes
+            across personas, and produces a decision-ready trust-risk report with remediation guidance.
           </p>
           <div className="hero-pills">
             <span className="signal-pill">UI Automation</span>
@@ -134,7 +134,7 @@ export function SubmitPage() {
         </div>
         <div className="hero-score">
           <div className="hero-score-label">Runtime posture</div>
-          <div className="hero-score-value">{readinessLoading ? "..." : readiness?.effective_mode ?? "mock"}</div>
+          <div className="hero-score-value">{readinessLoading ? "..." : (readiness?.effective_mode ?? "mock")}</div>
           <div className="hero-score-subtitle">
             {readiness?.nova_ready
               ? "Amazon Nova classification is ready for live reasoning."
@@ -148,7 +148,8 @@ export function SubmitPage() {
           <div>
             <h2 className="section-title">Launch an audit</h2>
             <p className="section-subtitle">
-              Configure the target URL, choose the journeys to inspect, and decide which personas the trust audit should compare.
+              Configure the target URL, choose the journeys to inspect, and decide which personas the trust audit should
+              compare.
             </p>
           </div>
         </div>
@@ -213,7 +214,8 @@ export function SubmitPage() {
               {submitting ? "Starting audit..." : "Start trust audit"}
             </button>
             <span className="muted">
-              Default behavior stays fully runnable without credentials. Add Nova and browser env vars later to upgrade to hybrid or live mode.
+              Default behavior stays fully runnable without credentials. Add Nova and browser env vars later to upgrade
+              to hybrid or live mode.
             </span>
           </div>
         </div>

@@ -67,7 +67,12 @@ function trimText(value: string, limit = 80) {
 
 function parseStepFromUrl(url: string): { scenario: string; persona: string; step: string } {
   // URL format: .../{scenario}_{persona}_{step}.png or similar
-  const parts = url.split("/").pop()?.replace(/\.[^.]+$/, "").split("_") ?? [];
+  const parts =
+    url
+      .split("/")
+      .pop()
+      ?.replace(/\.[^.]+$/, "")
+      .split("_") ?? [];
   // Try to extract scenario, persona, step from filename
   if (parts.length >= 3) {
     return {
@@ -112,7 +117,9 @@ function extractScreenshotsFromEvents(events: AuditEvent[]): ScreenshotEntry[] {
   const seenUrls = new Set<string>();
 
   for (const event of events) {
-    const details = event.details as { screenshot_url?: string; scenario?: string; persona?: string; step?: string } | undefined;
+    const details = event.details as
+      | { screenshot_url?: string; scenario?: string; persona?: string; step?: string }
+      | undefined;
     if (details?.screenshot_url && !seenUrls.has(details.screenshot_url)) {
       seenUrls.add(details.screenshot_url);
       entries.push({
@@ -168,10 +175,7 @@ export function ReportPage() {
     let cancelled = false;
     void (async () => {
       try {
-        const [nextAudit, findingsResponse] = await Promise.all([
-          api.getAudit(auditId),
-          api.getFindings(auditId),
-        ]);
+        const [nextAudit, findingsResponse] = await Promise.all([api.getAudit(auditId), api.getFindings(auditId)]);
         if (!cancelled) {
           setAudit(nextAudit);
           setFindings(findingsResponse.findings);
@@ -314,7 +318,9 @@ export function ReportPage() {
           <div className="subgrid">
             <div className="summary-card" style={{ borderLeft: "3px solid var(--critical)" }}>
               <div className="metric-label">Error Message</div>
-              <p style={{ marginTop: 12 }}>{audit?.summary ?? "An unexpected error occurred during the audit execution."}</p>
+              <p style={{ marginTop: 12 }}>
+                {audit?.summary ?? "An unexpected error occurred during the audit execution."}
+              </p>
             </div>
             {error ? (
               <div className="summary-card" style={{ borderLeft: "3px solid var(--high)" }}>
@@ -331,10 +337,7 @@ export function ReportPage() {
   return (
     <Layout
       mode={audit?.mode ?? "loading"}
-      signals={[
-        audit?.risk_level ? `${audit.risk_level} risk` : "loading report",
-        `${findings.length} findings`,
-      ]}
+      signals={[audit?.risk_level ? `${audit.risk_level} risk` : "loading report", `${findings.length} findings`]}
     >
       <section className="hero-panel">
         <div>
@@ -354,7 +357,8 @@ export function ReportPage() {
             ))}
           </div>
           <p className="muted" style={{ marginTop: 16 }}>
-            Target URL: {audit?.target_url ?? "Loading"} | Generated: {formatTimestamp(audit?.completed_at ?? audit?.updated_at)}
+            Target URL: {audit?.target_url ?? "Loading"} | Generated:{" "}
+            {formatTimestamp(audit?.completed_at ?? audit?.updated_at)}
           </p>
           <div className="action-row" style={{ marginTop: 24 }}>
             {auditId ? (
@@ -385,12 +389,15 @@ export function ReportPage() {
         <div className="hero-score">
           <div className="hero-score-label">Trust Score</div>
           <div className="hero-score-value">{scoreDisplay}</div>
-          <div className={`severity-pill severity-${audit?.risk_level === "critical" ? "critical" : audit?.risk_level === "high" ? "high" : audit?.risk_level === "low" ? "low" : "medium"}`}>
+          <div
+            className={`severity-pill severity-${audit?.risk_level === "critical" ? "critical" : audit?.risk_level === "high" ? "high" : audit?.risk_level === "low" ? "low" : "medium"}`}
+          >
             {audit?.risk_level ?? "loading"} risk
           </div>
           <div className="hero-score-subtitle">{riskSummary(audit?.risk_level)}</div>
           <p className="muted" style={{ marginTop: 12 }}>
-            Higher score = more trustworthy observed journeys. Scale: 82-100 low, 64-81 moderate, 42-63 high, 0-41 critical.
+            Higher score = more trustworthy observed journeys. Scale: 82-100 low, 64-81 moderate, 42-63 high, 0-41
+            critical.
           </p>
           <div style={{ marginTop: 18 }}>
             <ProgressMeter value={trustProgress} />
@@ -398,11 +405,16 @@ export function ReportPage() {
         </div>
       </section>
 
-      {error ? <section className="content-panel"><div className="empty-state">{error}</div></section> : null}
+      {error ? (
+        <section className="content-panel">
+          <div className="empty-state">{error}</div>
+        </section>
+      ) : null}
       {audit?.status !== "completed" ? (
         <section className="content-panel">
           <div className="empty-state">
-            This audit is still {audit?.status ?? "loading"}. The report view will hydrate as soon as findings are available.
+            This audit is still {audit?.status ?? "loading"}. The report view will hydrate as soon as findings are
+            available.
           </div>
         </section>
       ) : null}
@@ -411,7 +423,9 @@ export function ReportPage() {
         <div className="section-header">
           <div>
             <h2 className="section-title">Executive summary</h2>
-            <p className="section-subtitle">The signal judges need first: risk concentration, coverage, and whether persona experiences diverge.</p>
+            <p className="section-subtitle">
+              The signal judges need first: risk concentration, coverage, and whether persona experiences diverge.
+            </p>
           </div>
         </div>
         <div className="grid-3">
@@ -527,7 +541,9 @@ export function ReportPage() {
                       >
                         {info.name}
                       </span>
-                      <span className="regulatory-count">{count} finding{count === 1 ? "" : "s"}</span>
+                      <span className="regulatory-count">
+                        {count} finding{count === 1 ? "" : "s"}
+                      </span>
                     </div>
                     <div className="regulatory-fullname">{info.fullName}</div>
                     <div className="regulatory-description">{info.description}</div>
@@ -561,7 +577,8 @@ export function ReportPage() {
                   </p>
                 ) : null}
                 <p className="muted">
-                  Average steps: {item.average_steps} | Friction index: {item.friction_index} | Price delta: ${item.price_delta}
+                  Average steps: {item.average_steps} | Friction index: {item.friction_index} | Price delta: $
+                  {item.price_delta}
                 </p>
                 <p className="muted">Dominant patterns: {item.notable_patterns.map(titleize).join(", ") || "None"}</p>
               </article>
@@ -581,7 +598,9 @@ export function ReportPage() {
               <article className="compare-card" key={item.scenario}>
                 <div className="action-row">
                   <span className="signal-pill">{titleize(item.scenario)}</span>
-                  <span className={`severity-pill severity-${item.risk_level === "critical" ? "critical" : item.risk_level === "high" ? "high" : "medium"}`}>
+                  <span
+                    className={`severity-pill severity-${item.risk_level === "critical" ? "critical" : item.risk_level === "high" ? "high" : "medium"}`}
+                  >
                     {item.risk_level}
                   </span>
                 </div>
@@ -640,7 +659,8 @@ export function ReportPage() {
           </div>
         ) : (
           <div className="empty-state">
-            No screenshots available. Screenshots are captured during audit execution and will appear here once the audit is complete.
+            No screenshots available. Screenshots are captured during audit execution and will appear here once the
+            audit is complete.
           </div>
         )}
       </section>
@@ -703,7 +723,9 @@ export function ReportPage() {
         <div className="section-header">
           <div>
             <h2 className="section-title">Findings and evidence</h2>
-            <p className="section-subtitle">Grouped by scenario and persona so stakeholder teams can triage remediations quickly.</p>
+            <p className="section-subtitle">
+              Grouped by scenario and persona so stakeholder teams can triage remediations quickly.
+            </p>
           </div>
         </div>
         {Object.keys(groupedFindings).length ? (
@@ -727,7 +749,9 @@ export function ReportPage() {
             ))}
           </div>
         ) : (
-          <div className="empty-state">Findings will appear once the classifier finishes reasoning over the evidence.</div>
+          <div className="empty-state">
+            Findings will appear once the classifier finishes reasoning over the evidence.
+          </div>
         )}
       </section>
     </Layout>

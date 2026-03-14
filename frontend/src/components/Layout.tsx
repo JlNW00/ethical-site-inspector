@@ -70,7 +70,9 @@ export function Layout({ mode, children, signals = [], breadcrumbs, backLink }: 
           {breadcrumbs && (
             <ol className="breadcrumbs-list">
               <li className="breadcrumb-item">
-                <Link to="/" className="breadcrumb-link">Home</Link>
+                <Link to="/" className="breadcrumb-link">
+                  Home
+                </Link>
               </li>
               {breadcrumbs.map((crumb, index) => (
                 <li key={crumb.path} className="breadcrumb-item">

@@ -1,19 +1,24 @@
+# Python
 .venv/
 __pycache__/
 *.pyc
 backend/.env
-frontend/.env
+backend/.pytest_cache/
+
+# Node
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/tsconfig.tsbuildinfo
+
+# Data (runtime)
 data/ethicalsiteinspector.db
 data/ethicalsiteinspector.db-*
 data/screenshots/*
 !data/screenshots/.gitkeep
 data/reports/*
 !data/reports/.gitkeep
-frontend/node_modules/
-frontend/dist/
-backend/.pytest_cache/
-playwright-report/
-frontend/tsconfig.tsbuildinfo
+data/*.json
 
 # IDE
 .idea/
@@ -38,14 +43,10 @@ server.err
 backend/server.log
 backend/server.err
 *.pdf
+playwright-report/
 
-# Root node_modules (workspace symlink)
-node_modules/
+# Environment
+frontend/.env
 
-# Temp data dumps
-data/*.json
-
-# Temp scripts
-.factory/scripts/*.py
-.factory/scripts/*.json
-.factory/scripts/pids.txt
+# Factory mission infrastructure
+.factory/
