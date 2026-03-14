@@ -30,3 +30,22 @@ htmlcov/
 .coverage
 coverage/
 lcov.info
+
+# Runtime artifacts
+server.pid
+server.log
+server.err
+backend/server.log
+backend/server.err
+*.pdf
+
+# Root node_modules (workspace symlink)
+node_modules/
+
+# Temp data dumps
+data/*.json
+
+# Temp scripts
+.factory/scripts/*.py
+.factory/scripts/*.json
+.factory/scripts/pids.txt
