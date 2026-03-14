@@ -1,0 +1,27 @@
+{
+  "group": "browser-video003-round2",
+  "testedAt": "2026-03-14T04:48:00Z",
+  "isolation": {
+    "appUrl": "http://localhost:5173",
+    "backendApi": "http://localhost:8000",
+    "testAuditId": "e2ed0938-ca82-4e84-b76d-ec788e860c51",
+    "reportPageUrl": "http://localhost:5173/audits/e2ed0938-ca82-4e84-b76d-ec788e860c51/report"
+  },
+  "toolsUsed": ["agent-browser"],
+  "assertions": {
+    "VAL-VIDEO-003": {
+      "status": "fail",
+      "evidence": "Navigated to ReportPage for audit e2ed0938-ca82-4e84-b76d-ec788e860c51. The 'Session Recordings' h2 heading IS present and correctly positioned after 'Screenshot Timeline' (index 4 vs index 3 in DOM order). A video-grid with 4 video-card elements is rendered, each with correct scenario-persona labels: Cookie Consent/Privacy Sensitive, Cookie Consent/Cost Sensitive, Checkout Flow/Privacy Sensitive, Checkout Flow/Cost Sensitive. HOWEVER, there are ZERO <video> elements in the DOM (document.querySelectorAll('video').length === 0, document.querySelectorAll('video[controls]').length === 0). All 4 video-player-container divs contain a video-error div with '📹 Video unavailable' text instead of <video> elements. The onError handler in the video component replaces the <video> element with this error state because the mock .webm placeholder files (37 bytes) are not valid WebM containers that browsers can decode.",
+      "details": "The assertion requires 'an HTML5 <video> element with the controls attribute is rendered inside a container'. Since the error handler removes the <video> elements from the DOM entirely and replaces them with error text divs, the assertion FAILS. The structural layout (section heading, grid, labeled cards) is correct, but the core requirement of having actual <video controls> elements is not met. DOM structure found: section > video-grid > video-card > video-card-header (with scenario/persona labels) + video-player-container > video-error (with icon + 'Video unavailable' text). Console showed 4 errors about empty string src attributes (from screenshot <img> elements, not video). No unhandled media errors in console because the error handler caught them."
+    }
+  },
+  "frictions": [],
+  "blockers": [
+    {
+      "description": "Mock .webm placeholder files are 37 bytes (invalid WebM format). Browsers cannot decode them, triggering the HTML5 media error event. The video component's onError handler replaces <video> elements with 'Video unavailable' error divs. This means the <video controls> elements required by the assertion are never visible in the DOM at test time.",
+      "affectedAssertions": ["VAL-VIDEO-003"],
+      "quickFixAttempted": "None - this is a known issue from round 1. The mock video files need to be valid WebM containers (even minimal ones) for the <video> element to remain in the DOM with controls attribute."
+    }
+  ],
+  "summary": "Tested 1 assertion: 0 passed, 1 failed. VAL-VIDEO-003 FAILS because the 4 video cards all show 'Video unavailable' error state instead of <video controls> elements. The Session Recordings section structure (heading, grid, labeled cards) is correct, but invalid 37-byte mock .webm files cause browser decode errors, triggering the error handler that removes <video> elements from the DOM."
+}
