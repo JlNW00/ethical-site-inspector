@@ -239,7 +239,10 @@ describe("BenchmarkPage", () => {
     renderBenchmarkPage();
 
     await waitFor(() => {
-      expect(screen.getByText(/failed/i)).toBeInTheDocument();
+      // Look for the status pill specifically by class name, not the error state title
+      expect(screen.getByText((content, element) => {
+        return element?.classList?.contains("signal-pill") && element?.classList?.contains("status-failed") && content === "failed";
+      })).toBeInTheDocument();
     });
 
     // Should not poll again
@@ -344,7 +347,8 @@ describe("BenchmarkPage", () => {
     expect(scoreElements[0].textContent).toContain("85%");
 
     // Delta indicator should show 50 point spread (85 - 35)
-    expect(screen.getByText(/50/i)).toBeInTheDocument();
+    const deltaValue = screen.getByTestId("delta-value");
+    expect(deltaValue.textContent).toBe("50");
     expect(screen.getByText(/point spread/i)).toBeInTheDocument();
   });
 
@@ -405,10 +409,10 @@ describe("BenchmarkPage", () => {
     // Grid should show finding counts per scenario per URL
     const scenarioGrid = screen.getByTestId("scenario-grid");
 
-    // Check that finding counts are displayed
-    expect(within(scenarioGrid).getByText("3")).toBeInTheDocument(); // site-a cookie_consent
-    expect(within(scenarioGrid).getByText("2")).toBeInTheDocument(); // site-a checkout_flow
-    expect(within(scenarioGrid).getByText("0")).toBeInTheDocument(); // site-a newsletter_signup
+    // Check that finding counts are displayed (use getAllByText for values that appear multiple times)
+    expect(within(scenarioGrid).getAllByText("3").length).toBeGreaterThan(0); // site-a cookie_consent
+    expect(within(scenarioGrid).getAllByText("2").length).toBeGreaterThan(0); // site-a checkout_flow
+    expect(within(scenarioGrid).getAllByText("0").length).toBeGreaterThan(0); // multiple cells with 0
   });
 
   it("renders unified summary with highest/lowest scoring URLs named", async () => {
@@ -452,9 +456,10 @@ describe("BenchmarkPage", () => {
       expect(screen.getByText(/unified summary/i)).toBeInTheDocument();
     });
 
-    // Summary should name highest and lowest scoring URLs
-    expect(screen.getByText(/high.com/i)).toBeInTheDocument();
-    expect(screen.getByText(/low.com/i)).toBeInTheDocument();
+    // Summary should name highest and lowest scoring URLs (use summary section to scope)
+    const summarySection = screen.getByTestId("summary-section");
+    expect(within(summarySection).getByText(/high.com/i)).toBeInTheDocument();
+    expect(within(summarySection).getByText(/low.com/i)).toBeInTheDocument();
   });
 
   it("mentions common dark patterns in unified summary", async () => {
@@ -502,8 +507,9 @@ describe("BenchmarkPage", () => {
       expect(screen.getByText(/unified summary/i)).toBeInTheDocument();
     });
 
-    // Summary should mention pattern families
-    expect(screen.getByText(/manipulative design/i)).toBeInTheDocument();
+    // Summary should mention pattern families - titleized format
+    const summarySection = screen.getByTestId("summary-section");
+    expect(within(summarySection).getByText("Manipulative Design")).toBeInTheDocument();
   });
 
   it("shows overall risk word in unified summary", async () => {
@@ -534,9 +540,9 @@ describe("BenchmarkPage", () => {
       expect(screen.getByText(/unified summary/i)).toBeInTheDocument();
     });
 
-    // Should show risk word (high, moderate, low, critical)
+    // Should show risk word (high, moderate, low, critical) - look for "High" as titleized
     const summarySection = screen.getByTestId("summary-section");
-    expect(within(summarySection).getByText(/high/i)).toBeInTheDocument();
+    expect(within(summarySection).getByText("High")).toBeInTheDocument();
   });
 
   it("has View Report links that navigate to individual audit ReportPages", async () => {
@@ -602,7 +608,7 @@ describe("BenchmarkPage", () => {
       urls: ["https://failed-site.com", "https://success-site.com"],
       audit_ids: ["audit-failed", "audit-success"],
       trust_scores: {
-        "https://failed-site.com": 0,
+        "https://failed-site.com": null,
         "https://success-site.com": 75,
       },
     });
@@ -631,12 +637,12 @@ describe("BenchmarkPage", () => {
       expect(screen.getByText(/trust score comparison/i)).toBeInTheDocument();
     });
 
-    // Should show error badge for failed audit
-    expect(screen.getByText(/error/i)).toBeInTheDocument();
+    // Should show error badge for failed audit (within comparison section)
+    const comparisonSection = screen.getByTestId("comparison-section");
+    expect(within(comparisonSection).getByText(/error/i)).toBeInTheDocument();
 
     // Should show N/A for trust score
-    const nas = screen.getAllByText(/n\/a/i);
-    expect(nas.length).toBeGreaterThan(0);
+    expect(within(comparisonSection).getAllByText(/n\/a/i).length).toBeGreaterThan(0);
   });
 
   it("has Back to History button", async () => {
@@ -719,9 +725,12 @@ describe("BenchmarkPage", () => {
     renderBenchmarkPage();
 
     await waitFor(() => {
-      // Delta should be 90 - 30 = 60 points
-      expect(screen.getByText(/60/i)).toBeInTheDocument();
+      expect(screen.getByTestId("comparison-section")).toBeInTheDocument();
     });
+
+    // Delta should be 90 - 30 = 60 points (within delta-badge)
+    const deltaValue = screen.getByTestId("delta-value");
+    expect(deltaValue.textContent).toBe("60");
   });
 
   it("handles empty cells with '0' for scenarios with no findings", async () => {

@@ -49,18 +49,7 @@ const personaOptions = [
   },
 ] as const;
 
-// Get display label for a scenario value
-function getScenarioDisplayLabel(value: string): string {
-  const labels: Record<string, string> = {
-    cookie_consent: "Cookie Consent",
-    checkout_flow: "Checkout Flow",
-    subscription_cancellation: "Cancellation Flow",
-    account_deletion: "Account Deletion",
-    newsletter_signup: "Newsletter Signup",
-    pricing_comparison: "Pricing Comparison",
-  };
-  return labels[value] ?? titleize(value);
-}
+
 
 const MAX_BENCHMARK_URLS = 5;
 const MIN_BENCHMARK_URLS = 2;

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 
 import { api } from "../api/client";
 import type { Audit, Benchmark, Finding } from "../api/types";
@@ -155,8 +155,7 @@ export function BenchmarkPage() {
     return Math.max(...scores) - Math.min(...scores);
   }, [benchmark]);
 
-  // Get the benchmarkId from URL params for ReportPage back navigation
-  const currentBenchmarkId = benchmarkId;
+
 
   // Get all unique scenarios across audits
   const allScenarios = useMemo(() => {
@@ -316,8 +315,8 @@ export function BenchmarkPage() {
                 </p>
               </div>
               {scoreDelta > 0 && (
-                <div className="delta-badge">
-                  <span className="delta-value">{scoreDelta}</span>
+                <div className="delta-badge" data-testid="delta-badge">
+                  <span className="delta-value" data-testid="delta-value">{scoreDelta}</span>
                   <span className="delta-label">point spread</span>
                 </div>
               )}
@@ -326,7 +325,7 @@ export function BenchmarkPage() {
             <div className="trust-score-cards">
               {sortedUrls.map(({ url, auditId, score }) => {
                 const auditData = audits[url]?.audit;
-                const isFailed = !score && auditData?.status === "failed";
+                const isFailed = score === null && auditData?.status === "failed";
 
                 return (
                   <div key={url} className={`trust-score-card ${isFailed ? "failed" : ""}`}>
