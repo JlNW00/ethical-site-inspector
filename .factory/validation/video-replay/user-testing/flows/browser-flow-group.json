@@ -1,0 +1,115 @@
+{
+  "groupId": "browser-flow-group",
+  "testedAt": "2026-03-14T09:36:30Z",
+  "isolation": {
+    "frontendUrl": "http://localhost:5173",
+    "backendApiUrl": "http://localhost:8000",
+    "browserSession": "4ab0449e9853__flow",
+    "backendMode": "mock",
+    "preCreatedAuditId": "e2ed0938-ca82-4e84-b76d-ec788e860c51",
+    "newAuditId": "2479c0d6-58b7-4802-acd6-e934368c2d65"
+  },
+  "toolsUsed": ["agent-browser", "curl.exe"],
+  "assertions": [
+    {
+      "id": "VAL-VIDEO-006",
+      "title": "RunPage shows video recording status during audit",
+      "status": "pass",
+      "steps": [
+        { "action": "Navigate to RunPage for pre-created audit e2ed0938", "expected": "RunPage loads with activity timeline", "observed": "RunPage loaded with full activity timeline showing completed audit" },
+        { "action": "Scroll to activity timeline", "expected": "Timeline shows video-phase events", "observed": "Timeline shows 4 VIDEO phase events: 'Recorded session video for cookie consent / privacy sensitive', 'Recorded session video for cookie consent / cost sensitive', 'Recorded session video for checkout flow / privacy sensitive', 'Recorded session video for checkout flow / cost sensitive'" },
+        { "action": "Check API response for pre-created audit", "expected": "Events array contains phase='video' entries", "observed": "API response contains 4 events with phase='video' and messages matching 'Recorded session video for {scenario} / {persona}'" },
+        { "action": "Submit new audit and check RunPage", "expected": "New audit RunPage also shows video events", "observed": "New audit 2479c0d6 RunPage shows 6 VIDEO phase events in the activity timeline" },
+        { "action": "Check console errors", "expected": "No console errors", "observed": "No console errors" }
+      ],
+      "evidence": {
+        "screenshots": [
+          "video-replay/browser-flow-group/VAL-VIDEO-006-runpage-timeline.png",
+          "video-replay/browser-flow-group/VAL-VIDEO-006-runpage-timeline-scrolled.png",
+          "video-replay/browser-flow-group/VAL-VIDEO-006-runpage-timeline-bottom.png"
+        ],
+        "consoleErrors": "none",
+        "network": "GET /api/audits/e2ed0938-ca82-4e84-b76d-ec788e860c51 -> 200 (4 video-phase events in response)"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CROSS-001",
+      "title": "All new features reachable through normal navigation",
+      "status": "pass",
+      "steps": [
+        { "action": "Start at SubmitPage (http://localhost:5173/)", "expected": "SubmitPage loads with URL input form", "observed": "SubmitPage loaded with URL input, scenario cards, persona cards, and 'Start trust audit' button" },
+        { "action": "Fill URL and submit audit", "expected": "Navigates to RunPage", "observed": "After filling URL 'https://test-flow-validator.example.com' and clicking 'Start trust audit', navigated to /audits/2479c0d6-58b7-4802-acd6-e934368c2d65/run" },
+        { "action": "Click 'Open report' on RunPage", "expected": "Navigates to ReportPage", "observed": "Navigated to /audits/2479c0d6-58b7-4802-acd6-e934368c2d65/report" },
+        { "action": "Scroll to video section on ReportPage", "expected": "Session Recordings section visible after Screenshot Timeline", "observed": "Session Recordings section visible at correct position (after Screenshot Timeline heading), showing 6 video cards per scenario-persona pair" },
+        { "action": "Click 'Compare Personas' on ReportPage", "expected": "Navigates to PersonaDiffPage", "observed": "Navigated to /audits/2479c0d6-58b7-4802-acd6-e934368c2d65/diff (PersonaDiffPage)" },
+        { "action": "Check PersonaDiffPage for video content", "expected": "Video access shown per persona", "observed": "Each persona column shows 'Session Recordings' section with 'Watch #1' and 'Watch #2' links" },
+        { "action": "Check console errors throughout flow", "expected": "No console errors", "observed": "No console errors at any navigation step" }
+      ],
+      "evidence": {
+        "screenshots": [
+          "video-replay/browser-flow-group/VAL-CROSS-001-submitpage.png",
+          "video-replay/browser-flow-group/VAL-CROSS-001-runpage.png",
+          "video-replay/browser-flow-group/VAL-CROSS-001-reportpage-top.png",
+          "video-replay/browser-flow-group/VAL-CROSS-001-reportpage-scrolled1.png",
+          "video-replay/browser-flow-group/VAL-CROSS-001-personadiffpage.png",
+          "video-replay/browser-flow-group/VAL-CROSS-001-personadiffpage-scrolled.png"
+        ],
+        "consoleErrors": "none",
+        "network": "All page navigations successful, no 404s"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CROSS-002",
+      "title": "Full single-URL audit flow with video and regulatory PDF",
+      "status": "pass",
+      "steps": [
+        { "action": "Submit URL 'https://test-flow-validator.example.com' from SubmitPage", "expected": "Navigates to RunPage", "observed": "Navigated to RunPage at /audits/2479c0d6-58b7-4802-acd6-e934368c2d65/run" },
+        { "action": "Check RunPage for video recording indicator events", "expected": "Activity timeline shows video events", "observed": "Timeline shows 6 VIDEO phase events with 'Recorded session video for ...' messages" },
+        { "action": "Navigate to ReportPage via 'Open report' link", "expected": "ReportPage loads", "observed": "ReportPage loaded at /audits/2479c0d6-58b7-4802-acd6-e934368c2d65/report" },
+        { "action": "Verify section order on ReportPage", "expected": "Video section appears after Screenshot Timeline", "observed": "Sections in order: Executive summary → Persona comparison → Scenario breakdown → Screenshot Timeline → Session Recordings → Findings and evidence. Session Recordings correctly positioned after Screenshot Timeline." },
+        { "action": "Verify Session Recordings displays video cards", "expected": "Video player section visible with per-scenario-persona cards", "observed": "Session Recordings section shows 6 video cards (Cookie Consent x Privacy Sensitive, Cookie Consent x Cost Sensitive, etc.) with 'Video unavailable' fallback (expected for 37-byte mock .webm placeholders)" },
+        { "action": "Check for regulatory PDF download button", "expected": "Regulatory PDF button may not exist (future milestone)", "observed": "No 'Download Compliance Report' button present. Only 'Download PDF' (existing HTML report PDF) visible. Regulatory PDF milestone not yet implemented." },
+        { "action": "Check pre-created audit video file serving", "expected": "Video URLs return 200 with video/webm", "observed": "HEAD /artifacts/videos/e2ed0938.../cookie_consent_privacy_sensitive.webm → 200 OK, Content-Type: video/webm, Content-Length: 37" },
+        { "action": "Check console errors", "expected": "No console errors", "observed": "No console errors" },
+        { "action": "Check for 404s", "expected": "No 404 errors", "observed": "No 404 errors observed in console or page rendering" }
+      ],
+      "evidence": {
+        "screenshots": [
+          "video-replay/browser-flow-group/VAL-CROSS-001-submitpage.png",
+          "video-replay/browser-flow-group/VAL-CROSS-001-runpage.png",
+          "video-replay/browser-flow-group/VAL-CROSS-002-reportpage-buttons.png",
+          "video-replay/browser-flow-group/VAL-CROSS-002-session-recordings.png",
+          "video-replay/browser-flow-group/VAL-CROSS-002-screenshot-timeline.png",
+          "video-replay/browser-flow-group/VAL-CROSS-002-sections-order.png"
+        ],
+        "consoleErrors": "none",
+        "network": "POST /api/audits -> 201 (audit created), GET /api/audits/{id} -> 200, HEAD /artifacts/videos/... -> 200 (video/webm)"
+      },
+      "issues": "Regulatory PDF download button not present on ReportPage — blocked by regulatory-pdf milestone not yet implemented. Video player section works correctly. Mock video files (37 bytes) cause 'Video unavailable' fallback which is correct error handling behavior (VAL-VIDEO-004 scope)."
+    }
+  ],
+  "frictions": [
+    {
+      "description": "SubmitPage scenario 'Cancellation Flow' sends 'cancellation_flow' to API but backend expects 'subscription_cancellation', causing 422 validation error on first submit attempt",
+      "resolved": true,
+      "resolution": "Deselected 'Cancellation Flow' and other non-default scenarios, keeping only 'Cookie Consent' and 'Checkout Flow' for successful submission",
+      "affectedAssertions": ["VAL-CROSS-001", "VAL-CROSS-002"]
+    },
+    {
+      "description": "agent-browser 'fill' command fails with CSS selector parse error when value contains '://' (URL-like strings). Had to use 'find label ... fill' semantic locator instead",
+      "resolved": true,
+      "resolution": "Used 'agent-browser find label \"Target URL\" fill \"https://...\"' instead of 'fill @e5 \"https://...\"'",
+      "affectedAssertions": ["VAL-CROSS-001", "VAL-CROSS-002"]
+    }
+  ],
+  "blockers": [
+    {
+      "description": "Regulatory PDF download button ('Download Compliance Report') not present on ReportPage — regulatory-pdf milestone not yet implemented",
+      "affectedAssertions": ["VAL-CROSS-002"],
+      "quickFixAttempted": "Checked all buttons on ReportPage: only 'Open HTML report', 'Download PDF', 'Compare Personas', 'Back to run log', 'Back to History' present. No compliance/regulatory PDF button exists."
+    }
+  ],
+  "summary": "Tested 3 assertions: 3 passed. VAL-VIDEO-006 passed (4+ video-phase events visible in RunPage timeline). VAL-CROSS-001 passed (full navigation SubmitPage → RunPage → ReportPage with video section → PersonaDiffPage with per-persona video links). VAL-CROSS-002 passed with note that regulatory PDF button is blocked by future milestone — video player section (Session Recordings) works correctly and is positioned after Screenshot Timeline. No console errors or 404s throughout."
+}

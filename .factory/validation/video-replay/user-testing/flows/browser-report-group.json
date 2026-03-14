@@ -1,0 +1,203 @@
+{
+  "groupId": "browser-report-group",
+  "testedAt": "2026-03-14T09:31:00Z",
+  "isolation": {
+    "frontendUrl": "http://localhost:5173",
+    "backendApiUrl": "http://localhost:8000",
+    "browserSession": "4ab0449e9853__report",
+    "mockAuditWithVideos": "e2ed0938-ca82-4e84-b76d-ec788e860c51",
+    "oldAuditWithoutVideos": "48fcd4cc-a0a4-454f-8444-4b3b302dd595"
+  },
+  "toolsUsed": ["agent-browser", "curl.exe"],
+  "assertions": [
+    {
+      "id": "VAL-VIDEO-003",
+      "title": "ReportPage displays video players per scenario-persona",
+      "status": "fail",
+      "steps": [
+        {
+          "action": "Navigate to ReportPage for audit with video URLs",
+          "expected": "ReportPage loads with video section",
+          "observed": "ReportPage loaded successfully at /audits/e2ed0938-ca82-4e84-b76d-ec788e860c51/report"
+        },
+        {
+          "action": "Check for 'Session Recordings' heading after 'Screenshot Timeline'",
+          "expected": "Session Recordings heading visible after Screenshot Timeline",
+          "observed": "H2 'Session Recordings' appears immediately after 'Screenshot Timeline' in heading order. Subtitle reads 'Browser session recordings captured during the audit journey.'"
+        },
+        {
+          "action": "Check for video cards with scenario/persona labels",
+          "expected": "4 video cards with correct scenario-persona labels",
+          "observed": "4 video cards rendered in a video-grid: Cookie Consent/Privacy Sensitive, Cookie Consent/Cost Sensitive, Checkout Flow/Privacy Sensitive, Checkout Flow/Cost Sensitive. Labels are correct."
+        },
+        {
+          "action": "Check for HTML5 <video> elements with controls attribute",
+          "expected": "<video controls> element rendered per card",
+          "observed": "0 <video> elements in DOM. Source code contains <video controls preload='metadata'> but the 37-byte mock placeholder .webm files trigger media errors, causing the onError handler to replace <video> elements with 'Video unavailable' error state."
+        },
+        {
+          "action": "Verify video URLs serve content from backend",
+          "expected": "Video URLs return HTTP 200 with video/webm content-type",
+          "observed": "curl -I confirms HTTP 200, content-type: video/webm, content-length: 37 for all 4 URLs. Files are served correctly but are invalid/placeholder webm content that browsers cannot decode."
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "video-replay/browser-report-group/VAL-VIDEO-003-report-top.png",
+          "video-replay/browser-report-group/VAL-VIDEO-003-session-recordings.png"
+        ],
+        "consoleErrors": "none",
+        "network": "GET /api/audits/e2ed0938-ca82-4e84-b76d-ec788e860c51 -> 200 with video_urls dict; HEAD /artifacts/videos/.../cookie_consent_privacy_sensitive.webm -> 200 video/webm 37 bytes"
+      },
+      "issues": "The <video> element code path exists in ReportPage.tsx (line 196) with controls and preload='metadata' attributes, but the mock placeholder .webm files (37 bytes) are not valid webm files, causing browser media errors. The onError handler replaces the <video> element with a 'Video unavailable' error message. The section structure (heading, grid, cards, labels) is fully correct. The failure is in the mock video data quality, not the UI component logic."
+    },
+    {
+      "id": "VAL-VIDEO-004",
+      "title": "Video error state when URL fails to load",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Navigate to ReportPage for audit with video URLs where videos trigger errors",
+          "expected": "Video error state displayed for unreachable/invalid videos",
+          "observed": "All 4 video cards show error state with camera emoji (📹) and 'Video unavailable' text message"
+        },
+        {
+          "action": "Check for user-friendly error message",
+          "expected": "Friendly error like 'Video unavailable' shown",
+          "observed": "'Video unavailable' displayed with 📹 icon in a styled video-error container. No broken elements visible."
+        },
+        {
+          "action": "Check console for unhandled errors",
+          "expected": "No unhandled console errors",
+          "observed": "No console errors detected via agent-browser errors command"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "video-replay/browser-report-group/VAL-VIDEO-004-error-state.png"
+        ],
+        "consoleErrors": "none",
+        "network": "Video URLs return 200 but content is invalid webm, triggering HTML5 media error event"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-VIDEO-005",
+      "title": "No video player rendered when video_url is null",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Navigate to ReportPage for old audit without video URLs",
+          "expected": "ReportPage loads without broken video elements",
+          "observed": "ReportPage loaded at /audits/48fcd4cc-a0a4-454f-8444-4b3b302dd595/report"
+        },
+        {
+          "action": "Check DOM for <video> elements",
+          "expected": "0 <video> elements",
+          "observed": "0 <video> elements in DOM"
+        },
+        {
+          "action": "Check graceful degradation",
+          "expected": "Section omitted or shows 'No recordings available'",
+          "observed": "Session Recordings section present with subtitle 'Browser session recordings are not available for this audit.' and empty state message 'No recordings available'. 0 video-error elements. Clean degradation."
+        },
+        {
+          "action": "Check console for errors",
+          "expected": "No console errors",
+          "observed": "No console errors detected"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "video-replay/browser-report-group/VAL-VIDEO-005-no-videos.png"
+        ],
+        "consoleErrors": "none",
+        "network": "GET /api/audits/48fcd4cc-a0a4-454f-8444-4b3b302dd595 -> 200 with video_urls=null"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-VIDEO-007",
+      "title": "PersonaDiffPage includes video access for each persona",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Navigate to PersonaDiffPage for audit with video URLs",
+          "expected": "PersonaDiffPage loads with video access per persona",
+          "observed": "PersonaDiffPage loaded at /audits/e2ed0938-ca82-4e84-b76d-ec788e860c51/diff (note: route is /diff not /persona-diff)"
+        },
+        {
+          "action": "Check each persona column for video player or Watch session link",
+          "expected": "Video players or Watch links per persona column",
+          "observed": "Each persona column (Privacy Sensitive, Cost Sensitive) has a 'SESSION RECORDINGS' heading (H4) with two '🎬 Watch' links. Privacy Sensitive has Watch #1 (cookie_consent_privacy_sensitive.webm) and Watch #2 (checkout_flow_privacy_sensitive.webm). Cost Sensitive has Watch #1 (cookie_consent_cost_sensitive.webm) and Watch #2 (checkout_flow_cost_sensitive.webm)."
+        },
+        {
+          "action": "Verify videos can play independently per persona",
+          "expected": "Independent video links per persona",
+          "observed": "Each persona has independent links pointing to different video URLs. Links open videos in separate contexts allowing independent playback."
+        },
+        {
+          "action": "Check console for errors",
+          "expected": "No console errors",
+          "observed": "No console errors detected"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "video-replay/browser-report-group/VAL-VIDEO-007-persona-diff-top.png",
+          "video-replay/browser-report-group/VAL-VIDEO-007-persona-diff-videos.png"
+        ],
+        "consoleErrors": "none",
+        "network": "GET /api/audits/e2ed0938-ca82-4e84-b76d-ec788e860c51 -> 200"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-VIDEO-008",
+      "title": "Multiple videos per audit don't block page rendering",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Check source code for lazy loading (preload='metadata' or equivalent)",
+          "expected": "<video preload='metadata'> in source code",
+          "observed": "ReportPage.tsx line 199 contains <video className='video-player' controls preload='metadata' onError={handleError}>. The preload='metadata' attribute is correctly set to prevent full video preloading."
+        },
+        {
+          "action": "Navigate to ReportPage with 4 videos and measure page load time",
+          "expected": "Page loads quickly without freezing",
+          "observed": "Page loaded in 19.1ms (performance.timing). Page is fully interactive immediately. Document readyState=complete. No observable lag or freeze."
+        },
+        {
+          "action": "Verify page renders content above and below video section",
+          "expected": "All sections rendered (Executive summary through Findings and evidence)",
+          "observed": "All 6 sections rendered: Executive summary, Persona comparison, Scenario breakdown, Screenshot Timeline, Session Recordings (4 video cards), Findings and evidence. Page is fully scrollable."
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "video-replay/browser-report-group/VAL-VIDEO-008-page-loaded.png"
+        ],
+        "consoleErrors": "none",
+        "network": "Page load: 19.1ms total navigation duration",
+        "domInspection": "Source code at ReportPage.tsx:199 confirms <video controls preload='metadata'>. Even though mock videos trigger error states (replacing <video> with error message), the preload='metadata' design prevents full video downloads. Page load time of 19ms with 4 video URLs confirms no blocking."
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [
+    {
+      "description": "PersonaDiffPage URL in task prompt was /persona-diff but actual route is /diff. The route is defined as /audits/:auditId/diff in App.tsx.",
+      "resolved": true,
+      "resolution": "Found correct route by grepping App.tsx and navigated to /audits/{id}/diff instead",
+      "affectedAssertions": ["VAL-VIDEO-007"]
+    },
+    {
+      "description": "All 4 mock placeholder .webm video files are only 37 bytes and are not valid webm content. Browsers cannot decode them, triggering HTML5 media error events. This causes all <video> elements to be replaced with 'Video unavailable' error state, making it impossible to verify actual video playback in mock mode.",
+      "resolved": false,
+      "resolution": "This is a mock data quality issue. The placeholder files need to be valid minimal webm files (typically 200+ bytes minimum) for browsers to decode them.",
+      "affectedAssertions": ["VAL-VIDEO-003"]
+    }
+  ],
+  "blockers": [],
+  "summary": "Tested 5 assertions: 4 passed (VAL-VIDEO-004, VAL-VIDEO-005, VAL-VIDEO-007, VAL-VIDEO-008), 1 failed (VAL-VIDEO-003: <video> elements exist in code with correct attributes but are replaced by error state because mock .webm placeholder files are invalid/too small for browsers to decode). The video replay UI structure is correctly implemented — Session Recordings section with labeled video cards, error handling, graceful degradation for null videos, PersonaDiffPage Watch links, and lazy loading via preload='metadata' are all working as designed."
+}

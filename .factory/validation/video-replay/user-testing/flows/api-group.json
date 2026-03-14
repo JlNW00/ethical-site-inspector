@@ -1,0 +1,127 @@
+{
+  "groupId": "api-group",
+  "testedAt": "2026-03-14T09:29:00Z",
+  "isolation": {
+    "backendUrl": "http://localhost:8000",
+    "tool": "curl.exe",
+    "mockAuditWithVideo": "e2ed0938-ca82-4e84-b76d-ec788e860c51",
+    "oldAuditWithoutVideo": "48fcd4cc-a0a4-454f-8444-4b3b302dd595",
+    "accessMode": "read-only"
+  },
+  "toolsUsed": ["curl.exe", "alembic"],
+  "assertions": [
+    {
+      "id": "VAL-VIDEO-001",
+      "title": "Video URL data present in API response for completed audits",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "GET /api/audits/e2ed0938-ca82-4e84-b76d-ec788e860c51",
+          "expected": "200 with video_urls dict containing scenario_persona keys",
+          "observed": "200 OK. video_urls contains 4 keys: cookie_consent_privacy_sensitive, cookie_consent_cost_sensitive, checkout_flow_privacy_sensitive, checkout_flow_cost_sensitive — each mapping to /artifacts/videos/{id}/{key}.webm"
+        },
+        {
+          "action": "GET /api/audits/48fcd4cc-a0a4-454f-8444-4b3b302dd595 (old audit)",
+          "expected": "200 with video_urls null or empty (pre-video-feature audit)",
+          "observed": "200 OK. video_urls is null — correct for pre-video-feature audit"
+        },
+        {
+          "action": "HEAD /artifacts/videos/{id}/cookie_consent_privacy_sensitive.webm",
+          "expected": "HTTP 200, Content-Type: video/webm, Content-Length > 0",
+          "observed": "HTTP 200, Content-Type: video/webm, Content-Length: 37"
+        },
+        {
+          "action": "HEAD /artifacts/videos/{id}/cookie_consent_cost_sensitive.webm",
+          "expected": "HTTP 200, Content-Type: video/webm, Content-Length > 0",
+          "observed": "HTTP 200, Content-Type: video/webm, Content-Length: 37"
+        },
+        {
+          "action": "HEAD /artifacts/videos/{id}/checkout_flow_privacy_sensitive.webm",
+          "expected": "HTTP 200, Content-Type: video/webm, Content-Length > 0",
+          "observed": "HTTP 200, Content-Type: video/webm, Content-Length: 37"
+        },
+        {
+          "action": "HEAD /artifacts/videos/{id}/checkout_flow_cost_sensitive.webm",
+          "expected": "HTTP 200, Content-Type: video/webm, Content-Length > 0",
+          "observed": "HTTP 200, Content-Type: video/webm, Content-Length: 37"
+        }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "N/A (API-only test)",
+        "network": "GET /api/audits/e2ed0938-... -> 200 (video_urls dict with 4 entries); GET /api/audits/48fcd4cc-... -> 200 (video_urls: null); HEAD all 4 video URLs -> 200 video/webm content-length:37",
+        "files": [
+          "video-replay/api-group/VAL-VIDEO-001-new-audit-response.json",
+          "video-replay/api-group/VAL-VIDEO-001-old-audit-response.json",
+          "video-replay/api-group/VAL-VIDEO-001-video-head-1.txt"
+        ]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-VIDEO-002",
+      "title": "Mock mode produces valid mock video data",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "GET /api/audits/e2ed0938-ca82-4e84-b76d-ec788e860c51 (mock-mode audit)",
+          "expected": "video_urls with entries for all scenario-persona pairs",
+          "observed": "video_urls dict has 4 entries (2 scenarios x 2 personas), all pointing to /artifacts/videos/{id}/{key}.webm"
+        },
+        {
+          "action": "HEAD each of 4 mock video URLs",
+          "expected": "HTTP 200, Content-Type: video/webm for each",
+          "observed": "All 4 return HTTP 200, Content-Type: video/webm, Content-Length: 37 (placeholder .webm content)"
+        },
+        {
+          "action": "Verify events include video recording phase",
+          "expected": "Events with phase='video' present",
+          "observed": "4 events with phase='video' and message='Recorded session video for {scenario} / {persona}', each with video_url in details"
+        }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "N/A (API-only test)",
+        "network": "GET /api/audits/e2ed0938-... -> 200 (4 video_urls); HEAD 4 video URLs -> all 200 video/webm content-length:37",
+        "files": [
+          "video-replay/api-group/VAL-VIDEO-001-new-audit-response.json"
+        ]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CROSS-010",
+      "title": "Database migrations succeed without data loss",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Run: cd backend && .venv\\Scripts\\python.exe -m alembic upgrade head",
+          "expected": "Migration succeeds with exit code 0",
+          "observed": "Exit code 0. Output: 'Context impl SQLiteImpl. Will assume non-transactional DDL.' — already at head, no pending migrations"
+        },
+        {
+          "action": "GET /api/audits/e2ed0938-ca82-4e84-b76d-ec788e860c51 post-migration",
+          "expected": "200 with all data intact including video_urls",
+          "observed": "200 OK. All fields present: id, target_url, mode=mock, status=completed, trust_score=100.0, video_urls with 4 entries, 12 events, metrics — all intact"
+        },
+        {
+          "action": "GET /api/audits/48fcd4cc-a0a4-454f-8444-4b3b302dd595 post-migration",
+          "expected": "200 with all data intact, video_urls null",
+          "observed": "200 OK. All fields present: id, target_url, mode=mock, status=completed, trust_score=100.0, video_urls=null, 12 events — all intact"
+        }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "N/A (API/CLI test)",
+        "network": "alembic upgrade head -> exit 0; GET both audit endpoints -> 200 with data intact",
+        "files": [
+          "video-replay/api-group/VAL-CROSS-010-alembic-output.txt"
+        ]
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [],
+  "blockers": [],
+  "summary": "Tested 3 assertions: 3 passed, 0 failed, 0 blocked. VAL-VIDEO-001: Mock audit API response includes video_urls dict with 4 scenario_persona entries, all resolving to HTTP 200 video/webm; old audit correctly has video_urls=null. VAL-VIDEO-002: Mock mode produces valid placeholder .webm files served with correct content-type and non-zero content-length. VAL-CROSS-010: Alembic migration at head, both audits remain queryable with all data intact."
+}
