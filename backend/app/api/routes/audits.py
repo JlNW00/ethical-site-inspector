@@ -13,6 +13,7 @@ from app.core.database import SessionLocal, get_db
 from app.models import Audit, Finding
 from app.schemas.audit import AuditCreateRequest, AuditRead, FindingsResponse
 from app.services.audit_orchestrator import AuditOrchestrator
+from app.services.compliance_pdf_service import generate_compliance_pdf
 from app.services.pdf_service import generate_pdf_from_html
 
 router = APIRouter(prefix="/audits", tags=["audits"])
@@ -123,6 +124,54 @@ def get_report_pdf(audit_id: str, db: Session = Depends(get_db)) -> Response:  #
         raise HTTPException(status_code=500, detail=f"PDF generation failed: {e}") from e
 
     filename = f"ethical-site-inspector-{audit.id}.pdf"
+
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get("/{audit_id}/report/compliance-pdf")
+def get_compliance_pdf(audit_id: str, db: Session = Depends(get_db)) -> Response:  # noqa: B008
+    """Generate and download a regulatory compliance PDF report.
+
+    Returns a PDF file containing:
+    - Executive summary (target URL, date, trust score, findings count, implicated regulations, posture)
+    - Per-regulation sections with applicable citations and findings
+    - Compliance matrix (regulations x scenarios)
+    - Evidence references (screenshots)
+    - Video evidence references when available
+
+    Content-Type: application/pdf
+    Content-Disposition: attachment; filename="compliance-report-{id}.pdf"
+
+    Returns 404 if audit has no findings with regulatory implications.
+    """
+    # Load audit with findings
+    audit = db.scalar(select(Audit).where(Audit.id == audit_id).options(selectinload(Audit.findings)))
+    if audit is None:
+        raise HTTPException(status_code=404, detail="Audit not found")
+
+    # Get all findings for this audit
+    findings = list(db.scalars(select(Finding).where(Finding.audit_id == audit_id).order_by(Finding.order_index)).all())
+
+    # Check if there are any findings with regulatory categories
+    regulatory_findings = [f for f in findings if f.regulatory_categories]
+    if not regulatory_findings:
+        raise HTTPException(
+            status_code=404,
+            detail="No regulatory findings available for this audit. Compliance report requires findings with regulatory implications.",
+        )
+
+    try:
+        pdf_bytes = generate_compliance_pdf(audit, findings)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"PDF generation failed: {e}") from e
+
+    filename = f"compliance-report-{audit.id}.pdf"
 
     return Response(
         content=pdf_bytes,

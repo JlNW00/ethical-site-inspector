@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Regulatory Compliance Report - EthicalSiteInspector</title>
+  <style>
+    :root {
+      --bg: #07111f;
+      --panel: #ffffff;
+      --ink: #102034;
+      --muted: #5b6b82;
+      --line: #d6deea;
+      --good: #1f8f66;
+      --warn: #d97706;
+      --bad: #d9485f;
+      --critical: #7f1d1d;
+      --accent: #1d4ed8;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Space Grotesk", "Segoe UI", sans-serif;
+      background: #ffffff;
+      color: var(--ink);
+    }
+
+    @page {
+      size: A4;
+      margin: 20mm;
+    }
+
+    .shell {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .header {
+      text-align: center;
+      padding-bottom: 20px;
+      border-bottom: 2px solid var(--accent);
+      margin-bottom: 24px;
+    }
+
+    .header h1 {
+      margin: 0 0 8px;
+      font-size: 28px;
+      color: var(--ink);
+    }
+
+    .header .subtitle {
+      font-size: 14px;
+      color: var(--muted);
+      margin: 0;
+    }
+
+    .section {
+      margin-top: 24px;
+      padding: 20px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--panel);
+    }
+
+    .section h2 {
+      margin: 0 0 16px;
+      font-size: 20px;
+      color: var(--ink);
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 8px;
+    }
+
+    .section h3 {
+      margin: 16px 0 12px;
+      font-size: 16px;
+      color: var(--accent);
+    }
+
+    .executive-summary-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .summary-card {
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #f8fafc;
+    }
+
+    .summary-card .label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .summary-card .value {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--ink);
+    }
+
+    .score-display {
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .posture-statement {
+      margin-top: 16px;
+      padding: 12px;
+      border-left: 4px solid var(--accent);
+      background: #f0f5ff;
+      font-style: italic;
+    }
+
+    .regulations-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .regulation-badge {
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: #e7eef9;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--ink);
+      text-transform: uppercase;
+    }
+
+    .regulation-section {
+      margin-top: 20px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #f8fafc;
+    }
+
+    .regulation-header {
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .regulation-header h3 {
+      margin: 0;
+      font-size: 18px;
+      color: var(--ink);
+    }
+
+    .regulation-header .full-name {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    .citation-box {
+      margin: 8px 0;
+      padding: 10px;
+      background: #ffffff;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+    }
+
+    .citation-box .article {
+      font-weight: 600;
+      font-size: 13px;
+      color: var(--accent);
+    }
+
+    .citation-box .title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--ink);
+      margin: 4px 0;
+    }
+
+    .citation-box .description {
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
+    .finding-item {
+      margin: 12px 0;
+      padding: 12px;
+      background: #ffffff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+
+    .finding-item .finding-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 8px;
+    }
+
+    .finding-item .finding-title {
+      font-weight: 600;
+      font-size: 13px;
+      color: var(--ink);
+      flex: 1;
+    }
+
+    .finding-item .severity {
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      margin-left: 8px;
+    }
+
+    .severity-low { background: rgba(31, 143, 102, 0.12); color: var(--good); }
+    .severity-medium { background: rgba(217, 119, 6, 0.12); color: var(--warn); }
+    .severity-high { background: rgba(217, 72, 95, 0.12); color: var(--bad); }
+    .severity-critical { background: rgba(127, 29, 29, 0.12); color: var(--critical); }
+
+    .finding-item .explanation {
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 1.5;
+      margin: 6px 0;
+    }
+
+    .finding-item .citations {
+      font-size: 10px;
+      color: var(--accent);
+      margin-top: 6px;
+    }
+
+    .compliance-matrix {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+      font-size: 11px;
+    }
+
+    .compliance-matrix th,
+    .compliance-matrix td {
+      padding: 10px;
+      text-align: left;
+      border: 1px solid var(--line);
+    }
+
+    .compliance-matrix th {
+      background: #e7eef9;
+      font-weight: 600;
+      color: var(--ink);
+    }
+
+    .compliance-matrix td {
+      background: #ffffff;
+    }
+
+    .compliance-matrix .count-cell {
+      text-align: center;
+      font-weight: 600;
+    }
+
+    .compliance-matrix .zero {
+      color: var(--good);
+    }
+
+    .compliance-matrix .non-zero {
+      color: var(--bad);
+    }
+
+    .evidence-section {
+      margin-top: 16px;
+    }
+
+    .evidence-item {
+      margin: 8px 0;
+      padding: 8px;
+      background: #f0f5ff;
+      border-radius: 6px;
+      font-size: 11px;
+    }
+
+    .evidence-item .evidence-label {
+      font-weight: 600;
+      color: var(--ink);
+    }
+
+    .evidence-item .evidence-url {
+      color: var(--accent);
+      word-break: break-all;
+    }
+
+    .video-section {
+      margin-top: 16px;
+      padding: 12px;
+      background: #f8fafc;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+
+    .video-section h4 {
+      margin: 0 0 8px;
+      font-size: 13px;
+      color: var(--ink);
+    }
+
+    .video-item {
+      font-size: 11px;
+      color: var(--muted);
+      margin: 4px 0;
+    }
+
+    .footer {
+      margin-top: 32px;
+      padding-top: 16px;
+      border-top: 1px solid var(--line);
+      text-align: center;
+      font-size: 10px;
+      color: var(--muted);
+    }
+
+    .footer strong {
+      color: var(--ink);
+    }
+
+    .no-findings {
+      padding: 16px;
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: 8px;
+      text-align: center;
+      color: var(--good);
+    }
+
+    @media print {
+      body { background: white; }
+      .section { break-inside: avoid; }
+      .regulation-section { break-inside: avoid; }
+      .finding-item { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <div class="header">
+      <h1>Regulatory Compliance Report</h1>
+      <p class="subtitle">EthicalSiteInspector Compliance Analysis</p>
+    </div>
+
+    <div class="section">
+      <h2>Executive Summary</h2>
+      <div class="executive-summary-grid">
+        <div class="summary-card">
+          <div class="label">Target URL</div>
+          <div class="value">{{ target_url }}</div>
+        </div>
+        <div class="summary-card">
+          <div class="label">Audit Date</div>
+          <div class="value">{{ audit_date }}</div>
+        </div>
+        <div class="summary-card">
+          <div class="label">Trust Score</div>
+          <div class="score-display">{{ trust_score }}</div>
+        </div>
+        <div class="summary-card">
+          <div class="label">Total Regulatory Findings</div>
+          <div class="value">{{ total_findings }}</div>
+        </div>
+      </div>
+
+      <div style="margin-top: 16px;">
+        <div class="label">Implicated Regulations</div>
+        <div class="regulations-list">
+          {% for reg in implicated_regulations %}
+          <span class="regulation-badge">{{ reg }}</span>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="posture-statement">
+        <strong>Compliance Posture:</strong> {{ posture_statement }}
+      </div>
+    </div>
+
+    {% for reg_data in regulation_sections %}
+    <div class="section regulation-section">
+      <div class="regulation-header">
+        <h3>{{ reg_data.abbreviation }} — {{ reg_data.full_name }}</h3>
+      </div>
+
+      <h4>Applicable Citations</h4>
+      {% for citation in reg_data.citations %}
+      <div class="citation-box">
+        <div class="article">{{ citation.article }}</div>
+        <div class="title">{{ citation.title }}</div>
+        <div class="description">{{ citation.description }}</div>
+      </div>
+      {% endfor %}
+
+      <h4>Findings</h4>
+      {% if reg_data.findings %}
+        {% for finding in reg_data.findings %}
+        <div class="finding-item">
+          <div class="finding-header">
+            <span class="finding-title">{{ finding.title }}</span>
+            <span class="severity severity-{{ finding.severity }}">{{ finding.severity }}</span>
+          </div>
+          <div class="explanation">{{ finding.explanation }}</div>
+          {% if finding.applicable_citations %}
+          <div class="citations">
+            <strong>Applicable to:</strong> {{ finding.applicable_citations | join(", ") }}
+          </div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="no-findings">No findings implicate this regulation.</div>
+      {% endif %}
+    </div>
+    {% endfor %}
+
+    <div class="section">
+      <h2>Compliance Matrix</h2>
+      <p style="font-size: 11px; color: var(--muted); margin-bottom: 12px;">
+        Cross-reference of regulations and audited scenarios. Cell values indicate the number of findings.
+      </p>
+      <table class="compliance-matrix">
+        <thead>
+          <tr>
+            <th>Scenario / Regulation</th>
+            {% for reg in matrix.regulations %}
+            <th>{{ reg }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in matrix.rows %}
+          <tr>
+            <td><strong>{{ row.scenario }}</strong></td>
+            {% for cell in row.cells %}
+            <td class="count-cell {% if cell.count == 0 %}zero{% else %}non-zero{% endif %}">
+              {% if cell.count == 0 %}
+                Compliant
+              {% else %}
+                {{ cell.count }}
+              {% endif %}
+            </td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="section">
+      <h2>Evidence References</h2>
+      <div class="evidence-section">
+        {% for evidence in evidence_references %}
+        <div class="evidence-item">
+          <div class="evidence-label">
+            {{ evidence.finding_title }} — {{ evidence.scenario }} / {{ evidence.persona }}
+          </div>
+          {% for url in evidence.screenshot_urls %}
+          <div class="evidence-url">Figure: {{ url }}</div>
+          {% endfor %}
+        </div>
+        {% endfor %}
+      </div>
+
+      {% if video_references %}
+      <div class="video-section">
+        <h4>Video Evidence</h4>
+        <p style="font-size: 11px; color: var(--muted); margin: 0 0 8px;">
+          Session recordings are available for the following scenario/persona combinations:
+        </p>
+        {% for video in video_references %}
+        <div class="video-item">
+          <strong>{{ video.scenario }} — {{ video.persona }}:</strong> {{ video.url }}
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="footer">
+      <strong>EthicalSiteInspector</strong> — Automated Trust & Compliance Analysis<br>
+      Report generated on {{ generated_at }}
+    </div>
+  </div>
+</body>
+</html>

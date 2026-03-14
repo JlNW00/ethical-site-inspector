@@ -165,6 +165,106 @@ RegulationType = Literal[
     "CPRA",
 ]
 
+# Regulation full names for display
+REGULATION_FULL_NAMES: dict[RegulationType, str] = {
+    "FTC": "Federal Trade Commission Act",
+    "GDPR": "General Data Protection Regulation",
+    "DSA": "Digital Services Act",
+    "CPRA": "California Privacy Rights Act",
+}
+
+# Regulation citation data - specific articles, sections, and guidelines
+REGULATION_CITATIONS: dict[RegulationType, list[dict[str, str]]] = {
+    "FTC": [
+        {
+            "article": "FTC Act § 5",
+            "title": "Unfair or Deceptive Acts or Practices",
+            "description": "Prohibits unfair or deceptive acts or practices in or affecting commerce.",
+        },
+        {
+            "article": "16 CFR Part 425",
+            "title": "Trade Regulation Rule Concerning Negative Option Programs",
+            "description": "Click-to-Cancel rule requiring simple cancellation mechanisms.",
+        },
+        {
+            "article": "FTC Act § 12",
+            "title": "False Advertisements",
+            "description": "Prohibits dissemination of false advertisements for food, drugs, devices, or cosmetics.",
+        },
+        {
+            "article": "Restore Online Shoppers' Confidence Act",
+            "title": "ROSCA - Post-Transaction Third-Party Sellers",
+            "description": "Requires clear disclosure of third-party sellers and express informed consent.",
+        },
+    ],
+    "GDPR": [
+        {
+            "article": "Article 25",
+            "title": "Data Protection by Design and by Default",
+            "description": "Requires implementation of appropriate technical and organizational measures to ensure data protection principles are integrated into processing activities.",
+        },
+        {
+            "article": "Article 5(1)(a)",
+            "title": "Lawfulness, Fairness and Transparency",
+            "description": "Personal data must be processed lawfully, fairly and in a transparent manner.",
+        },
+        {
+            "article": "Article 7",
+            "title": "Conditions for Consent",
+            "description": "Consent must be freely given, specific, informed and unambiguous indication of data subject's wishes.",
+        },
+        {
+            "article": "Article 8",
+            "title": "Conditions Applicable to Child's Consent",
+            "description": "Special protections for children in relation to information society services.",
+        },
+    ],
+    "DSA": [
+        {
+            "article": "Article 25",
+            "title": "Protection of Minors",
+            "description": "Providers of online platforms shall take appropriate measures to ensure a high level of privacy, safety and security of minors.",
+        },
+        {
+            "article": "Article 27",
+            "title": "Dark Patterns Prohibition",
+            "description": "Prohibits designing, organizing or operating online interfaces in a way that deceives or manipulates recipients of the service.",
+        },
+        {
+            "article": "Article 26",
+            "title": "Additional Obligations for Marketplaces",
+            "description": "Transparency requirements for online marketplaces regarding traders and products.",
+        },
+        {
+            "article": "Recital 67",
+            "title": "Interface Design Transparency",
+            "description": "Providers should not design their online interfaces in a way that deceives, manipulates, or materially distorts decision-making.",
+        },
+    ],
+    "CPRA": [
+        {
+            "article": "Section 1798.185(a)(20)",
+            "title": "Dark Patterns Prohibition",
+            "description": "Prohibits using dark patterns to subvert or impair consumer choice regarding the sale or sharing of personal information.",
+        },
+        {
+            "article": "Section 1798.100",
+            "title": "Consumer Right to Know",
+            "description": "Consumers have the right to know what personal information is being collected about them.",
+        },
+        {
+            "article": "Section 1798.130",
+            "title": "Notice at Collection",
+            "description": "Businesses must provide notice at or before the point of collection about categories of personal information collected.",
+        },
+        {
+            "article": "Section 1798.120",
+            "title": "Right to Opt-Out of Sale/Sharing",
+            "description": "Consumers have the right to opt-out of the sale or sharing of their personal information.",
+        },
+    ],
+}
+
 # Mapping from dark pattern categories to applicable regulations
 REGULATORY_MAPPING: dict[DarkPatternCategory, list[RegulationType]] = {
     "manipulative_design": ["FTC", "DSA"],
