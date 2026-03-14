@@ -8,7 +8,7 @@ accept/reject buttons are legitimate, not dark patterns).
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 from app.core.taxonomy import get_regulations_for_pattern_family
 
@@ -188,14 +188,15 @@ def calculate_confidence(
     Returns:
         Confidence score between 0.0 and 1.0
     """
+    # Base confidence from evidence type
     from app.core.taxonomy import (
         CONFIDENCE_THRESHOLDS,
         EVIDENCE_TYPE_CONFIDENCE,
         EVIDENCE_TYPES,
+        EvidenceType,
     )
 
-    # Base confidence from evidence type (cast to valid type if valid)
-    base_confidence = EVIDENCE_TYPE_CONFIDENCE.get(evidence_type, 0.50) if evidence_type in EVIDENCE_TYPES else 0.50  # type: ignore[arg-type,call-overload]
+    base_confidence = EVIDENCE_TYPE_CONFIDENCE.get(cast(EvidenceType, evidence_type), 0.50) if evidence_type in EVIDENCE_TYPES else 0.50
 
     # Nova AI evidence gets high confidence
     if evidence_type == "nova_ai" or has_ai_evidence:

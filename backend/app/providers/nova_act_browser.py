@@ -422,7 +422,8 @@ class NovaActAuditProvider(BrowserAuditProvider):
         if scenario_method is None:
             raise ValueError(f"Unknown scenario: {scenario}")
 
-        return scenario_method(audit_id, target_url, persona, nova_act)
+        result: JourneyObservation = scenario_method(audit_id, target_url, persona, nova_act)
+        return result
 
     def _run_single_persona_with_progress(
         self,
@@ -436,7 +437,8 @@ class NovaActAuditProvider(BrowserAuditProvider):
         video_urls_lock: threading.Lock,
     ) -> JourneyObservation:
         """Run a single scenario for a single persona using Nova Act with progress callback."""
-        scenario_method = getattr(self, f"_run_{scenario}_scenario", None)
+        from collections.abc import Callable
+        scenario_method: Callable[..., JourneyObservation] | None = getattr(self, f"_run_{scenario}_scenario", None)
         if scenario_method is None:
             raise ValueError(f"Unknown scenario: {scenario}")
 
@@ -453,13 +455,15 @@ class NovaActAuditProvider(BrowserAuditProvider):
         video_urls_lock: threading.Lock | None = None,
     ) -> JourneyObservation:
         """Run cookie consent scenario with Nova Act."""
+        # pylint: disable=too-many-locals,too-many-statements
+        """Run cookie consent scenario with Nova Act."""
         # NovaAct is imported at module level
         nova_act_class = NovaAct  # Use module-level import
         if nova_act_class is None:
             raise RuntimeError("Nova Act SDK not available")
 
         activity_log: list[str] = []
-        state_snapshots: list[dict] = []
+        state_snapshots: list[dict[str, Any]] = []
         screenshot_paths: list[str] = []
         screenshot_urls: list[str] = []
         interacted_controls: list[str] = []
@@ -737,9 +741,11 @@ class NovaActAuditProvider(BrowserAuditProvider):
         video_urls_lock: threading.Lock | None = None,
     ) -> JourneyObservation:
         """Run checkout flow scenario with Nova Act."""
+        # pylint: disable=too-many-locals,too-many-statements
+        """Run checkout flow scenario with Nova Act."""
 
         activity_log: list[str] = []
-        state_snapshots: list[dict] = []
+        state_snapshots: list[dict[str, Any]] = []
         screenshot_paths: list[str] = []
         screenshot_urls: list[str] = []
         interacted_controls: list[str] = []
@@ -929,9 +935,11 @@ class NovaActAuditProvider(BrowserAuditProvider):
         video_urls_lock: threading.Lock | None = None,
     ) -> JourneyObservation:
         """Run subscription cancellation scenario with Nova Act."""
+        # pylint: disable=too-many-locals,too-many-statements
+        """Run subscription cancellation scenario with Nova Act."""
 
         activity_log: list[str] = []
-        state_snapshots: list[dict] = []
+        state_snapshots: list[dict[str, Any]] = []
         screenshot_paths: list[str] = []
         screenshot_urls: list[str] = []
         interacted_controls: list[str] = []
@@ -1132,7 +1140,7 @@ class NovaActAuditProvider(BrowserAuditProvider):
         """Run account deletion scenario with Nova Act."""
 
         activity_log: list[str] = []
-        state_snapshots: list[dict] = []
+        state_snapshots: list[dict[str, Any]] = []
         screenshot_paths: list[str] = []
         screenshot_urls: list[str] = []
         interacted_controls: list[str] = []
@@ -1327,7 +1335,7 @@ class NovaActAuditProvider(BrowserAuditProvider):
         """Run newsletter signup scenario with Nova Act."""
 
         activity_log: list[str] = []
-        state_snapshots: list[dict] = []
+        state_snapshots: list[dict[str, Any]] = []
         screenshot_paths: list[str] = []
         screenshot_urls: list[str] = []
         interacted_controls: list[str] = []
@@ -1513,7 +1521,7 @@ class NovaActAuditProvider(BrowserAuditProvider):
         """Run pricing comparison scenario with Nova Act."""
 
         activity_log: list[str] = []
-        state_snapshots: list[dict] = []
+        state_snapshots: list[dict[str, Any]] = []
         screenshot_paths: list[str] = []
         screenshot_urls: list[str] = []
         interacted_controls: list[str] = []

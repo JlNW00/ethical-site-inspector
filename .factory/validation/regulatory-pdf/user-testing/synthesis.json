@@ -1,0 +1,35 @@
+{
+  "milestone": "regulatory-pdf",
+  "round": 1,
+  "status": "pass",
+  "assertionsSummary": {
+    "total": 12,
+    "passed": 12,
+    "failed": 0,
+    "blocked": 0
+  },
+  "passedAssertions": [
+    "VAL-REGPDF-001",
+    "VAL-REGPDF-002",
+    "VAL-REGPDF-003",
+    "VAL-REGPDF-004",
+    "VAL-REGPDF-005",
+    "VAL-REGPDF-006",
+    "VAL-REGPDF-007",
+    "VAL-REGPDF-008",
+    "VAL-REGPDF-009",
+    "VAL-REGPDF-010",
+    "VAL-CROSS-004",
+    "VAL-CROSS-007"
+  ],
+  "failedAssertions": [],
+  "blockedAssertions": [],
+  "appliedUpdates": [
+    {
+      "target": "user-testing.md",
+      "description": "Added 'Regulatory PDF Test Data' section documenting seeded test audits with regulatory findings, since mock mode produces 0 findings due to missing scenario_state_found in mock browser provider metadata.",
+      "source": "setup"
+    }
+  ],
+  "previousRound": null
+}

@@ -1,0 +1,489 @@
+{
+  "groupId": "pdf-api",
+  "testedAt": "2026-03-14T20:50:07.452200+00:00",
+  "isolation": {
+    "backend_api": "http://localhost:8000",
+    "tool": "curl.exe + Python (PyPDF2)",
+    "test_audit_with_findings": "regpdf-test-with-findings",
+    "test_audit_no_findings": "regpdf-test-no-findings",
+    "test_audit_video_and_reg": "regpdf-test-video-and-reg",
+    "access": "read-only API calls"
+  },
+  "toolsUsed": [
+    "curl.exe",
+    "Python/PyPDF2"
+  ],
+  "assertions": [
+    {
+      "id": "VAL-REGPDF-002",
+      "title": "API endpoint returns valid PDF with correct headers",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "GET http://localhost:8000/api/audits/regpdf-test-with-findings/report/compliance-pdf",
+          "expected": "200 with PDF content",
+          "observed": "HTTP 200"
+        },
+        {
+          "action": "Check Content-Type header",
+          "expected": "application/pdf",
+          "observed": "application/pdf"
+        },
+        {
+          "action": "Check Content-Disposition header",
+          "expected": "attachment; filename=\"compliance-report-regpdf-test-with-findings.pdf\"",
+          "observed": "attachment; filename=\"compliance-report-regpdf-test-with-findings.pdf\""
+        },
+        {
+          "action": "Check first 5 bytes for %PDF-",
+          "expected": "%PDF-",
+          "observed": "%PDF-"
+        }
+      ],
+      "evidence": {
+        "headers": "regulatory-pdf/pdf-api/VAL-REGPDF-002-headers.txt",
+        "pdf_file": "regulatory-pdf/pdf-api/VAL-REGPDF-002-compliance.pdf",
+        "status_code": 200,
+        "content_type": "application/pdf",
+        "content_disposition": "attachment; filename=\"compliance-report-regpdf-test-with-findings.pdf\"",
+        "first_5_bytes": "%PDF-"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-REGPDF-003",
+      "title": "PDF contains per-regulation sections",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Check for FTC section",
+          "expected": "Text contains 'FTC' abbreviation and/or full name",
+          "observed": "Found: True (searched for: ['FTC', 'Federal Trade Commission'])"
+        },
+        {
+          "action": "Check for GDPR section",
+          "expected": "Text contains 'GDPR' abbreviation and/or full name",
+          "observed": "Found: True (searched for: ['GDPR', 'General Data Protection Regulation'])"
+        },
+        {
+          "action": "Check for DSA section",
+          "expected": "Text contains 'DSA' abbreviation and/or full name",
+          "observed": "Found: True (searched for: ['DSA', 'Digital Services Act'])"
+        },
+        {
+          "action": "Check for CPRA section",
+          "expected": "Text contains 'CPRA' abbreviation and/or full name",
+          "observed": "Found: True (searched for: ['CPRA', 'California Privacy Rights Act'])"
+        },
+        {
+          "action": "Check for FTC heading with abbreviation + full name",
+          "expected": "Heading like 'FTC \u2014 Full Name'",
+          "observed": "Found: True"
+        },
+        {
+          "action": "Check for GDPR heading with abbreviation + full name",
+          "expected": "Heading like 'GDPR \u2014 Full Name'",
+          "observed": "Found: True"
+        },
+        {
+          "action": "Check for DSA heading with abbreviation + full name",
+          "expected": "Heading like 'DSA \u2014 Full Name'",
+          "observed": "Found: True"
+        },
+        {
+          "action": "Check for CPRA heading with abbreviation + full name",
+          "expected": "Heading like 'CPRA \u2014 Full Name'",
+          "observed": "Found: True"
+        }
+      ],
+      "evidence": {
+        "extracted_text": "regulatory-pdf/pdf-api/VAL-REGPDF-003-extracted-text.txt",
+        "regulations_found": {
+          "FTC": true,
+          "GDPR": true,
+          "DSA": true,
+          "CPRA": true
+        },
+        "headings_found": {
+          "FTC": true,
+          "GDPR": true,
+          "DSA": true,
+          "CPRA": true
+        }
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-REGPDF-004",
+      "title": "Each regulation section lists findings with article citations",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Check for FTC article citations",
+          "expected": "At least one citation pattern for FTC",
+          "observed": "Found: True"
+        },
+        {
+          "action": "Check for GDPR article citations",
+          "expected": "At least one citation pattern for GDPR",
+          "observed": "Found: True"
+        },
+        {
+          "action": "Check for DSA article citations",
+          "expected": "At least one citation pattern for DSA",
+          "observed": "Found: True"
+        },
+        {
+          "action": "Check for CPRA article citations",
+          "expected": "At least one citation pattern for CPRA",
+          "observed": "Found: True"
+        },
+        {
+          "action": "Cross-reference findings with regulatory categories",
+          "expected": "FTC: 3, GDPR: 3, DSA: 3, CPRA: 3 findings",
+          "observed": "Finding categories mapped from API data"
+        },
+        {
+          "action": "Check for severity levels in PDF",
+          "expected": "Severity terms found ({'critical', 'medium', 'high'})",
+          "observed": "Found severity mentions: True"
+        },
+        {
+          "action": "Check findings referenced in PDF (searched for title/pattern_family)",
+          "expected": "At least some of 5 findings referenced",
+          "observed": "Found 5 finding references"
+        }
+      ],
+      "evidence": {
+        "extracted_text": "regulatory-pdf/pdf-api/VAL-REGPDF-003-extracted-text.txt",
+        "findings_data": "regulatory-pdf/pdf-api/VAL-REGPDF-004-findings-data.json",
+        "citations_found": {
+          "FTC": true,
+          "GDPR": true,
+          "DSA": true,
+          "CPRA": true
+        },
+        "finding_references": 5
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-REGPDF-005",
+      "title": "PDF includes compliance matrix",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Check for compliance matrix section",
+          "expected": "Text contains 'compliance matrix' or similar heading",
+          "observed": "Found indicators: ['compliance matrix', 'regulation', 'scenario']"
+        },
+        {
+          "action": "Check for scenario names (potential matrix rows)",
+          "expected": "Scenario names present",
+          "observed": "Found 3 scenario name references"
+        },
+        {
+          "action": "Check for compliance status terms",
+          "expected": "Terms like 'Compliant', '0', finding counts",
+          "observed": "Found: ['compliant', 'findings']"
+        }
+      ],
+      "evidence": {
+        "extracted_text": "regulatory-pdf/pdf-api/VAL-REGPDF-005-matrix-check.txt",
+        "matrix_indicators": [
+          "compliance matrix",
+          "regulation",
+          "scenario"
+        ],
+        "scenario_count": 3,
+        "compliance_terms": [
+          "compliant",
+          "findings"
+        ]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-REGPDF-006",
+      "title": "PDF includes executive summary",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Check for target URL in PDF",
+          "expected": "Contains 'https://darkpattern-example.com'",
+          "observed": "Found: True"
+        },
+        {
+          "action": "Check for trust score",
+          "expected": "Contains trust score 42.0",
+          "observed": "Found: True"
+        },
+        {
+          "action": "Check for total regulatory findings count",
+          "expected": "Contains count '5'",
+          "observed": "Found: True"
+        },
+        {
+          "action": "Check for implicated regulations list",
+          "expected": "Contains: {'DSA', 'FTC', 'GDPR', 'CPRA'}",
+          "observed": "Found: {'DSA': True, 'FTC': True, 'GDPR': True, 'CPRA': True}"
+        },
+        {
+          "action": "Check for executive summary or compliance posture",
+          "expected": "Contains executive summary heading or posture statement",
+          "observed": "Found terms: ['executive summary', 'compliance posture', 'summary']"
+        }
+      ],
+      "evidence": {
+        "first_pages_text": "regulatory-pdf/pdf-api/VAL-REGPDF-006-first-pages.txt",
+        "target_url_found": true,
+        "trust_score_found": true,
+        "findings_count": 5,
+        "regulations": {
+          "DSA": true,
+          "FTC": true,
+          "GDPR": true,
+          "CPRA": true
+        },
+        "summary_terms": [
+          "executive summary",
+          "compliance posture",
+          "summary"
+        ]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-REGPDF-007",
+      "title": "PDF includes evidence references",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Search for evidence reference patterns in PDF text",
+          "expected": "At least one evidence reference per finding (screenshot URL, figure ref, etc.)",
+          "observed": "Found 4 pattern types with matches"
+        }
+      ],
+      "evidence": {
+        "extracted_text": "regulatory-pdf/pdf-api/VAL-REGPDF-007-evidence-refs.txt",
+        "patterns_found": [
+          {
+            "pattern": "screenshot",
+            "matches": [
+              "screenshot",
+              "screenshot",
+              "screenshot"
+            ]
+          },
+          {
+            "pattern": "/artifacts/",
+            "matches": [
+              "/artifacts/",
+              "/artifacts/",
+              "/artifacts/"
+            ]
+          },
+          {
+            "pattern": "\\.svg",
+            "matches": [
+              ".svg",
+              ".svg",
+              ".svg"
+            ]
+          },
+          {
+            "pattern": "Evidence",
+            "matches": [
+              "Evidence"
+            ]
+          }
+        ]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-REGPDF-008",
+      "title": "Compliance PDF is distinct from existing PDF",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "GET compliance PDF",
+          "expected": "200 with compliance PDF",
+          "observed": "HTTP 200"
+        },
+        {
+          "action": "GET existing PDF",
+          "expected": "200 or 404 (report_path may be null)",
+          "observed": "HTTP 404"
+        },
+        {
+          "action": "Compare Content-Disposition filenames",
+          "expected": "Different filenames (compliance-report-*.pdf vs audit-report-*.pdf)",
+          "observed": "Compliance: 'attachment; filename=\"compliance-report-regpdf-test-with-findings.pdf\"', Existing: ''"
+        },
+        {
+          "action": "Existing PDF returned 404 (report_path is null for seeded data)",
+          "expected": "Expected per assertion NOTE - verify compliance PDF has unique content instead",
+          "observed": "Existing PDF 404 as expected for seeded test data"
+        },
+        {
+          "action": "Verify compliance PDF has unique regulatory content",
+          "expected": "Contains regulation headings, compliance matrix, regulatory terms",
+          "observed": "Unique content checks: {'regulation_headings': True, 'compliance_matrix': True, 'regulatory_content': True}"
+        },
+        {
+          "action": "Verify compliance PDF filename is distinct",
+          "expected": "Contains 'compliance-report'",
+          "observed": "Filename in disposition: attachment; filename=\"compliance-report-regpdf-test-with-findings.pdf\""
+        }
+      ],
+      "evidence": {
+        "comparison": "regulatory-pdf/pdf-api/VAL-REGPDF-008-comparison.txt",
+        "compliance_status": 200,
+        "compliance_disposition": "attachment; filename=\"compliance-report-regpdf-test-with-findings.pdf\"",
+        "existing_status": 404,
+        "existing_disposition": "",
+        "unique_content": {
+          "regulation_headings": true,
+          "compliance_matrix": true,
+          "regulatory_content": true
+        }
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-REGPDF-009",
+      "title": "Zero-findings audit handles compliance PDF gracefully",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "GET http://localhost:8000/api/audits/regpdf-test-no-findings/report/compliance-pdf",
+          "expected": "Valid PDF with 'No regulatory findings' OR HTTP 404 with descriptive error. No 500.",
+          "observed": "HTTP 404"
+        },
+        {
+          "action": "Check 404 response has descriptive error",
+          "expected": "JSON error with description",
+          "observed": "Error response: {\"detail\": \"No regulatory findings available for this audit. Compliance report requires findings with regulatory implications.\"}"
+        }
+      ],
+      "evidence": {
+        "response": "regulatory-pdf/pdf-api/VAL-REGPDF-009-response.txt",
+        "status_code": 404
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-REGPDF-010",
+      "title": "Compliance PDF has professional formatting",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Check PDF file size (10KB-5MB)",
+          "expected": "10240 <= size <= 5242880",
+          "observed": "21388 bytes (20.9 KB)"
+        },
+        {
+          "action": "Check page count (>= 2)",
+          "expected": "At least 2 pages",
+          "observed": "8 pages"
+        },
+        {
+          "action": "Check extracted text length (>= 500 chars)",
+          "expected": "500+ characters",
+          "observed": "6966 characters"
+        },
+        {
+          "action": "Check for raw HTML/CSS strings",
+          "expected": "No <div, <span, class=, style= in text",
+          "observed": "None found (clean)"
+        },
+        {
+          "action": "Check for 'EthicalSiteInspector' branding",
+          "expected": "'EthicalSiteInspector' in header/footer",
+          "observed": "Found: True"
+        }
+      ],
+      "evidence": {
+        "formatting_check": "regulatory-pdf/pdf-api/VAL-REGPDF-010-formatting.txt",
+        "file_size_bytes": 21388,
+        "page_count": 8,
+        "text_length": 6966,
+        "html_strings_found": [],
+        "branding_found": true
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CROSS-004",
+      "title": "Regulatory PDF references video evidence when available",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "GET compliance PDF for video-enabled audit (regpdf-test-video-and-reg)",
+          "expected": "200 with valid PDF",
+          "observed": "HTTP 200"
+        },
+        {
+          "action": "Check for video evidence references in PDF",
+          "expected": "Video URL, filename, or 'video evidence available' text",
+          "observed": "Found 5 pattern types: ['video', 'recording', '\\\\.webm', 'session recording', 'video evidence']"
+        },
+        {
+          "action": "GET compliance PDF for non-video audit (regpdf-test-with-findings)",
+          "expected": "200 with valid PDF (no errors)",
+          "observed": "HTTP 200"
+        },
+        {
+          "action": "Verify non-video audit PDF is valid",
+          "expected": "Valid PDF starting with %PDF-",
+          "observed": "Valid PDF, 21388 bytes"
+        }
+      ],
+      "evidence": {
+        "video_pdf": "regulatory-pdf/pdf-api/VAL-CROSS-004-video-pdf.pdf",
+        "video_pdf_text": "regulatory-pdf/pdf-api/VAL-CROSS-004-video-text.txt",
+        "video_references": [
+          {
+            "pattern": "video",
+            "matches": [
+              "video",
+              "video",
+              "video"
+            ]
+          },
+          {
+            "pattern": "recording",
+            "matches": [
+              "recording"
+            ]
+          },
+          {
+            "pattern": "\\.webm",
+            "matches": [
+              ".webm",
+              ".webm"
+            ]
+          },
+          {
+            "pattern": "session recording",
+            "matches": [
+              "Session recording"
+            ]
+          },
+          {
+            "pattern": "video evidence",
+            "matches": [
+              "Video Evidence"
+            ]
+          }
+        ],
+        "non_video_pdf_status": 200
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [],
+  "blockers": [],
+  "summary": "Tested 10 assertions: 10 passed"
+}

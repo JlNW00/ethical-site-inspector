@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from typing import Any, cast
 
-from app.core.taxonomy import SEVERITY_RANK
+from app.core.taxonomy import SEVERITY_RANK, SeverityType
 from app.schemas.runtime import JourneyObservation, RuleFindingDraft
 
 
@@ -20,7 +21,7 @@ def build_rule_findings(observation: JourneyObservation) -> list[RuleFindingDraf
 
     def add_or_merge(
         pattern_family: str,
-        severity: str,
+        severity: SeverityType,
         title: str,
         excerpt: str,
         rule_reason: str,
@@ -28,7 +29,7 @@ def build_rule_findings(observation: JourneyObservation) -> list[RuleFindingDraf
         *,
         matched_quote: str | None = None,
         matched_buttons: list[str] | None = None,
-        matched_prices: list[dict] | None = None,
+        matched_prices: list[dict[str, Any]] | None = None,
         supporting_evidence: list[str] | None = None,
         detection_basis: str | None = None,
     ) -> None:
@@ -58,7 +59,7 @@ def build_rule_findings(observation: JourneyObservation) -> list[RuleFindingDraf
             matched_findings[pattern_family] = draft
             return
 
-        if SEVERITY_RANK[draft.severity] > SEVERITY_RANK[existing.severity]:
+        if SEVERITY_RANK.get(cast("SeverityType", draft.severity), 1) > SEVERITY_RANK.get(cast("SeverityType", existing.severity), 1):
             existing.severity = draft.severity
         if len(draft.evidence_excerpt) > len(existing.evidence_excerpt):
             existing.evidence_excerpt = draft.evidence_excerpt
@@ -281,7 +282,7 @@ def build_rule_findings(observation: JourneyObservation) -> list[RuleFindingDraf
     return list(matched_findings.values())
 
 
-def _base_payload(observation: JourneyObservation) -> dict:
+def _base_payload(observation: JourneyObservation) -> dict[str, Any]:
     evidence = observation.evidence
     metadata = deepcopy(evidence.metadata)
     metadata.setdefault("source", "mock")
@@ -313,10 +314,12 @@ def _base_payload(observation: JourneyObservation) -> dict:
 
 
 def _matching_buttons(buttons: list[str], keywords: tuple[str, ...]) -> list[str]:
+    """Find buttons that match any of the given keywords."""
     return [button for button in buttons if any(keyword in button.lower() for keyword in keywords)]
 
 
 def _first_matching_line(lines: list[str], keywords: tuple[str, ...]) -> str | None:
+    """Find first line matching any keyword."""
     for line in lines:
         lower_line = line.lower()
         if any(keyword in lower_line for keyword in keywords):
@@ -324,7 +327,8 @@ def _first_matching_line(lines: list[str], keywords: tuple[str, ...]) -> str | N
     return None
 
 
-def _price_delta(prices: list[dict]) -> float:
+def _price_delta(prices: list[dict[str, Any]]) -> float:
+    """Calculate price delta between last and first prices."""
     if len(prices) < 2:
         return 0.0
     return float(prices[-1]["value"]) - float(prices[0]["value"])
@@ -365,8 +369,8 @@ def _merge_unique(first: list[str], second: list[str], limit: int = 6) -> list[s
     return result
 
 
-def _merge_price_points(first: list[dict], second: list[dict], limit: int = 4) -> list[dict]:
-    result: list[dict] = []
+def _merge_price_points(first: list[dict[str, Any]], second: list[dict[str, Any]], limit: int = 4) -> list[dict[str, Any]]:
+    result: list[dict[str, Any]] = []
     seen: set[tuple[str, float]] = set()
     for item in first + second:
         key = (str(item.get("label", "")), float(item.get("value", 0)))

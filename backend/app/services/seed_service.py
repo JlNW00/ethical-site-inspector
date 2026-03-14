@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from sqlalchemy import select
 
 from app.core.config import get_settings
@@ -8,7 +10,8 @@ from app.schemas.audit import AuditCreateRequest
 from app.services.audit_orchestrator import AuditOrchestrator
 
 
-def ensure_seeded_demo(session_factory) -> str | None:
+def ensure_seeded_demo(session_factory: Any) -> str | None:
+    result: str | None = None
     settings = get_settings()
     with session_factory() as db:
         existing_id = db.scalar(
@@ -18,7 +21,7 @@ def ensure_seeded_demo(session_factory) -> str | None:
             .limit(1)
         )
         if existing_id:
-            return existing_id
+            return str(existing_id)
 
         orchestrator = AuditOrchestrator(session_factory)
         payload = AuditCreateRequest(
@@ -32,4 +35,5 @@ def ensure_seeded_demo(session_factory) -> str | None:
             mode="mock" if settings.effective_mode != "live" else settings.effective_mode,
         )
         orchestrator.run_audit(audit.id, mode_override="mock")
-        return audit.id
+        result = audit.id
+        return result

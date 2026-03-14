@@ -15,10 +15,18 @@ HealthStatus = Literal["ok"]
 ReadinessStatus = Literal["ready"]
 
 
+def _default_scenarios() -> list[ScenarioType]:
+    return ["cookie_consent", "checkout_flow"]
+
+
+def _default_personas() -> list[PersonaType]:
+    return ["privacy_sensitive", "cost_sensitive"]
+
+
 class AuditCreateRequest(BaseModel):
     target_url: HttpUrl
-    scenarios: list[ScenarioType] = Field(default_factory=lambda: ["cookie_consent", "checkout_flow"])
-    personas: list[PersonaType] = Field(default_factory=lambda: ["privacy_sensitive", "cost_sensitive"])
+    scenarios: list[ScenarioType] = Field(default_factory=_default_scenarios)
+    personas: list[PersonaType] = Field(default_factory=_default_personas)
 
 
 class AuditEventRead(BaseModel):

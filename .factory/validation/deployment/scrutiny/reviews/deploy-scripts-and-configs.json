@@ -1,0 +1,68 @@
+{
+  "featureId": "deploy-scripts-and-configs",
+  "reviewedAt": "2026-03-14T23:22:00.000Z",
+  "commitId": "a8b17f05eaef53b5c7ac8c23f05e6e4a2d3a48e4",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "Solid implementation of all four deployment artifacts (deploy.sh, nginx config, systemd service, env template) plus 55 comprehensive tests. All feature requirements are fully covered: deploy.sh has 8 idempotent steps with --step flag, nginx has SPA fallback and proxy rules with security headers, systemd runs as non-root with Restart=always, and the env template covers all Settings class variables with placeholder secrets. No blocking issues found.",
+    "issues": [
+      {
+        "file": "infrastructure/deploy.sh",
+        "line": 57,
+        "severity": "non_blocking",
+        "description": "curl | bash pattern used for Node.js installation (curl -fsSL https://rpm.nodesource.com/setup_20.x | bash -). While standard practice for NodeSource, this is a known supply-chain risk vector. Consider using Amazon Linux Extras or dnf module for Node.js instead."
+      },
+      {
+        "file": "infrastructure/deploy.sh",
+        "line": 112,
+        "severity": "non_blocking",
+        "description": "Step 3 installs both requirements.txt AND requirements-dev.txt in production. Dev dependencies (pytest, ruff, mypy, etc.) are unnecessary in production and increase the attack surface. Consider installing only requirements.txt in production mode."
+      },
+      {
+        "file": "infrastructure/deploy.sh",
+        "line": 232,
+        "severity": "non_blocking",
+        "description": "step8_build_frontend uses 'rm -rf \"${WWW_DIR}\"/*' before copying new build. While functional, if WWW_DIR were misconfigured (empty string), this glob could expand dangerously. A safer pattern: rm -rf \"${WWW_DIR:?}\"/* (bash parameter expansion with error on empty)."
+      },
+      {
+        "file": "infrastructure/env.production.template",
+        "line": 119,
+        "severity": "non_blocking",
+        "description": "Template includes SECRET_KEY, LOG_LEVEL, and RATE_LIMIT_PER_MINUTE which are not defined in the Settings class (config.py uses extra='ignore'). These extra variables won't cause errors but may confuse operators expecting them to be functional. Either remove them or add corresponding fields to Settings."
+      },
+      {
+        "file": "infrastructure/nginx/ethicalsiteinspector.conf",
+        "line": 79,
+        "severity": "non_blocking",
+        "description": "The /api/health location block is redundant since /api already proxies all /api/* paths to the backend. The separate block only provides shorter timeouts for health checks, which is a nice operational improvement but adds maintenance surface. Not a bug — just a complexity note."
+      },
+      {
+        "file": "infrastructure/systemd/ethicalsiteinspector.service",
+        "line": 17,
+        "severity": "non_blocking",
+        "description": "ReadWritePaths only includes /opt/ethicalsiteinspector/data. If the backend writes temporary files or logs to other paths under /opt/ethicalsiteinspector (e.g., Playwright browser temp files, alembic version tracking), ProtectSystem=strict may block those writes. Monitor after deployment."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "Worker deviated from TDD red-green cycle specified in backend-dev skill. The skill mandates 'Write Tests First (TDD Red Phase)' but the transcript shows the worker created all 4 deployment files first, then wrote tests afterward. For infrastructure file validation tests (purely file-content assertions), this deviation is pragmatically justified — the tests validate static file content rather than runtime behavior, so TDD provides less value here.",
+      "evidence": "Transcript skeleton shows: Create deploy.sh → Create nginx conf → Create systemd service → Create env template → Create test_deployment.py → Run tests. Skill SKILL.md step 2: 'Write Tests First (TDD Red Phase)'"
+    },
+    {
+      "area": "conventions",
+      "observation": "The deploy.sh script installs requirements-dev.txt in production (step 3). AGENTS.md doesn't have guidance on production vs development dependency installation. A convention note about only installing production requirements in deployment scripts could prevent future workers from including dev dependencies in production.",
+      "evidence": "infrastructure/deploy.sh line 112: 'pip install -r \"${APP_DIR}/backend/requirements-dev.txt\"'"
+    },
+    {
+      "area": "knowledge",
+      "observation": "The deployment architecture (deploy.sh + nginx + systemd targeting Amazon Linux 2023 with ec2-user) establishes production conventions not documented in library/architecture.md. Future features touching deployment would benefit from a library entry documenting: deployment target OS (Amazon Linux 2023), app directory (/opt/ethicalsiteinspector), service user (ec2-user), www directory (/var/www/ethicalsiteinspector), env file location (/opt/ethicalsiteinspector/.env).",
+      "evidence": "infrastructure/deploy.sh configuration block (lines 10-17), infrastructure/systemd/ethicalsiteinspector.service (User=ec2-user, WorkingDirectory=/opt/ethicalsiteinspector/backend)"
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "PASS. The deploy-scripts-and-configs feature is well-implemented with all 4 required artifacts (deploy.sh, nginx config, systemd service, env template) plus 55 tests. deploy.sh is idempotent with all 8 steps and --step support. Nginx config correctly handles SPA fallback, API/artifacts proxying, and includes security headers. Systemd service follows best practices (non-root user, Restart=always, security hardening directives). Env template covers all Settings class variables with placeholder secrets. No hardcoded secrets found. 6 non-blocking issues noted: curl|bash for NodeSource, dev deps in production, rm -rf safety, extra env vars not in Settings, redundant health location block, and ReadWritePaths scope. All are minor operational improvements rather than correctness issues."
+}

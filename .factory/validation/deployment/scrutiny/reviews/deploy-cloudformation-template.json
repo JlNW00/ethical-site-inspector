@@ -1,0 +1,56 @@
+{
+  "featureId": "deploy-cloudformation-template",
+  "reviewedAt": "2026-03-14T23:22:00.000Z",
+  "commitId": "92afa5c7dcd3ee2f6d263bf49a65d89561b05589",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "Comprehensive CloudFormation template with all required resources (EC2, RDS PostgreSQL, S3, ALB, Security Groups, conditional Route53), proper VPC networking (public/private subnets, NAT gateways), SecretsManager for DB credentials, and IAM roles. Template is well-structured, secure (no hardcoded secrets, least-privilege SG rules), and fully parameterized. 40 tests validate template validity, resource types, security groups, health check, CORS, parameters, outputs, and secret hygiene. All tests pass. Two minor non-blocking observations noted below.",
+    "issues": [
+      {
+        "file": "infrastructure/cloudformation.yaml",
+        "line": 356,
+        "severity": "non_blocking",
+        "description": "EC2 IAM role has AmazonS3ReadOnlyAccess managed policy which grants read to ALL S3 buckets in the account. A more secure approach would scope the S3 policy to only the ArtifactBucket resource ARN. Current policy works but violates least-privilege for S3 access."
+      },
+      {
+        "file": "infrastructure/cloudformation.yaml",
+        "line": 271,
+        "severity": "non_blocking",
+        "description": "S3 PublicAccessBlockConfiguration has all four blocks set to false, and the BucketPolicy grants s3:GetObject to Principal '*' on /videos/* and /screenshots/*. This is intentional for video playback but means any public internet user can enumerate and download all stored videos/screenshots if they know the key pattern. Consider using CloudFront with signed URLs for tighter access control in production."
+      },
+      {
+        "file": "infrastructure/cloudformation.yaml",
+        "line": 314,
+        "severity": "non_blocking",
+        "description": "RDS DeletionProtection is set to false. For a production deployment template this should default to true to prevent accidental database deletion. Could be parameterized."
+      },
+      {
+        "file": "infrastructure/cloudformation.yaml",
+        "line": 335,
+        "severity": "non_blocking",
+        "description": "EC2 instance is placed in PublicSubnet1 with a public IP (MapPublicIpOnLaunch: true on subnet). While the EC2 security group restricts inbound to ALB-only traffic on port 8000, best practice is to place application servers in private subnets behind the ALB. The SSH access via KeyPairName would need a bastion host in that case."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "The handoff commitId (92afa5c7dcd3ee2f6d263bf49a65d89561b05589) references the HEAD commit at handoff time (user-testing-validator-regulatory-pdf), not a dedicated commit for the cloudformation feature. The actual files (infrastructure/cloudformation.yaml and backend/tests/test_cloudformation.py) are staged but not committed. This means the feature's changes are not independently trackable in git history.",
+      "evidence": "git show 92afa5c shows it modifies only .factory/ files. git status shows both cloudformation files as 'new file' in staging area."
+    },
+    {
+      "area": "conventions",
+      "observation": "First worker session (53847cb3-80da-4e3c-9ce7-36369ee128aa) has no handoff file in the handoffs directory. The feature required two worker sessions to complete, suggesting the first session failed silently.",
+      "evidence": "features.json shows workerSessionIds: ['53847cb3-...', '3049eafe-...'], but only the 3049eafe handoff exists in handoffs/"
+    },
+    {
+      "area": "services",
+      "observation": "No CloudFormation-specific validation commands (e.g., cfn-lint, aws cloudformation validate-template) are documented in services.yaml. The tests use Python YAML parsing which validates structure but not AWS-level validity.",
+      "evidence": "services.yaml has no cfn-related commands. Tests rely on yaml.load with custom CF loader but don't call AWS validation APIs."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "PASS. The CloudFormation template at infrastructure/cloudformation.yaml is comprehensive and well-implemented. It includes all required resources (EC2 with AL2023 AMI, RDS PostgreSQL with SecretsManager credentials, S3 with CORS for video playback, ALB with /api/health health check, 3 security groups with least-privilege rules, conditional Route53 DNS). The template goes beyond requirements by including proper VPC networking (public/private subnets across 2 AZs, NAT gateways, route tables), IAM roles with SecretsManager access, and CloudFormation exports. The 40 tests in test_cloudformation.py provide thorough coverage of all validation contract assertions (VAL-DEPLOY-001 through VAL-DEPLOY-013). Four non-blocking issues noted: overly broad S3 read IAM policy, public S3 bucket access, DeletionProtection off, and EC2 in public subnet. None are blocking for the current deployment milestone."
+}

@@ -1,0 +1,79 @@
+{
+  "featureId": "deploy-mypy-fixes",
+  "reviewedAt": "2026-03-14T23:21:00.000Z",
+  "commitId": "be6d099",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The feature successfully eliminates all mypy type errors across 8 backend files, achieving mypy exit code 0. The approach uses proper imports (cast, Callable, AsyncIterator), explicit generic type parameters (dict[str, Any], list[dict[str, Any]]), and intermediate typed variables to resolve no-any-return errors. All 416 tests pass and ruff is clean. There are several non-blocking quality issues: a duplicate apply_suppression call in audit_orchestrator.py, a duplicate docstring in nova_act_browser.py, an unnecessary time module re-import in benchmark_orchestrator.py, and weakened typing for EVIDENCE_TYPE_LABELS. The parent validator also noted and fixed one missed mypy error (seed_service.py:24 return str(existing_id)). No type: ignore comments were added by this feature — the remaining ones are pre-existing in other files.",
+    "issues": [
+      {
+        "file": "backend/app/services/audit_orchestrator.py",
+        "line": 218,
+        "severity": "non_blocking",
+        "description": "Duplicate apply_suppression call. Lines 212-217 and 218-223 contain identical calls to apply_suppression() with the same arguments. The second call overwrites the first result. This was introduced by the worker when adding the suppression block — the original code already had this call, and the worker added another copy above it. Functionally harmless but dead code that should be removed."
+      },
+      {
+        "file": "backend/app/providers/nova_act_browser.py",
+        "line": 458,
+        "severity": "non_blocking",
+        "description": "Duplicate docstring in _run_cookie_consent_scenario. The worker added a docstring + pylint disable comment, but the original docstring was preserved, resulting in two consecutive docstrings: '\"\"\"Run cookie consent scenario with Nova Act.\"\"\"' on line 457 and again on line 459 (after the pylint comment). The second is a dead string expression."
+      },
+      {
+        "file": "backend/app/services/benchmark_orchestrator.py",
+        "line": 153,
+        "severity": "non_blocking",
+        "description": "Unnecessary re-import of time module. The worker removed the module-level 'import time' and replaced it with 'import time as _time' inside the while loop body. The original 'time.sleep()' call had no mypy issues — this change is unnecessary and introduces an import inside a loop. The comment 'Use mypy-compatible cast to handle the float return type' is misleading as this has nothing to do with casting or return types."
+      },
+      {
+        "file": "backend/app/services/benchmark_orchestrator.py",
+        "line": 158,
+        "severity": "non_blocking",
+        "description": "Overly verbose return pattern. 'result: float | None = None; return result' replaces a simple 'return None' that would have been fine given the return type annotation 'float | None'. This pattern was unnecessary since mypy doesn't flag 'return None' when the return type includes None."
+      },
+      {
+        "file": "backend/app/core/taxonomy.py",
+        "line": 322,
+        "severity": "non_blocking",
+        "description": "EVIDENCE_TYPE_LABELS type weakened from dict[EvidenceType, str] to dict[str, str]. This reduces type safety — callers can now pass any string key without type checking. A better approach would have been to use cast() at call sites (as done elsewhere in this PR) rather than widening the container type. However, this is pragmatic since the dict is used with .get() where the key is often a plain str variable."
+      },
+      {
+        "file": "backend/app/services/seed_service.py",
+        "line": 13,
+        "severity": "non_blocking",
+        "description": "Inconsistent typing: session_factory is typed as 'Any' here, but the same parameter in audit_orchestrator.py and benchmark_orchestrator.py is correctly typed as 'Callable[[], Session]'. Should use the same type for consistency."
+      },
+      {
+        "file": "backend/app/services/seed_service.py",
+        "line": 14,
+        "severity": "non_blocking",
+        "description": "Dead variable on early return path: 'result: str | None = None' is declared but never used when the function returns early via 'return str(existing_id)' on line 24. The variable is only used on the audit-creation path (line 39-40). Minor dead code."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "The AGENTS.md says 'mypy strict with --ignore-missing-imports' but the actual mypy configuration used is just '--ignore-missing-imports' without strict mode. The feature description mentions reaching 'mypy exit code 0' which was achieved, but the distinction between strict and non-strict mode is unclear. Consider clarifying the expected mypy strictness level in AGENTS.md.",
+      "evidence": "AGENTS.md line: 'Type hints everywhere — mypy strict with --ignore-missing-imports'. services.yaml: 'typecheck_backend: cd backend && .venv\\Scripts\\python.exe -m mypy app/ --ignore-missing-imports' (no --strict flag)."
+    },
+    {
+      "area": "conventions",
+      "observation": "No convention documented for when to use cast() vs type: ignore vs widening the type annotation. This feature used all three approaches inconsistently: cast() in taxonomy.py/rule_engine.py/suppression.py, type widening for EVIDENCE_TYPE_LABELS, and intermediate typed variables for no-any-return fixes. A documented preference would help future workers make consistent choices.",
+      "evidence": "taxonomy.py uses cast('DarkPatternCategory', category). EVIDENCE_TYPE_LABELS was widened to dict[str, str]. seed_service.py and benchmark_orchestrator.py use 'result: type = value; return result' pattern."
+    },
+    {
+      "area": "skills",
+      "observation": "The backend-dev skill procedure says 'Write Tests First (TDD Red Phase)' but this feature is a pure type-annotation fix with no behavioral changes. The worker correctly skipped TDD and went straight to fixing types. The skill could note that pure code-quality fixes (mypy, ruff) can skip the TDD phase.",
+      "evidence": "Skill SKILL.md step 2: 'Write Tests First (TDD Red Phase)'. Feature description: 'Fix remaining mypy type errors. Added type annotations, imports, explicit return types'. Worker handoff: 'tests.added: []' — no new tests written, which is correct for this type of work."
+    },
+    {
+      "area": "knowledge",
+      "observation": "The feature required 4 worker sessions to complete (3 failures/partial completions due to token exhaustion). The description was updated with detailed fix instructions after early failures, which finally enabled success. For large-scale type-fix tasks, providing a pre-computed error list and specific fix instructions in the feature description dramatically improves worker efficiency.",
+      "evidence": "workerSessionIds has 4 entries. First handoff: 'partial' with 'Tool call quota exceeded'. Second: 'failure' with 'token budget was exhausted'. Third (a47bf32f): not reviewed but preceded the final success. Fourth (841e509b): success with detailed instructions in feature description."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "PASS. The deploy-mypy-fixes feature successfully eliminates all mypy type errors across 8 backend files, achieving the primary goal of mypy exit code 0. All 416 tests pass and ruff reports no lint errors. Seven non-blocking issues were identified: a duplicate apply_suppression call in audit_orchestrator.py, a duplicate docstring in nova_act_browser.py, an unnecessary time module re-import in benchmark_orchestrator.py, an overly verbose return pattern, weakened EVIDENCE_TYPE_LABELS typing, inconsistent session_factory typing in seed_service.py, and a dead variable. The parent validator also caught and fixed one missed error (seed_service.py return str(existing_id)). No unjustified type: ignore comments were added. No behavioral changes to existing code beyond the duplicate suppression call (which is functionally identical). Overall the implementation achieves its goals with acceptable quality."
+}

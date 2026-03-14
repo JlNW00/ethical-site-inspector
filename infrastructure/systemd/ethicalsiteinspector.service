@@ -1,0 +1,43 @@
+[Unit]
+Description=EthicalSiteInspector Backend API
+After=network.target
+After=postgresql.service
+Wants=network.target
+
+[Service]
+Type=exec
+User=ec2-user
+Group=ec2-user
+WorkingDirectory=/opt/ethicalsiteinspector/backend
+
+# Environment file containing all configuration
+EnvironmentFile=/opt/ethicalsiteinspector/.env
+
+# Main process - uvicorn ASGI server
+ExecStart=/opt/ethicalsiteinspector/backend/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --workers 2
+
+# Restart policy
+Restart=always
+RestartSec=5
+
+# Graceful shutdown
+TimeoutStopSec=30
+KillSignal=SIGTERM
+
+# Resource limits
+LimitNOFILE=65535
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=ethicalsiteinspector
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/ethicalsiteinspector/data
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

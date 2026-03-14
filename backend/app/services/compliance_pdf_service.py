@@ -16,7 +16,7 @@ from typing import Any
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from xhtml2pdf import pisa
 
-from app.core.taxonomy import REGULATION_CITATIONS, REGULATION_FULL_NAMES
+from app.core.taxonomy import REGULATION_CITATIONS, REGULATION_FULL_NAMES, RegulationType
 from app.models.audit import Audit, Finding
 
 
@@ -302,7 +302,7 @@ def generate_compliance_pdf(audit: Audit, findings: list[Finding]) -> bytes:
     # Build regulation sections
     regulation_sections = []
     for reg in implicated_regulations:
-        reg_key = reg  # type: RegulationType
+        reg_key: RegulationType = reg  # type: ignore[assignment]
         reg_findings = _get_findings_for_regulation(regulatory_findings, reg)
 
         # Build finding data with applicable citations

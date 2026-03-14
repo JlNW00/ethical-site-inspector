@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import Counter, defaultdict
+from collections.abc import Callable
 from datetime import UTC, datetime
 from threading import Thread
 from typing import Any
@@ -27,7 +28,7 @@ from app.services.report_service import ReportService
 
 
 class AuditOrchestrator:
-    def __init__(self, session_factory):
+    def __init__(self, session_factory: Callable[[], Session]) -> None:
         self.session_factory = session_factory
 
     def create_audit(self, db: Session, payload: AuditCreateRequest, mode: str) -> Audit:
@@ -214,6 +215,12 @@ class AuditOrchestrator:
                 evidence_payload=updated_payload,
                 confidence=confidence,
             )
+            # Apply suppression rules
+            suppressed, final_payload = apply_suppression(
+                pattern_family=draft.pattern_family,
+                evidence_payload=updated_payload,
+                confidence=confidence,
+            )
 
             # Get regulatory categories from taxonomy
             regulatory_categories = get_regulations_for_pattern_family(draft.pattern_family)
@@ -308,7 +315,7 @@ class AuditOrchestrator:
         return audit
 
     @staticmethod
-    def _build_metrics(summary: dict, observations: list, finding_models: list[Finding]) -> dict:
+    def _build_metrics(summary: dict[str, Any], observations: list[Any], finding_models: list[Finding]) -> dict[str, Any]:
         site_host = observations[0].evidence.metadata.get("site_host") if observations else None
         evidence_origin_label = summary.get("evidence_origin_label", "Captured from site")
         persona_buckets: dict[str, dict[str, Any]] = defaultdict(
@@ -409,8 +416,8 @@ class AuditOrchestrator:
         }
 
     @staticmethod
-    def _score_audit(findings: list[Finding], metrics: dict) -> tuple[float, str]:
-        severity_weights = {"low": 2.0, "medium": 5.0, "high": 9.0, "critical": 14.0}
+    def _score_audit(findings: list[Finding], metrics: dict[str, Any]) -> tuple[float, str]:
+        severity_weights: dict[str, float] = {"low": 2.0, "medium": 5.0, "high": 9.0, "critical": 14.0}
         deduction = sum(severity_weights.get(finding.severity, 5.0) + finding.trust_impact for finding in findings)
         friction_penalty = sum(item["friction_index"] for item in metrics.get("persona_comparison", []))
         trust_score = max(12.0, 100.0 - deduction - friction_penalty)
@@ -425,11 +432,13 @@ class AuditOrchestrator:
         return round(trust_score, 1), risk_level
 
     @staticmethod
-    def _build_summary(findings: list[Finding], metrics: dict) -> str:
+    def _build_summary(findings: list[Finding], metrics: dict[str, Any]) -> str:
         if not findings:
             return "No major trust risks were detected in the audited journeys."
         top_finding = max(findings, key=lambda finding: (finding.trust_impact, finding.confidence))
-        riskiest_scenario = next(iter(metrics.get("scenario_breakdown", [])), {}).get("scenario", "the audited flows")
+        scenario_breakdown = metrics.get("scenario_breakdown", [])
+        scenario_list: list[dict[str, Any]] = scenario_breakdown if isinstance(scenario_breakdown, list) else []
+        riskiest_scenario = next(iter(scenario_list), {}).get("scenario", "the audited flows")
         site_host = metrics.get("site_host") or "the audited site"
         evidence_origin_label = metrics.get("evidence_origin_label", "Captured from site")
         return (
@@ -442,10 +451,10 @@ class AuditOrchestrator:
     def _merge_drafts(drafts: list[RuleFindingDraft]) -> list[RuleFindingDraft]:
         merged: dict[tuple[str, str, str], RuleFindingDraft] = {}
         for draft in drafts:
-            key = (draft.scenario, draft.persona, draft.pattern_family)
-            existing = merged.get(key)
+            draft_key = (draft.scenario, draft.persona, draft.pattern_family)
+            existing = merged.get(draft_key)
             if not existing:
-                merged[key] = draft
+                merged[draft_key] = draft
                 continue
 
             existing.severity = AuditOrchestrator._max_severity(existing.severity, draft.severity)
@@ -494,8 +503,8 @@ class AuditOrchestrator:
         return result
 
     @staticmethod
-    def _merge_unique_prices(first: list[dict], second: list[dict], limit: int = 4) -> list[dict]:
-        result: list[dict] = []
+    def _merge_unique_prices(first: list[dict[str, Any]], second: list[dict[str, Any]], limit: int = 4) -> list[dict[str, Any]]:
+        result: list[dict[str, Any]] = []
         seen: set[tuple[str, float]] = set()
         for item in first + second:
             key = (str(item.get("label", "")), float(item.get("value", 0)))

@@ -1,0 +1,167 @@
+{
+  "groupId": "browser-ui",
+  "testedAt": "2026-03-14T20:50:00Z",
+  "isolation": {
+    "frontendUrl": "http://localhost:5173",
+    "backendUrl": "http://localhost:8000",
+    "browserSession": "default (c96f6d9b818a__browser-ui session name caused EACCES port error, used default session)",
+    "readOnly": true
+  },
+  "toolsUsed": ["agent-browser"],
+  "assertions": [
+    {
+      "id": "VAL-REGPDF-001",
+      "title": "Compliance Report button conditional visibility on ReportPage",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Navigate to http://localhost:5173/audits/regpdf-test-with-findings/report",
+          "expected": "ReportPage loads for audit with regulatory findings",
+          "observed": "ReportPage loaded successfully showing Trust Score 42/100, 5 Findings, High Risk"
+        },
+        {
+          "action": "Check for 'Download Compliance Report' button",
+          "expected": "Button is visible",
+          "observed": "Button is visible as a link with text 'Download Compliance Report'"
+        },
+        {
+          "action": "Inspect button href attribute",
+          "expected": "href contains /api/audits/regpdf-test-with-findings/report/compliance-pdf",
+          "observed": "href = 'http://127.0.0.1:8000/api/audits/regpdf-test-with-findings/report/compliance-pdf'"
+        },
+        {
+          "action": "Inspect button target attribute",
+          "expected": "target='_blank' (opens in new tab)",
+          "observed": "target = '_blank'"
+        },
+        {
+          "action": "Verify 'Download PDF' button is also present",
+          "expected": "Download PDF button visible alongside Compliance Report button",
+          "observed": "Download PDF button present with href 'http://127.0.0.1:8000/api/audits/regpdf-test-with-findings/report/pdf'"
+        },
+        {
+          "action": "Take screenshot of page with compliance report button",
+          "expected": "Screenshot captured",
+          "observed": "Screenshot saved to evidence directory"
+        },
+        {
+          "action": "Navigate to http://localhost:5173/audits/regpdf-test-no-findings/report",
+          "expected": "ReportPage loads for audit without regulatory findings",
+          "observed": "ReportPage loaded successfully showing Trust Score 95/100, 1 Finding, Low Risk"
+        },
+        {
+          "action": "Check 'Download Compliance Report' button is NOT visible",
+          "expected": "Button is absent",
+          "observed": "Button is absent - DOM query found no links with 'Compliance' text or 'compliance-pdf' in href"
+        },
+        {
+          "action": "Verify 'Download PDF' button IS still visible",
+          "expected": "Download PDF button present",
+          "observed": "Download PDF button present with href 'http://127.0.0.1:8000/api/audits/regpdf-test-no-findings/report/pdf'"
+        },
+        {
+          "action": "Take screenshot of page without compliance report button",
+          "expected": "Screenshot captured",
+          "observed": "Screenshot saved to evidence directory"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "regulatory-pdf/browser-ui/VAL-REGPDF-001-with-findings.png",
+          "regulatory-pdf/browser-ui/VAL-REGPDF-001-no-findings.png"
+        ],
+        "consoleErrors": "none",
+        "network": "Page loads returned 200, all assets loaded successfully",
+        "domInspection": {
+          "withFindings": {
+            "complianceButton": {
+              "text": "Download Compliance Report",
+              "href": "http://127.0.0.1:8000/api/audits/regpdf-test-with-findings/report/compliance-pdf",
+              "target": "_blank"
+            },
+            "pdfButton": {
+              "text": "Download PDF",
+              "href": "http://127.0.0.1:8000/api/audits/regpdf-test-with-findings/report/pdf",
+              "target": "_blank"
+            }
+          },
+          "noFindings": {
+            "complianceButton": null,
+            "pdfButton": {
+              "text": "Download PDF",
+              "href": "http://127.0.0.1:8000/api/audits/regpdf-test-no-findings/report/pdf"
+            }
+          }
+        }
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CROSS-007",
+      "title": "Per-URL regulatory PDF from benchmark",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Navigate to http://localhost:5173/benchmarks/9b9d3b22-9571-4591-b6dd-4f4f199e17f3",
+          "expected": "BenchmarkPage loads showing 2 URLs with View Report links",
+          "observed": "BenchmarkPage loaded showing 'Comparing 2 URLs' (Completed), example.com/ and example.org/ with View Report links and 100% trust scores"
+        },
+        {
+          "action": "Take screenshot of BenchmarkPage",
+          "expected": "Screenshot captured",
+          "observed": "Screenshot saved to evidence directory"
+        },
+        {
+          "action": "Click first 'View Report' link (example.com audit)",
+          "expected": "Navigate to individual audit ReportPage within 1 click",
+          "observed": "Navigated to /audits/94843e6d-5bfc-4ba5-a58b-3988450889ee/report?benchmark=9b9d3b22-9571-4591-b6dd-4f4f199e17f3 (1 click from BenchmarkPage)"
+        },
+        {
+          "action": "Check if 'Download Compliance Report' button exists on individual ReportPage",
+          "expected": "Button should NOT be visible (benchmark audit has 0 regulatory findings)",
+          "observed": "Button is correctly absent - audit has 0 findings so no regulatory categories exist"
+        },
+        {
+          "action": "Verify 'Download PDF' button IS visible (standard PDF still works)",
+          "expected": "Download PDF button present",
+          "observed": "Download PDF button is present and visible"
+        },
+        {
+          "action": "Verify 'Back to Benchmark' link exists for return navigation",
+          "expected": "Back to Benchmark link visible",
+          "observed": "'Back to Benchmark' link is present, enabling return to BenchmarkPage"
+        },
+        {
+          "action": "Take screenshot of individual ReportPage",
+          "expected": "Screenshot captured showing ReportPage with example.com target URL",
+          "observed": "Screenshot saved showing Target URL: https://example.com/, Trust Score 100/100, 0 Findings, with Download PDF and Back to Benchmark buttons"
+        },
+        {
+          "action": "Check console errors",
+          "expected": "No console errors",
+          "observed": "No console errors"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "regulatory-pdf/browser-ui/VAL-CROSS-007-benchmark-page.png",
+          "regulatory-pdf/browser-ui/VAL-CROSS-007-individual-report.png"
+        ],
+        "consoleErrors": "none",
+        "network": "All page loads returned 200 successfully",
+        "navigationTrace": "BenchmarkPage (/benchmarks/9b9d3b22-...) -> click 'View Report' -> ReportPage (/audits/94843e6d-.../report?benchmark=9b9d3b22-...) = 1 click (within 2-click requirement)"
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [
+    {
+      "description": "The assigned browser session name 'c96f6d9b818a__browser-ui' caused an EACCES permission denied error on port 50205 during daemon startup. Used default session instead.",
+      "resolved": true,
+      "resolution": "Used default browser session (no --session flag) which launched successfully",
+      "affectedAssertions": ["VAL-REGPDF-001", "VAL-CROSS-007"]
+    }
+  ],
+  "blockers": [],
+  "summary": "Tested 2 assertions: 2 passed. VAL-REGPDF-001 confirmed the 'Download Compliance Report' button is conditionally visible only when regulatory findings exist, with correct href and target=_blank. VAL-CROSS-007 confirmed the BenchmarkPage-to-ReportPage navigation path works within 1 click, and the compliance PDF button correctly hides for benchmark audits with 0 regulatory findings."
+}

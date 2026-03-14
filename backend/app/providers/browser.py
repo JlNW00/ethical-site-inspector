@@ -8,6 +8,7 @@ import time
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 from urllib.parse import urljoin, urlparse
 
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
@@ -30,7 +31,7 @@ from app.extractors.playwright_extractors import (
 from app.providers.storage import StorageProvider
 from app.schemas.runtime import BrowserRunResult, JourneyObservation, ObservationEvidence
 
-ProgressCallback = Callable[[str, str, int, str, dict], None]
+ProgressCallback = Callable[[str, str, int, str, dict[str, Any]], None]
 
 
 class BrowserAuditProvider(ABC):
@@ -358,8 +359,8 @@ class MockBrowserAuditProvider(BrowserAuditProvider):
             ),
         )
 
-    def _scenario_evidence(self, scenario: str, persona: str) -> dict:
-        catalog: dict[tuple[str, str], dict] = {
+    def _scenario_evidence(self, scenario: str, persona: str) -> dict[str, Any]:
+        catalog: dict[tuple[str, str], dict[str, Any]] = {
             ("cookie_consent", "privacy_sensitive"): {
                 "accent": "#d9485f",
                 "button_labels": ["Accept all", "Manage settings", "Continue with recommended choice"],
@@ -692,7 +693,7 @@ class PlaywrightAuditProvider(BrowserAuditProvider):
         # Return the most recently modified video file
         return max(video_files, key=lambda p: p.stat().st_mtime)
 
-    def _run_scenario(self, audit_id: str, target_url: str, scenario: str, persona: str, page) -> JourneyObservation:
+    def _run_scenario(self, audit_id: str, target_url: str, scenario: str, persona: str, page: Any) -> JourneyObservation:
         page.goto(target_url, wait_until="domcontentloaded", timeout=25_000)
         page.wait_for_timeout(1_000)
         activity_log = ["Loaded target URL"]
@@ -776,7 +777,7 @@ class PlaywrightAuditProvider(BrowserAuditProvider):
         )
 
     def _attempt_scenario_actions(
-        self, page, scenario: str, persona: str, activity_log: list[str], state_snapshots: list[dict]
+        self, page: Any, scenario: str, persona: str, activity_log: list[str], state_snapshots: list[dict[str, Any]]
     ) -> list[str]:
         if scenario == "checkout_flow":
             return self._attempt_checkout_actions(page, persona, activity_log, state_snapshots)
@@ -785,7 +786,7 @@ class PlaywrightAuditProvider(BrowserAuditProvider):
         return self._attempt_plan_actions(page, scenario, persona, activity_log, state_snapshots)
 
     def _attempt_plan_actions(
-        self, page, scenario: str, persona: str, activity_log: list[str], state_snapshots: list[dict]
+        self, page: Any, scenario: str, persona: str, activity_log: list[str], state_snapshots: list[dict[str, Any]]
     ) -> list[str]:
         interactions: list[str] = []
         plan = self._scenario_action_plan(scenario, persona)
@@ -805,7 +806,7 @@ class PlaywrightAuditProvider(BrowserAuditProvider):
         return interactions
 
     def _attempt_cookie_actions(
-        self, page, persona: str, activity_log: list[str], state_snapshots: list[dict]
+        self, page: Any, persona: str, activity_log: list[str], state_snapshots: list[dict[str, Any]]
     ) -> list[str]:
         current_buttons = state_snapshots[-1].get("buttons", []) if state_snapshots else []
         direct_cookie_controls = any(
@@ -855,7 +856,7 @@ class PlaywrightAuditProvider(BrowserAuditProvider):
         return interactions
 
     def _attempt_checkout_actions(
-        self, page, persona: str, activity_log: list[str], state_snapshots: list[dict]
+        self, page: Any, persona: str, activity_log: list[str], state_snapshots: list[dict[str, Any]]
     ) -> list[str]:
         interactions: list[str] = []
         try:
@@ -906,7 +907,7 @@ class PlaywrightAuditProvider(BrowserAuditProvider):
 
     def _click_first_matching(
         self,
-        page,
+        page: Any,
         keywords: list[str],
         require_keywords: list[str] | None = None,
         *,
@@ -919,12 +920,12 @@ class PlaywrightAuditProvider(BrowserAuditProvider):
         return None
 
     @staticmethod
-    def _element_label(element) -> str:
+    def _element_label(element: Any) -> str:
         return extract_locator_label(element)
 
     @staticmethod
-    def _candidate_frames(page) -> list:
-        frames: list = []
+    def _candidate_frames(page: Any) -> list[Any]:
+        frames: list[Any] = []
         for frame in page.frames:
             try:
                 if frame.is_detached():
@@ -936,7 +937,7 @@ class PlaywrightAuditProvider(BrowserAuditProvider):
 
     def _click_first_matching_in_scope(
         self,
-        scope,
+        scope: Any,
         keywords: list[str],
         require_keywords: list[str] | None = None,
         *,
@@ -972,7 +973,7 @@ class PlaywrightAuditProvider(BrowserAuditProvider):
                 continue
         return None
 
-    def _dismiss_irrelevant_dialogs(self, page, scenario: str, activity_log: list[str]) -> None:
+    def _dismiss_irrelevant_dialogs(self, page: Any, scenario: str, activity_log: list[str]) -> None:
         dialogs = page.locator("[role='dialog'], dialog, [aria-modal='true']")
         total = min(dialogs.count(), 4)
         for index in range(total):
@@ -995,7 +996,7 @@ class PlaywrightAuditProvider(BrowserAuditProvider):
             except Exception:
                 continue
 
-    def _snapshot_state(self, page, *, scenario: str, label: str) -> dict:
+    def _snapshot_state(self, page: Any, *, scenario: str, label: str) -> dict[str, Any]:
         keywords = scenario_keywords(scenario)
         headings = extract_headings_matching_keywords(page, keywords, limit=6)
         texts = extract_lines_matching_keywords(page, keywords, limit=10)
@@ -1032,7 +1033,7 @@ class PlaywrightAuditProvider(BrowserAuditProvider):
             "grounded": grounded,
         }
 
-    def _scenario_action_plan(self, scenario: str, persona: str) -> list[dict]:
+    def _scenario_action_plan(self, scenario: str, persona: str) -> list[dict[str, Any]]:
         plans = {
             "cookie_consent": {
                 "privacy_sensitive": [
@@ -1086,7 +1087,7 @@ class PlaywrightAuditProvider(BrowserAuditProvider):
         return plans.get(scenario, {}).get(persona, [])
 
     def _state_type(
-        self, page, *, scenario: str, label: str, headings: list[str], texts: list[str], buttons: list[str]
+        self, page: Any, *, scenario: str, label: str, headings: list[str], texts: list[str], buttons: list[str]
     ) -> str:
         if scenario != "checkout_flow":
             return label
@@ -1115,7 +1116,7 @@ class PlaywrightAuditProvider(BrowserAuditProvider):
         headings: list[str],
         texts: list[str],
         buttons: list[str],
-        prices: list[dict],
+        prices: list[dict[str, Any]],
     ) -> bool:
         combined = " ".join(texts + headings + buttons).lower()
         if scenario == "cookie_consent":
@@ -1157,7 +1158,7 @@ class PlaywrightAuditProvider(BrowserAuditProvider):
 
     @staticmethod
     def _price_is_scenario_grounded(
-        scenario: str, price_point: dict, texts: list[str], headings: list[str], buttons: list[str]
+        scenario: str, price_point: dict[str, Any], texts: list[str], headings: list[str], buttons: list[str]
     ) -> bool:
         if scenario != "checkout_flow":
             return False
@@ -1180,7 +1181,7 @@ class PlaywrightAuditProvider(BrowserAuditProvider):
             )
         )
 
-    def _merge_unique_from_states(self, states: list[dict], key: str, limit: int) -> list[str]:
+    def _merge_unique_from_states(self, states: list[dict[str, Any]], key: str, limit: int) -> list[str]:
         values: list[str] = []
         seen: set[str] = set()
         for state in states:
@@ -1194,16 +1195,16 @@ class PlaywrightAuditProvider(BrowserAuditProvider):
         return values
 
     @staticmethod
-    def _merge_checkbox_states(states: list[dict]) -> dict[str, bool]:
+    def _merge_checkbox_states(states: list[dict[str, Any]]) -> dict[str, bool]:
         merged: dict[str, bool] = {}
         for state in states:
             merged.update(state.get("checkbox_states", {}))
         return merged
 
-    def _scenario_price_points(self, states: list[dict]) -> list[dict]:
+    def _scenario_price_points(self, states: list[dict[str, Any]]) -> list[dict[str, Any]]:
         if len(states) < 2:
             return []
-        selected_points: list[dict] = []
+        selected_points: list[dict[str, Any]] = []
         seen_states: set[str] = set()
         eligible_labels = {"detail_page", "availability_panel", "reserve_state", "policy_review", "final"}
         for state in states:
@@ -1228,7 +1229,7 @@ class PlaywrightAuditProvider(BrowserAuditProvider):
         self,
         *,
         scenario: str,
-        states: list[dict],
+        states: list[dict[str, Any]],
         interacted_controls: list[str],
         text_snippets: list[str],
         button_labels: list[str],
@@ -1259,13 +1260,13 @@ class PlaywrightAuditProvider(BrowserAuditProvider):
         return deduped
 
     @staticmethod
-    def _observed_price_delta(price_points: list[dict]) -> float:
+    def _observed_price_delta(price_points: list[dict[str, Any]]) -> float:
         if len(price_points) < 2:
             return 0.0
         values = [float(item["value"]) for item in price_points]
         return round(values[-1] - values[0], 2)
 
-    def _append_checkout_offer_state(self, page, offer: dict, state_snapshots: list[dict]) -> None:
+    def _append_checkout_offer_state(self, page: Any, offer: dict[str, Any], state_snapshots: list[dict[str, Any]]) -> None:
         offer_prices = extract_prices_from_text(offer["text"], limit=4)
         offer_state = {
             "label": "offer_selection",
@@ -1282,7 +1283,7 @@ class PlaywrightAuditProvider(BrowserAuditProvider):
         }
         state_snapshots.append(offer_state)
 
-    def _append_checkout_hotel_state(self, page, hotel: dict, state_snapshots: list[dict]) -> None:
+    def _append_checkout_hotel_state(self, page: Any, hotel: dict[str, Any], state_snapshots: list[dict[str, Any]]) -> None:
         hotel_state = {
             "label": "detail_selection",
             "state_type": "detail",
@@ -1298,15 +1299,15 @@ class PlaywrightAuditProvider(BrowserAuditProvider):
         }
         state_snapshots.append(hotel_state)
 
-    def _choose_checkout_offer(self, page, persona: str) -> dict | None:
+    def _choose_checkout_offer(self, page: Any, persona: str) -> dict[str, Any] | None:
         candidates = self._extract_checkout_candidates(page)
         if not candidates:
             return None
         ranked = sorted(candidates, key=lambda item: self._checkout_offer_score(item, persona), reverse=True)
         return ranked[0]
 
-    def _extract_checkout_candidates(self, page) -> list[dict]:
-        candidates: list[dict] = []
+    def _extract_checkout_candidates(self, page: Any) -> list[dict[str, Any]]:
+        candidates: list[dict[str, Any]] = []
         locator = page.locator("a[href]")
         total = min(locator.count(), 160)
         for index in range(total):
@@ -1348,7 +1349,7 @@ class PlaywrightAuditProvider(BrowserAuditProvider):
                 continue
         return candidates
 
-    def _checkout_offer_score(self, candidate: dict, persona: str) -> float:
+    def _checkout_offer_score(self, candidate: dict[str, Any], persona: str) -> float:
         text = candidate["text"].lower()
         kind = candidate["kind"]
         current_price = float(candidate["current_price"] or 9999.0)
@@ -1380,9 +1381,9 @@ class PlaywrightAuditProvider(BrowserAuditProvider):
             score += discount / 8
         return score
 
-    def _choose_hotel_detail_link(self, page, persona: str) -> dict | None:
+    def _choose_hotel_detail_link(self, page: Any, persona: str) -> dict[str, Any] | None:
         locator = page.locator("a[href*='/hotel/']")
-        candidates: list[dict] = []
+        candidates: list[dict[str, Any]] = []
         total = min(locator.count(), 80)
         excluded_labels = {"hotels", "apartments", "resorts", "villas", "cabins", "cottages"}
         for index in range(total):
@@ -1412,7 +1413,7 @@ class PlaywrightAuditProvider(BrowserAuditProvider):
             return None
         return sorted(candidates, key=lambda item: item["score"], reverse=True)[0]
 
-    def _checkout_follow_up(self, page, persona: str) -> list[dict]:
+    def _checkout_follow_up(self, page: Any, persona: str) -> list[dict[str, Any]]:
         if "/hotel/" not in page.url:
             return []
         if persona == "privacy_sensitive":
@@ -1433,7 +1434,7 @@ class PlaywrightAuditProvider(BrowserAuditProvider):
         ]
 
     @staticmethod
-    def _navigate_to_href(page, href: str) -> bool:
+    def _navigate_to_href(page: Any, href: str) -> bool:
         if not href:
             return False
         try:
@@ -1443,7 +1444,7 @@ class PlaywrightAuditProvider(BrowserAuditProvider):
             return False
 
     @staticmethod
-    def _representative_price(prices: list[dict]) -> dict | None:
+    def _representative_price(prices: list[dict[str, Any]]) -> dict[str, Any] | None:
         preferred_terms = ("current price", "price $", "from $", "total", "you'll pay", "pay")
         for price in prices:
             label = str(price.get("label", "")).lower()
@@ -1452,7 +1453,7 @@ class PlaywrightAuditProvider(BrowserAuditProvider):
         return None
 
     @staticmethod
-    def _context_options(persona: str) -> dict:
+    def _context_options(persona: str) -> dict[str, Any]:
         base = {
             "viewport": {"width": 1440, "height": 960},
             "locale": "en-US",

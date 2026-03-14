@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from threading import Thread
 
 from sqlalchemy import select
@@ -19,7 +20,7 @@ class BenchmarkOrchestrator:
     A benchmark spawns individual audits per URL and aggregates their results.
     """
 
-    def __init__(self, session_factory, audit_orchestrator: AuditOrchestrator | None = None):
+    def __init__(self, session_factory: Callable[[], Session], audit_orchestrator: AuditOrchestrator | None = None) -> None:
         self.session_factory = session_factory
         self.audit_orchestrator = audit_orchestrator or AuditOrchestrator(session_factory)
 
@@ -132,7 +133,6 @@ class BenchmarkOrchestrator:
         Polls the audit status until it completes or fails.
         Returns the trust score if completed, None if failed.
         """
-        import time
 
         max_wait = 600  # 10 minutes max wait
         poll_interval = 1.0  # 1 second polling
@@ -150,11 +150,14 @@ class BenchmarkOrchestrator:
                 if audit.status == "failed":
                     return None
 
-            time.sleep(poll_interval)
+            # Use mypy-compatible cast to handle the float return type
+            import time as _time
+            _time.sleep(poll_interval)
             elapsed += poll_interval
 
-        # Timeout - return None
-        return None
+        # Timeout - return None explicitly typed
+        result: float | None = None
+        return result
 
     def _handle_benchmark_failure(self, benchmark_id: str, exc: Exception) -> None:
         """Handle terminal benchmark failure."""

@@ -95,6 +95,40 @@ Testing surface, tools, and resource cost classification for validation.
 - Benchmarks list: `http://localhost:8000/api/benchmarks`
 - Individual audit: `http://localhost:8000/api/audits/94843e6d-5bfc-4ba5-a58b-3988450889ee`
 
+## Regulatory PDF Test Data
+
+**IMPORTANT:** Mock audits in this app produce 0 findings because the mock browser provider doesn't set `scenario_state_found` in observation metadata (the rule engine gate). Test data with findings was manually seeded into the database.
+
+**Audit WITH regulatory findings:** `regpdf-test-with-findings`
+- target_url: https://darkpattern-example.com
+- trust_score: 42.0, risk_level: high
+- 5 findings with regulatory categories:
+  - sneaking (GDPR, DSA, CPRA) — cookie_consent
+  - asymmetric_choice (GDPR, DSA) — cookie_consent
+  - hidden_costs (FTC, DSA) — checkout_flow
+  - obstruction (FTC, CPRA) — subscription_cancellation
+  - sneaking (FTC, GDPR, CPRA) — checkout_flow
+- All 4 regulations represented: FTC, GDPR, DSA, CPRA
+- video_urls: null
+
+**Audit WITHOUT regulatory findings:** `regpdf-test-no-findings`
+- target_url: https://clean-example.com
+- trust_score: 95.0, risk_level: low
+- 1 finding with empty regulatory_categories
+
+**Audit WITH video + regulatory findings:** `regpdf-test-video-and-reg`
+- target_url: https://video-regulatory-example.com
+- trust_score: 55.0, risk_level: medium
+- 2 findings with regulatory categories (GDPR, DSA, FTC, CPRA)
+- video_urls present: cookie_consent_privacy_sensitive, checkout_flow_cost_sensitive
+
+**Key endpoints:**
+- Compliance PDF: `GET http://localhost:8000/api/audits/{id}/report/compliance-pdf`
+- Findings: `GET http://localhost:8000/api/audits/{id}/findings`
+- ReportPage: `http://localhost:5173/audits/{id}/report`
+
+**Benchmark audit for VAL-CROSS-007:** Use `94843e6d-5bfc-4ba5-a58b-3988450889ee` from benchmark `9b9d3b22-9571-4591-b6dd-4f4f199e17f3` — note this benchmark audit has 0 findings (no regulatory categories), so the compliance PDF button should NOT be visible on its ReportPage. For testing CROSS-007 (per-URL regulatory PDF from benchmark), use the manually seeded `regpdf-test-with-findings` audit which HAS regulatory findings but is NOT part of a benchmark. Alternatively, test that the button is correctly ABSENT when there are no regulatory findings.
+
 ## Known Constraints
 - Mock mode only for development — no real Nova Act or AWS Bedrock
 - Videos in mock mode will be placeholder .webm files

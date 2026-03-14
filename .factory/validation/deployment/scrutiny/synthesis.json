@@ -1,0 +1,146 @@
+{
+  "milestone": "deployment",
+  "round": 1,
+  "status": "pass",
+  "validatorsRun": {
+    "test_backend": {
+      "passed": true,
+      "command": "cd backend && .venv\\Scripts\\python.exe -m pytest tests/ -v --tb=short --durations=10",
+      "exitCode": 0,
+      "details": "416 passed, 2 warnings in 21.64s"
+    },
+    "test_frontend": {
+      "passed": true,
+      "command": "cd frontend && npx vitest run",
+      "exitCode": 0,
+      "details": "220 passed across 14 test files"
+    },
+    "typecheck_backend": {
+      "passed": true,
+      "command": "cd backend && .venv\\Scripts\\python.exe -m mypy app/ --ignore-missing-imports",
+      "exitCode": 0,
+      "details": "Success: no issues found in 39 source files (after fixing 1 residual error in seed_service.py:24)"
+    },
+    "typecheck_frontend": {
+      "passed": true,
+      "command": "cd frontend && npx tsc -b",
+      "exitCode": 0,
+      "details": "Clean — no errors"
+    },
+    "lint_backend": {
+      "passed": true,
+      "command": "cd backend && .venv\\Scripts\\python.exe -m ruff check app/",
+      "exitCode": 0,
+      "details": "All checks passed"
+    },
+    "lint_frontend": {
+      "passed": true,
+      "command": "cd frontend && npm run lint",
+      "exitCode": 0,
+      "details": "0 errors, 12 warnings (complexity, max-lines — all pre-existing)"
+    }
+  },
+  "reviewsSummary": {
+    "total": 3,
+    "passed": 3,
+    "failed": 0,
+    "failedFeatures": []
+  },
+  "blockingIssues": [],
+  "nonBlockingIssues": [
+    {
+      "featureId": "deploy-cloudformation-template",
+      "count": 4,
+      "highlights": [
+        "EC2 IAM role has overly broad AmazonS3ReadOnlyAccess — should scope to ArtifactBucket ARN",
+        "S3 bucket publicly accessible for videos/screenshots — consider CloudFront with signed URLs",
+        "RDS DeletionProtection=false — should default true for production",
+        "EC2 placed in public subnet — best practice is private subnet behind ALB"
+      ]
+    },
+    {
+      "featureId": "deploy-scripts-and-configs",
+      "count": 6,
+      "highlights": [
+        "curl|bash pattern for NodeSource — supply-chain risk",
+        "Dev dependencies installed in production (requirements-dev.txt)",
+        "rm -rf safety: ${WWW_DIR} should use ${WWW_DIR:?} to fail on empty",
+        "Extra env vars (SECRET_KEY, LOG_LEVEL, RATE_LIMIT_PER_MINUTE) not in Settings class",
+        "Redundant nginx /api/health location block",
+        "ReadWritePaths scope may need expansion for Playwright temp files"
+      ]
+    },
+    {
+      "featureId": "deploy-mypy-fixes",
+      "count": 7,
+      "highlights": [
+        "Duplicate apply_suppression call in audit_orchestrator.py (dead code)",
+        "Duplicate docstring in nova_act_browser.py _run_cookie_consent_scenario",
+        "Unnecessary 'import time as _time' inside while loop in benchmark_orchestrator.py",
+        "EVIDENCE_TYPE_LABELS type weakened from dict[EvidenceType, str] to dict[str, str]",
+        "Inconsistent session_factory typing (Any vs Callable[[], Session])",
+        "Dead 'result' variable on early return path in seed_service.py",
+        "Overly verbose return pattern in benchmark_orchestrator.py"
+      ]
+    }
+  ],
+  "validatorFixes": [
+    {
+      "file": "backend/app/services/seed_service.py",
+      "line": 24,
+      "description": "Fixed residual mypy error: changed 'return existing_id' to 'return str(existing_id)' to resolve 'Returning Any from function declared to return str | None' error missed by deploy-mypy-fixes worker"
+    }
+  ],
+  "appliedUpdates": [
+    {
+      "target": "library",
+      "description": "Added .factory/library/deployment-architecture.md documenting production deployment conventions: target OS (Amazon Linux 2023), directory layout, service user (ec2-user), service ports, and key infrastructure files",
+      "sourceFeature": "deploy-scripts-and-configs"
+    }
+  ],
+  "suggestedGuidanceUpdates": [
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Clarify mypy strictness level. Currently says 'mypy strict with --ignore-missing-imports' but the actual command in services.yaml does not include --strict. Align documentation with the actual enforcement level.",
+      "evidence": "deploy-mypy-fixes achieved mypy exit 0 without --strict. services.yaml command is 'mypy app/ --ignore-missing-imports' (no --strict).",
+      "isSystemic": false
+    },
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Add convention: when resolving mypy type errors, prefer cast() for narrowing return types over widening container types. Use 'type: ignore[specific-code]' only for third-party library issues. Avoid intermediate-variable patterns when a simpler fix exists.",
+      "evidence": "deploy-mypy-fixes used inconsistent approaches across files: cast() in taxonomy/rule_engine/suppression, type widening for EVIDENCE_TYPE_LABELS, and intermediate typed variables in seed_service/benchmark_orchestrator.",
+      "isSystemic": false
+    },
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Add convention: production deployment scripts should install requirements.txt only (not requirements-dev.txt). Dev dependencies (pytest, ruff, mypy) should not be present in production environments.",
+      "evidence": "deploy-scripts-and-configs installs requirements-dev.txt in production deploy.sh (line 112).",
+      "isSystemic": false
+    },
+    {
+      "target": "skills",
+      "suggestion": "The backend-dev skill's TDD mandate ('Write Tests First') should note an exception for pure code-quality tasks (mypy fixes, lint fixes, infrastructure file creation) where the tests validate static properties rather than runtime behavior. Implementation-first is more efficient for these tasks.",
+      "evidence": "Both deploy-scripts-and-configs and deploy-mypy-fixes workers deviated from TDD. deploy-scripts-and-configs wrote all 4 infra files first, then tests. deploy-mypy-fixes wrote no new tests at all (correct for type annotations). Both are pragmatically justified deviations.",
+      "isSystemic": true
+    }
+  ],
+  "rejectedObservations": [
+    {
+      "observation": "commitId references HEAD at handoff time, not a dedicated feature commit",
+      "reason": "Workflow artifact of how orchestrator assigns commitIds — not actionable for shared state"
+    },
+    {
+      "observation": "First worker session (53847cb3) has no handoff file",
+      "reason": "Operational artifact of a failed/partial session — not a knowledge gap for future workers"
+    },
+    {
+      "observation": "No cfn-lint command in services.yaml",
+      "reason": "cfn-lint is not installed in the environment. Adding a broken command would be misleading. The existing Python tests provide adequate structural validation."
+    },
+    {
+      "observation": "4-session convergence lessons for large type-fix tasks",
+      "reason": "Orchestrator-level lesson about task decomposition — outside scope of shared state. Feature description was already updated with detailed instructions between attempts."
+    }
+  ],
+  "previousRound": null
+}

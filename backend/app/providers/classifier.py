@@ -4,6 +4,7 @@ import json
 from abc import ABC, abstractmethod
 from functools import lru_cache
 from pathlib import Path
+from typing import Any
 
 import boto3
 from botocore.config import Config
@@ -74,7 +75,7 @@ class MockClassifierProvider(ClassifierProvider):
         context_label: str,
         quote: str,
         matched_buttons: list[str],
-        matched_prices: list,
+        matched_prices: list[dict[str, Any]],
         step_count: int,
     ) -> str:
         if draft.pattern_family == "hidden_costs" and len(matched_prices) >= 2:
@@ -141,7 +142,7 @@ class LiveNovaClassifierProvider(ClassifierProvider):
             "trust_impact": draft.trust_impact,
             "evidence_payload": draft.evidence_payload,
         }
-        content = [{"text": json.dumps(prompt_payload, indent=2)}]
+        content: list[dict[str, Any]] = [{"text": json.dumps(prompt_payload, indent=2)}]
         first_image = next(iter(draft.evidence_payload.get("screenshot_paths", [])), None)
         if first_image and Path(first_image).exists():
             content.append(
@@ -165,8 +166,8 @@ class LiveNovaClassifierProvider(ClassifierProvider):
             )
             parsed = self._parse_response(raw_text)
             return ClassifiedFinding(
-                explanation=parsed["explanation"],
-                remediation=parsed["remediation"],
+                explanation=str(parsed["explanation"]),
+                remediation=str(parsed["remediation"]),
                 confidence=float(parsed["confidence"]),
                 severity=str(parsed.get("severity", draft.severity)),
             )
@@ -176,10 +177,12 @@ class LiveNovaClassifierProvider(ClassifierProvider):
     @staticmethod
     def _parse_response(raw_text: str) -> dict[str, str | float]:
         try:
-            return json.loads(raw_text)
+            result: dict[str, str | float] = json.loads(raw_text)
+            return result
         except json.JSONDecodeError:
             start = raw_text.find("{")
             end = raw_text.rfind("}")
             if start != -1 and end != -1 and end > start:
-                return json.loads(raw_text[start : end + 1])
+                inner_result: dict[str, str | float] = json.loads(raw_text[start : end + 1])
+                return inner_result
             raise

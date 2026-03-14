@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from datetime import datetime
+from typing import Any
 from urllib.parse import urlparse
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
@@ -24,7 +25,7 @@ class ReportService:
         self.environment.filters["pretty_path"] = self._pretty_path
         self.storage = storage
 
-    def generate_report(self, audit: Audit, findings: list[Finding], metrics: dict) -> tuple[str | None, str]:
+    def generate_report(self, audit: Audit, findings: list[Finding], metrics: dict[str, Any]) -> tuple[str | None, str]:
         template = self.environment.get_template("report.html")
         grouped_findings: dict[str, dict[str, list[Finding]]] = defaultdict(lambda: defaultdict(list))
         for finding in sorted(findings, key=lambda item: (item.scenario, item.persona, item.order_index)):
@@ -44,7 +45,7 @@ class ReportService:
         )
         return saved.absolute_path, saved.public_url
 
-    def _build_report_meta(self, audit: Audit, findings: list[Finding], metrics: dict) -> dict:
+    def _build_report_meta(self, audit: Audit, findings: list[Finding], metrics: dict[str, Any]) -> dict[str, Any]:
         completed_at = audit.completed_at or audit.updated_at or audit.created_at
         return {
             "target_host": self._target_host(audit.target_url),

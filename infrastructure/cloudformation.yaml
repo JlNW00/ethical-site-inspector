@@ -1,0 +1,615 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  EthicalSiteInspector Production Infrastructure
+  Creates EC2, RDS PostgreSQL, S3, ALB, and security groups for hosting
+  the EthicalSiteInspector application.
+
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: ethical-site-inspector
+    Description: Name prefix for all resources in this stack
+    MinLength: 1
+    MaxLength: 50
+    AllowedPattern: '^[a-zA-Z][-a-zA-Z0-9]*$'
+    ConstraintDescription: Must begin with a letter and contain only alphanumeric characters and hyphens.
+
+  InstanceType:
+    Type: String
+    Default: t3.small
+    Description: EC2 instance type for the application server
+    AllowedValues:
+      - t3.micro
+      - t3.small
+      - t3.medium
+      - t3.large
+    ConstraintDescription: Must be a valid T3 instance type.
+
+  DBInstanceClass:
+    Type: String
+    Default: db.t3.micro
+    Description: RDS instance class for PostgreSQL
+    AllowedValues:
+      - db.t3.micro
+      - db.t3.small
+      - db.t3.medium
+    ConstraintDescription: Must be a valid db.t3 instance class.
+
+  DBAllocatedStorage:
+    Type: Number
+    Default: 20
+    MinValue: 20
+    MaxValue: 1000
+    Description: Allocated storage for RDS instance in GB
+    ConstraintDescription: Must be between 20 and 1000 GB.
+
+  KeyPairName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: Name of an existing EC2 KeyPair to enable SSH access to the instance
+    ConstraintDescription: Must be the name of an existing EC2 KeyPair.
+
+  DomainName:
+    Type: String
+    Default: ''
+    Description: (Optional) Domain name for Route53 DNS record. Leave empty to skip DNS creation.
+    AllowedPattern: '^$|^([a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)*[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?$'
+    ConstraintDescription: Must be a valid domain name or empty.
+
+  HostedZoneId:
+    Type: String
+    Default: ''
+    Description: (Optional) Route53 Hosted Zone ID for the domain. Required if DomainName is provided.
+
+Conditions:
+  HasDomainName: !Not [!Equals [!Ref DomainName, '']]
+  HasHostedZone: !Not [!Equals [!Ref HostedZoneId, '']]
+  CreateDnsRecord: !And [!Condition HasDomainName, !Condition HasHostedZone]
+
+Resources:
+  # ---------------------------------------------------------------------------
+  # VPC and Networking
+  # ---------------------------------------------------------------------------
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags:
+        - Key: Name
+          Value: !Ref EnvironmentName
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Ref EnvironmentName
+
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [0, !GetAZs '']
+      CidrBlock: 10.0.1.0/24
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName} Public Subnet 1'
+
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [1, !GetAZs '']
+      CidrBlock: 10.0.2.0/24
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName} Public Subnet 2'
+
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [0, !GetAZs '']
+      CidrBlock: 10.0.3.0/24
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName} Private Subnet 1'
+
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [1, !GetAZs '']
+      CidrBlock: 10.0.4.0/24
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName} Private Subnet 2'
+
+  NatGateway1EIP:
+    Type: AWS::EC2::EIP
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      Domain: vpc
+
+  NatGateway2EIP:
+    Type: AWS::EC2::EIP
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      Domain: vpc
+
+  NatGateway1:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatGateway1EIP.AllocationId
+      SubnetId: !Ref PublicSubnet1
+
+  NatGateway2:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatGateway2EIP.AllocationId
+      SubnetId: !Ref PublicSubnet2
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName} Public Routes'
+
+  DefaultPublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet1
+      RouteTableId: !Ref PublicRouteTable
+
+  PublicSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet2
+      RouteTableId: !Ref PublicRouteTable
+
+  PrivateRouteTable1:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName} Private Routes (AZ1)'
+
+  DefaultPrivateRoute1:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable1
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway1
+
+  PrivateSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet1
+      RouteTableId: !Ref PrivateRouteTable1
+
+  PrivateRouteTable2:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName} Private Routes (AZ2)'
+
+  DefaultPrivateRoute2:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable2
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway2
+
+  PrivateSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet2
+      RouteTableId: !Ref PrivateRouteTable2
+
+  # ---------------------------------------------------------------------------
+  # Security Groups
+  # ---------------------------------------------------------------------------
+  ALBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub '${EnvironmentName}-alb-sg'
+      GroupDescription: Security group for Application Load Balancer
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+          Description: Allow HTTP from anywhere
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+          Description: Allow HTTPS from anywhere
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-alb-sg'
+
+  EC2SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub '${EnvironmentName}-ec2-sg'
+      GroupDescription: Security group for EC2 application server
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-ec2-sg'
+
+  EC2SecurityGroupIngressFromALB:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref EC2SecurityGroup
+      IpProtocol: tcp
+      FromPort: 8000
+      ToPort: 8000
+      SourceSecurityGroupId: !Ref ALBSecurityGroup
+      Description: Allow HTTP traffic from ALB only
+
+  RDSSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub '${EnvironmentName}-rds-sg'
+      GroupDescription: Security group for RDS PostgreSQL
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-rds-sg'
+
+  RDSSecurityGroupIngressFromEC2:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref RDSSecurityGroup
+      IpProtocol: tcp
+      FromPort: 5432
+      ToPort: 5432
+      SourceSecurityGroupId: !Ref EC2SecurityGroup
+      Description: Allow PostgreSQL traffic from EC2 only
+
+  # ---------------------------------------------------------------------------
+  # S3 Bucket
+  # ---------------------------------------------------------------------------
+  ArtifactBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${EnvironmentName}-artifacts-${AWS::AccountId}'
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders:
+              - '*'
+            AllowedMethods:
+              - GET
+              - HEAD
+            AllowedOrigins:
+              - !Sub 'http://${ALB.DNSName}'
+              - !If [CreateDnsRecord, !Sub 'https://${DomainName}', !Ref 'AWS::NoValue']
+            MaxAge: 3600
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-artifacts'
+
+  ArtifactBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref ArtifactBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowPublicReadForVideos
+            Effect: Allow
+            Principal: '*'
+            Action:
+              - s3:GetObject
+            Resource: !Sub '${ArtifactBucket.Arn}/videos/*'
+          - Sid: AllowPublicReadForScreenshots
+            Effect: Allow
+            Principal: '*'
+            Action:
+              - s3:GetObject
+            Resource: !Sub '${ArtifactBucket.Arn}/screenshots/*'
+
+  # ---------------------------------------------------------------------------
+  # RDS PostgreSQL Instance
+  # ---------------------------------------------------------------------------
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupName: !Sub '${EnvironmentName}-db-subnet-group'
+      DBSubnetGroupDescription: Subnet group for RDS PostgreSQL
+      SubnetIds:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+
+  DBInstance:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBInstanceIdentifier: !Sub '${EnvironmentName}-postgres'
+      DBName: ethicalinspector
+      Engine: postgres
+      EngineVersion: '15.4'
+      DBInstanceClass: !Ref DBInstanceClass
+      AllocatedStorage: !Ref DBAllocatedStorage
+      StorageType: gp2
+      MasterUsername: !Sub '{{resolve:secretsmanager:${DBSecret}:SecretString:username}}'
+      MasterUserPassword: !Sub '{{resolve:secretsmanager:${DBSecret}:SecretString:password}}'
+      VPCSecurityGroups:
+        - !Ref RDSSecurityGroup
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      MultiAZ: false
+      PubliclyAccessible: false
+      BackupRetentionPeriod: 7
+      DeleteAutomatedBackups: true
+      DeletionProtection: false
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-postgres'
+
+  DBSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub '${EnvironmentName}/db-credentials'
+      Description: Credentials for RDS PostgreSQL instance
+      GenerateSecretString:
+        SecretStringTemplate: '{"username":"dbadmin"}'
+        GenerateStringKey: password
+        PasswordLength: 32
+        ExcludeCharacters: '"@/\'
+
+  # ---------------------------------------------------------------------------
+  # EC2 Application Server
+  # ---------------------------------------------------------------------------
+  EC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Sub '{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64}}'
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref KeyPairName
+      SecurityGroupIds:
+        - !Ref EC2SecurityGroup
+      SubnetId: !Ref PublicSubnet1
+      IamInstanceProfile: !Ref EC2InstanceProfile
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          set -e
+          exec > >(tee /var/log/user-data.log) 2>&1
+          
+          echo "=== Starting EthicalSiteInspector setup ==="
+          
+          # Update system
+          dnf update -y
+          
+          # Install required packages
+          dnf install -y python3 python3-pip python3-venv nginx git postgresql15
+          
+          # Install Node.js 20
+          curl -fsSL https://rpm.nodesource.com/setup_20.x | bash -
+          dnf install -y nodejs
+          
+          # Create application directory
+          mkdir -p /opt/ethicalsiteinspector
+          cd /opt/ethicalsiteinspector
+          
+          # Clone repository (placeholder - in production, copy from S3 or CodeDeploy)
+          # git clone <repository-url> .
+          
+          # Set up backend
+          cd /opt/ethicalsiteinspector/backend || mkdir -p /opt/ethicalsiteinspector/backend
+          python3 -m venv .venv
+          source .venv/bin/activate
+          
+          # Install Python dependencies (will be done after code deployment)
+          # pip install -r requirements.txt
+          # playwright install chromium --with-deps
+          
+          # Run database migrations (will be done after code deployment)
+          # alembic upgrade head
+          
+          # Set up nginx
+          systemctl enable nginx
+          systemctl start nginx
+          
+          # Set up systemd service for the backend
+          cat > /etc/systemd/system/ethicalsiteinspector.service << 'EOF'
+          [Unit]
+          Description=EthicalSiteInspector Backend API
+          After=network.target
+          
+          [Service]
+          Type=exec
+          User=ec2-user
+          WorkingDirectory=/opt/ethicalsiteinspector/backend
+          ExecStart=/opt/ethicalsiteinspector/backend/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000
+          Restart=always
+          RestartSec=5
+          EnvironmentFile=/opt/ethicalsiteinspector/.env
+          
+          [Install]
+          WantedBy=multi-user.target
+          EOF
+          
+          systemctl daemon-reload
+          systemctl enable ethicalsiteinspector.service
+          
+          echo "=== Initial setup complete ==="
+          echo "Next steps: Deploy application code and run deployment script"
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-app-server'
+
+  EC2Role:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${EnvironmentName}-ec2-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
+        - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
+      Policies:
+        - PolicyName: SecretsManagerAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource: !Ref DBSecret
+
+  EC2InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: !Sub '${EnvironmentName}-ec2-profile'
+      Roles:
+        - !Ref EC2Role
+
+  # ---------------------------------------------------------------------------
+  # Application Load Balancer
+  # ---------------------------------------------------------------------------
+  ALB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Sub '${EnvironmentName}-alb'
+      Scheme: internet-facing
+      Type: application
+      IpAddressType: ipv4
+      SecurityGroups:
+        - !Ref ALBSecurityGroup
+      Subnets:
+        - !Ref PublicSubnet1
+        - !Ref PublicSubnet2
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-alb'
+
+  ALBTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub '${EnvironmentName}-tg'
+      Port: 8000
+      Protocol: HTTP
+      VpcId: !Ref VPC
+      TargetType: instance
+      HealthCheckPath: /api/health
+      HealthCheckProtocol: HTTP
+      HealthCheckPort: traffic-port
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 3
+      HealthCheckTimeoutSeconds: 5
+      HealthCheckIntervalSeconds: 30
+      SuccessCode: '200'
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-tg'
+
+  ALBTargetGroupAttachment:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroupAttachment
+    Properties:
+      TargetGroupArn: !Ref ALBTargetGroup
+      TargetId: !Ref EC2Instance
+      Port: 8000
+
+  HTTPListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref ALB
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref ALBTargetGroup
+
+  # HTTPS Listener (placeholder - requires SSL certificate)
+  # HTTPSListener:
+  #   Type: AWS::ElasticLoadBalancingV2::Listener
+  #################################################################################################
+
+  # ---------------------------------------------------------------------------
+  # Route53 DNS Record (conditional)
+  # ---------------------------------------------------------------------------
+  DNSRecord:
+    Type: AWS::Route53::RecordSet
+    Condition: CreateDnsRecord
+    Properties:
+      HostedZoneId: !Ref HostedZoneId
+      Name: !Ref DomainName
+      Type: A
+      AliasTarget:
+        DNSName: !GetAtt ALB.DNSName
+        HostedZoneId: !GetAtt ALB.CanonicalHostedZoneID
+        EvaluateTargetHealth: true
+
+Outputs:
+  ALBDnsName:
+    Description: DNS name of the Application Load Balancer
+    Value: !GetAtt ALB.DNSName
+    Export:
+      Name: !Sub '${EnvironmentName}-ALBDnsName'
+
+  RDSEndpoint:
+    Description: RDS PostgreSQL endpoint address
+    Value: !GetAtt DBInstance.Endpoint.Address
+    Export:
+      Name: !Sub '${EnvironmentName}-RDSEndpoint'
+
+  S3BucketName:
+    Description: Name of the S3 bucket for artifacts and videos
+    Value: !Ref ArtifactBucket
+    Export:
+      Name: !Sub '${EnvironmentName}-S3BucketName'
+
+  EC2InstanceId:
+    Description: ID of the EC2 application server
+    Value: !Ref EC2Instance
+    Export:
+      Name: !Sub '${EnvironmentName}-EC2InstanceId'
+
+  VPCId:
+    Description: ID of the VPC
+    Value: !Ref VPC
+    Export:
+      Name: !Sub '${EnvironmentName}-VPCId'
+
+  DBSecretArn:
+    Description: ARN of the database credentials secret
+    Value: !Ref DBSecret
+    Export:
+      Name: !Sub '${EnvironmentName}-DBSecretArn'

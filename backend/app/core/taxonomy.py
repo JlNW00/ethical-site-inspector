@@ -7,7 +7,7 @@ All backend modules should import from this file rather than hardcoding values.
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Literal, cast
 
 # =============================================================================
 # Dark Pattern Categories
@@ -319,7 +319,7 @@ EvidenceType = Literal[
 ]
 
 # Evidence type labels for UI display
-EVIDENCE_TYPE_LABELS: dict[EvidenceType, str] = {
+EVIDENCE_TYPE_LABELS: dict[str, str] = {
     "nova_ai": "Nova AI evidence",
     "heuristic": "Heuristic detection",
     "mock": "Simulated",
@@ -376,7 +376,7 @@ def get_regulations_for_category(category: str) -> list[str]:
     """Get applicable regulations for a given dark pattern category."""
     # Cast category to DarkPatternCategory if valid
     if category in DARK_PATTERN_CATEGORIES:
-        result = REGULATORY_MAPPING.get(category)  # type: ignore[arg-type,call-overload]
+        result = REGULATORY_MAPPING.get(cast("DarkPatternCategory", category))
         if result:
             return list(result)
     return []
@@ -385,7 +385,7 @@ def get_regulations_for_category(category: str) -> list[str]:
 def get_regulations_for_pattern_family(pattern_family: str) -> list[str]:
     """Get applicable regulations for a legacy pattern family (backward compatibility)."""
     # Pattern families are legacy strings, not Literal types
-    result = PATTERN_FAMILY_REGULATORY_MAPPING.get(pattern_family, [])  # type: ignore[arg-type,call-overload]
+    result = PATTERN_FAMILY_REGULATORY_MAPPING.get(pattern_family, [])
     if result:
         return list(result)
     return []
@@ -393,7 +393,7 @@ def get_regulations_for_pattern_family(pattern_family: str) -> list[str]:
 
 def category_to_pattern_family(category: str) -> str | None:
     """Map a dark pattern category to a legacy pattern family (if applicable)."""
-    reverse_map: dict[str, str] = {v: k for k, v in PATTERN_FAMILY_TO_CATEGORY.items()}  # type: ignore[misc]
+    reverse_map: dict[str, str] = {v: k for k, v in PATTERN_FAMILY_TO_CATEGORY.items()}
     return reverse_map.get(category)
 
 
@@ -431,7 +431,7 @@ def get_relevant_categories_for_scenario(scenario: str) -> list[str]:
     """Get dark pattern categories relevant to a given scenario."""
     # Cast scenario to ScenarioType if valid
     if scenario in AUDIT_SCENARIOS:
-        result = SCENARIO_RELEVANT_CATEGORIES.get(scenario)  # type: ignore[arg-type,call-overload]
+        result = SCENARIO_RELEVANT_CATEGORIES.get(cast("ScenarioType", scenario))
         if result:
             return list(result)
     return []
