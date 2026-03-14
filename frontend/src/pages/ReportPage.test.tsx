@@ -128,14 +128,15 @@ const createMockFinding = (overrides: Partial<Finding> = {}): Finding => ({
   ...overrides,
 });
 
-function renderReportPage(auditId = "audit-123") {
+function renderReportPage(auditId = "audit-123", searchParams = "") {
   return render(
-    <MemoryRouter initialEntries={[`/audits/${auditId}/report`]}>
+    <MemoryRouter initialEntries={[`/audits/${auditId}/report${searchParams}`]}>
       <Routes>
         <Route path="/audits/:auditId/report" element={<ReportPage />} />
         <Route path="/audits/:auditId/diff" element={<div data-testid="diff-page">Diff Page</div>} />
         <Route path="/audits/:auditId/run" element={<div data-testid="run-page">Run Page</div>} />
         <Route path="/history" element={<div data-testid="history-page">History Page</div>} />
+        <Route path="/benchmarks/:benchmarkId" element={<div data-testid="benchmark-page">Benchmark Page</div>} />
       </Routes>
     </MemoryRouter>,
   );
@@ -466,6 +467,35 @@ describe("ReportPage", () => {
       const runLogLink = screen.getByText(/Back to run log/i).closest("a");
       expect(runLogLink).toHaveAttribute("href", "/audits/audit-123/run");
     });
+  });
+
+  it("shows Back to Benchmark link when ?benchmark= param is present", async () => {
+    const audit = createMockAudit({ id: "audit-123" });
+
+    mockGetAudit.mockResolvedValue(audit);
+    mockGetFindings.mockResolvedValue({ audit_id: "audit-123", findings: [] });
+
+    renderReportPage("audit-123", "?benchmark=bench-456");
+
+    await waitFor(() => {
+      const benchmarkLink = screen.getByText(/Back to Benchmark/i).closest("a");
+      expect(benchmarkLink).toHaveAttribute("href", "/benchmarks/bench-456");
+    });
+  });
+
+  it("does not show Back to Benchmark link when no benchmark param", async () => {
+    const audit = createMockAudit({ id: "audit-123" });
+
+    mockGetAudit.mockResolvedValue(audit);
+    mockGetFindings.mockResolvedValue({ audit_id: "audit-123", findings: [] });
+
+    renderReportPage();
+
+    await waitFor(() => {
+      expect(screen.getByText("Trust Audit Report")).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText(/Back to Benchmark/i)).not.toBeInTheDocument();
   });
 
   it("displays executive summary with metrics", async () => {

@@ -200,8 +200,8 @@ export function SubmitPage() {
         const validUrls = benchmarkUrls.filter((url) => url.trim() && isValidUrl(url));
         const benchmark = await api.createBenchmark({
           urls: validUrls,
-          scenarios: selectedScenarios,
-          personas: selectedPersonas,
+          selected_scenarios: selectedScenarios,
+          selected_personas: selectedPersonas,
         });
         navigate(`/benchmarks/${benchmark.id}`);
       } else {

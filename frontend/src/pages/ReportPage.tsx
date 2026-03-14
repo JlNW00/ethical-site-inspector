@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 
 import { api } from "../api/client";
 import type { Audit, AuditEvent, Finding } from "../api/types";
@@ -253,6 +253,8 @@ function VideoSection({ videoUrls, scenarios, personas }: VideoSectionProps) {
 
 export function ReportPage() {
   const { auditId } = useParams<{ auditId: string }>();
+  const [searchParams] = useSearchParams();
+  const benchmarkId = searchParams.get("benchmark");
   const [audit, setAudit] = useState<Audit | null>(null);
   const [findings, setFindings] = useState<Finding[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -387,6 +389,11 @@ export function ReportPage() {
                   View Run Log
                 </Link>
               ) : null}
+              {benchmarkId ? (
+                <Link className="btn btn-secondary" to={`/benchmarks/${benchmarkId}`}>
+                  Back to Benchmark
+                </Link>
+              ) : null}
               <Link className="btn btn-secondary" to="/history">
                 Back to History
               </Link>
@@ -472,6 +479,11 @@ export function ReportPage() {
             {auditId ? (
               <Link className="btn btn-secondary" to={`/audits/${auditId}/run`}>
                 Back to run log
+              </Link>
+            ) : null}
+            {benchmarkId ? (
+              <Link className="btn btn-secondary" to={`/benchmarks/${benchmarkId}`}>
+                Back to Benchmark
               </Link>
             ) : null}
             <Link className="btn btn-secondary" to="/history">

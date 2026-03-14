@@ -136,6 +136,6 @@ export interface Benchmark {
 
 export interface CreateBenchmarkRequest {
   urls: string[];
-  scenarios: string[];
-  personas: string[];
+  selected_scenarios: string[];
+  selected_personas: string[];
 }

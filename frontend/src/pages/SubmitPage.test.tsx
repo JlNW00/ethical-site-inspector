@@ -345,7 +345,7 @@ describe("SubmitPage", () => {
       expect(mockNavigate).toHaveBeenCalledWith("/audits/audit-123/run");
     });
 
-    it("calls createBenchmark and navigates to benchmark page in benchmark mode", async () => {
+    it("calls createBenchmark with correct field names and navigates to benchmark page", async () => {
       mockCreateBenchmark.mockResolvedValue({ id: "bench-456", urls: ["https://example1.com", "https://example2.com"] });
 
       render(
@@ -372,8 +372,8 @@ describe("SubmitPage", () => {
       await waitFor(() => {
         expect(mockCreateBenchmark).toHaveBeenCalledWith({
           urls: ["https://example1.com", "https://example2.com"],
-          scenarios: expect.any(Array),
-          personas: expect.any(Array),
+          selected_scenarios: expect.any(Array),
+          selected_personas: expect.any(Array),
         });
       });
 
@@ -441,6 +441,36 @@ describe("SubmitPage", () => {
       await waitFor(() => {
         expect(screen.getByText("Network error")).toBeInTheDocument();
       });
+    });
+
+    it("clears stale error when starting new submission", async () => {
+      mockCreateAudit.mockRejectedValue(new Error("First attempt failed"));
+
+      render(
+        <MemoryRouter>
+          <SubmitPage />
+        </MemoryRouter>
+      );
+
+      // First submission fails
+      const startButton = screen.getByTestId("start-audit-button");
+      fireEvent.click(startButton);
+
+      await waitFor(() => {
+        expect(screen.getByText("First attempt failed")).toBeInTheDocument();
+      });
+
+      // Mock success for second attempt
+      mockCreateAudit.mockResolvedValue({ id: "audit-123" });
+
+      // Second submission - error should be cleared
+      fireEvent.click(startButton);
+
+      await waitFor(() => {
+        expect(screen.queryByText("First attempt failed")).not.toBeInTheDocument();
+      });
+
+      expect(mockNavigate).toHaveBeenCalledWith("/audits/audit-123/run");
     });
   });
 
