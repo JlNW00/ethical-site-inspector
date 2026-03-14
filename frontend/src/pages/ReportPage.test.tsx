@@ -805,7 +805,7 @@ describe("ReportPage", () => {
     renderReportPage();
 
     await waitFor(() => {
-      expect(screen.getByText("Trust Audit Report")).toBeInTheDocument();
+      expect(screen.getByText(/Download Compliance Report/i)).toBeInTheDocument();
     });
 
     const complianceButton = screen.getByText(/Download Compliance Report/i).closest("a");
