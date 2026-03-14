@@ -1,6 +1,9 @@
-{"method": "GET", "path": "/api/health", "request_id": "50516585-aeff-4014-a349-01626b5b697a", "event": "request_started", "logger": "middleware.request_id", "level": "info", "timestamp": "2026-03-14T08:08:15.931944Z"}
-{"method": "GET", "path": "/api/health", "status_code": 200, "request_id": "50516585-aeff-4014-a349-01626b5b697a", "event": "request_completed", "logger": "middleware.request_id", "level": "info", "timestamp": "2026-03-14T08:08:15.933445Z"}
-INFO:     127.0.0.1:61961 - "GET /api/health HTTP/1.1" 200 OK
-{"method": "GET", "path": "/api/health", "request_id": "1ed4c885-4ca4-4a77-8f04-a4a2d7628e19", "event": "request_started", "logger": "middleware.request_id", "level": "info", "timestamp": "2026-03-14T08:08:18.105793Z"}
-{"method": "GET", "path": "/api/health", "status_code": 200, "request_id": "1ed4c885-4ca4-4a77-8f04-a4a2d7628e19", "event": "request_completed", "logger": "middleware.request_id", "level": "info", "timestamp": "2026-03-14T08:08:18.106293Z"}
-INFO:     127.0.0.1:61969 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     Will watch for changes in these directories: ['C:\\EthicalSiteInspector\\backend']
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [155616] using WatchFiles
+INFO:     Started server process [155856]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+{"method": "GET", "path": "/api/health", "request_id": "d804b55f-06dd-41e5-b672-e3918a8ddc57", "event": "request_started", "logger": "middleware.request_id", "level": "info", "timestamp": "2026-03-14T10:06:38.333222Z"}
+{"method": "GET", "path": "/api/health", "status_code": 200, "request_id": "d804b55f-06dd-41e5-b672-e3918a8ddc57", "event": "request_completed", "logger": "middleware.request_id", "level": "info", "timestamp": "2026-03-14T10:06:38.334223Z"}
+INFO:     127.0.0.1:25025 - "GET /api/health HTTP/1.1" 200 OK

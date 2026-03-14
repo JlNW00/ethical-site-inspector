@@ -12,9 +12,8 @@ from __future__ import annotations
 
 import os
 import sys
-from io import BytesIO
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
@@ -27,9 +26,8 @@ from sqlalchemy.orm import sessionmaker as sa_sessionmaker
 from app.api.routes.audits import router as audits_router
 from app.api.routes.health import router as health_router
 from app.core.config import get_settings
-from app.core.database import Base, get_db
+from app.core.database import get_db
 from app.models.audit import Audit, Finding
-
 
 # =============================================================================
 # Fixtures

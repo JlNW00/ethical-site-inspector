@@ -11,17 +11,14 @@ These tests verify that:
 
 from __future__ import annotations
 
-import pytest
-
+from app.core.taxonomy import (
+    REGULATIONS,
+)
 from app.detectors.suppression import (
     apply_suppression,
     calculate_confidence,
     get_regulatory_categories,
     should_suppress,
-)
-from app.core.taxonomy import (
-    EVIDENCE_TYPE_CONFIDENCE,
-    REGULATIONS,
 )
 
 

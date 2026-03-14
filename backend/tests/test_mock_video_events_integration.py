@@ -455,6 +455,9 @@ class TestVideoEventsAPIResponse:
         assert audit.video_urls is not None, "video_urls should be persisted"
         assert len(audit.video_urls) > 0, "video_urls should not be empty"
 
+
+
+
     def test_api_response_events_include_video_phase(
         self, db_session, mock_audit_orchestrator_with_stubs
     ):
@@ -484,6 +487,72 @@ class TestVideoEventsAPIResponse:
         # Events should include video phase
         video_events = [e for e in audit.events if e.phase == "video"]
         assert len(video_events) > 0, "API response should include video phase events"
+
+
+class TestMockWebMValidity:
+    """Test that mock WebM files are valid and browser-compatible."""
+
+    def test_mock_webm_bytes_length(self):
+        """
+        VAL-VIDEO-003: Mock WebM file must be > 100 bytes to be valid.
+        The old 37-byte placeholder was invalid; the new one is 212 bytes.
+        """
+        from app.providers.browser import MockBrowserAuditProvider
+
+        webm_bytes = MockBrowserAuditProvider.MOCK_WEBM_BYTES
+        assert len(webm_bytes) > 100, f"Mock WebM should be > 100 bytes, got {len(webm_bytes)}"
+        assert len(webm_bytes) >= 200, f"Mock WebM should be at least 200 bytes, got {len(webm_bytes)}"
+
+    def test_mock_webm_has_ebml_header(self):
+        """
+        VAL-VIDEO-003: Valid WebM must start with EBML header (0x1A 0x45 0xDF 0xA3).
+        """
+        from app.providers.browser import MockBrowserAuditProvider
+
+        webm_bytes = MockBrowserAuditProvider.MOCK_WEBM_BYTES
+        # EBML header signature
+        assert webm_bytes[:4] == bytes([0x1A, 0x45, 0xDF, 0xA3]), "Should start with EBML header"
+
+    def test_mock_webm_contains_webm_doctype(self):
+        """
+        VAL-VIDEO-003: Valid WebM must contain 'webm' doctype.
+        """
+        from app.providers.browser import MockBrowserAuditProvider
+
+        webm_bytes = MockBrowserAuditProvider.MOCK_WEBM_BYTES
+        assert b"webm" in webm_bytes, "Should contain 'webm' doctype"
+
+    def test_mock_webm_contains_segment(self):
+        """
+        VAL-VIDEO-003: Valid WebM must contain Segment element.
+        """
+        from app.providers.browser import MockBrowserAuditProvider
+
+        webm_bytes = MockBrowserAuditProvider.MOCK_WEBM_BYTES
+        # Segment ID is 0x18 0x53 0x80 0x67
+        segment_id = bytes([0x18, 0x53, 0x80, 0x67])
+        assert segment_id in webm_bytes, "Should contain Segment element"
+
+    def test_mock_webm_contains_tracks(self):
+        """
+        VAL-VIDEO-003: Valid WebM must contain Tracks element.
+        """
+        from app.providers.browser import MockBrowserAuditProvider
+
+        webm_bytes = MockBrowserAuditProvider.MOCK_WEBM_BYTES
+        # Tracks ID is 0x16 0x54 0xAE 0x6B
+        tracks_id = bytes([0x16, 0x54, 0xAE, 0x6B])
+        assert tracks_id in webm_bytes, "Should contain Tracks element"
+
+    def test_mock_webm_contains_vp8_codec(self):
+        """
+        VAL-VIDEO-003: Valid WebM must contain VP8 video track.
+        """
+        from app.providers.browser import MockBrowserAuditProvider
+
+        webm_bytes = MockBrowserAuditProvider.MOCK_WEBM_BYTES
+        # VP8 codec ID
+        assert b"V_VP8" in webm_bytes, "Should contain VP8 codec ID"
 
 
 class TestVideoEventsFrontendContract:

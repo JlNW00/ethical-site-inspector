@@ -5,7 +5,6 @@ from __future__ import annotations
 import os
 import sys
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 from sqlalchemy import create_engine
@@ -18,8 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 # Override DATABASE_URL *before* any app module touches get_settings / engine
 os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
 
-from app.core.database import Base  # noqa: E402
-from app.models.audit import Audit, AuditEvent, Finding  # noqa: E402
+from app.core.database import Base
 
 
 @pytest.fixture()

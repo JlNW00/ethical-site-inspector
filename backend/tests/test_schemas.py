@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -19,7 +19,6 @@ from app.schemas.audit import (
     HealthResponse,
     ReadinessResponse,
 )
-
 
 # ---------------------------------------------------------------------------
 # AuditCreateRequest
@@ -66,7 +65,7 @@ class TestAuditCreateRequest:
 
 class TestHealthResponse:
     def test_health_response_creation(self):
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         resp = HealthResponse(status="ok", timestamp=now)
         assert resp.status == "ok"
         assert resp.timestamp == now
@@ -121,7 +120,7 @@ class TestReadinessResponse:
 
 class TestFindingRead:
     def test_finding_read_from_dict(self):
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         data = {
             "id": "f-001",
             "scenario": "cookie_consent",

@@ -10,12 +10,12 @@ These tests verify that:
 
 from __future__ import annotations
 
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from app.models.audit import Audit, Finding
+from app.models.audit import Finding
 from app.schemas.audit import FindingRead
 
 
@@ -210,8 +210,9 @@ class TestOrchestratorIntegration:
     def orchestrator_with_stub(self, db_engine):
         """Create an orchestrator with a stubbed browser provider."""
         from sqlalchemy.orm import sessionmaker
-        from app.services.audit_orchestrator import AuditOrchestrator
+
         from app.schemas.runtime import BrowserRunResult, JourneyObservation, ObservationEvidence
+        from app.services.audit_orchestrator import AuditOrchestrator
 
         session_local = sessionmaker(bind=db_engine)
         orchestrator = AuditOrchestrator(session_local)
@@ -287,7 +288,9 @@ class TestOrchestratorIntegration:
     def test_findings_have_regulatory_categories_after_audit(self, db_session, orchestrator_with_stub):
         """VAL-ADV-001: Findings should have regulatory_categories populated after audit."""
         import time
+
         from pydantic import HttpUrl
+
         from app.schemas.audit import AuditCreateRequest
 
         orchestrator, _ = orchestrator_with_stub
@@ -321,7 +324,9 @@ class TestOrchestratorIntegration:
     def test_findings_have_evidence_type_in_payload(self, db_session, orchestrator_with_stub):
         """Findings should have evidence_type in evidence_payload after audit."""
         import time
+
         from pydantic import HttpUrl
+
         from app.schemas.audit import AuditCreateRequest
 
         orchestrator, _ = orchestrator_with_stub
@@ -348,7 +353,9 @@ class TestOrchestratorIntegration:
     def test_findings_have_evidence_type_label(self, db_session, orchestrator_with_stub):
         """Findings should have human-readable evidence_type_label in payload."""
         import time
+
         from pydantic import HttpUrl
+
         from app.schemas.audit import AuditCreateRequest
 
         orchestrator, _ = orchestrator_with_stub
@@ -376,7 +383,9 @@ class TestOrchestratorIntegration:
     def test_audit_metrics_include_suppressed_count(self, db_session, orchestrator_with_stub):
         """VAL-ADV-005: Audit metrics should include suppressed_count."""
         import time
+
         from pydantic import HttpUrl
+
         from app.schemas.audit import AuditCreateRequest
 
         orchestrator, _ = orchestrator_with_stub
@@ -401,7 +410,9 @@ class TestOrchestratorIntegration:
     def test_audit_metrics_include_active_finding_count(self, db_session, orchestrator_with_stub):
         """Audit metrics should include active_finding_count (non-suppressed)."""
         import time
+
         from pydantic import HttpUrl
+
         from app.schemas.audit import AuditCreateRequest
 
         orchestrator, _ = orchestrator_with_stub
@@ -429,7 +440,6 @@ class TestOrchestratorIntegration:
     def test_confidence_scoring_nova_ai_vs_heuristic(self, db_session):
         """VAL-ADV-003: Nova AI findings get confidence > 0.75, heuristic <= 0.75."""
         from app.detectors.suppression import calculate_confidence
-        from app.core.taxonomy import EVIDENCE_TYPE_CONFIDENCE
 
         # Nova AI evidence should get confidence > 0.75
         nova_ai_confidence = calculate_confidence(

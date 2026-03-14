@@ -27,9 +27,8 @@ from sqlalchemy.orm import sessionmaker as sa_sessionmaker
 from app.api.routes.audits import router as audits_router
 from app.api.routes.health import router as health_router
 from app.core.config import get_settings
-from app.core.database import Base, get_db
+from app.core.database import get_db
 from app.models.audit import Audit, AuditEvent, Finding
-
 
 # =============================================================================
 # Fixtures

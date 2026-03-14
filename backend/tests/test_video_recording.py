@@ -15,7 +15,6 @@ from app.providers.browser import MockBrowserAuditProvider, PlaywrightAuditProvi
 from app.providers.nova_act_browser import NovaActAuditProvider
 from app.providers.storage import StorageObject, StorageProvider
 
-
 # =============================================================================
 # Video URL Collection Tests
 # =============================================================================
