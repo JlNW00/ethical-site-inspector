@@ -21,6 +21,10 @@ EthicalSiteInspector autonomously navigates real websites as different user pers
 - **PDF & HTML reports** — Exportable audit reports with evidence and regulatory references
 - **Persona diff view** — Side-by-side comparison of how different personas experience the same site
 - **Audit history** — Browse, filter, compare, and rerun past audits
+- **Nova Act video replay** — Browser session recordings (.webm) per scenario/persona, viewable on ReportPage
+- **Comparative benchmark mode** — Multi-URL (2-5) side-by-side dark pattern comparison with trust score ranking
+- **Regulatory compliance PDF** — Formal per-regulation reports (FTC, GDPR, DSA, CPRA) with article citations and compliance matrix
+- **AWS CloudFormation deployment** — Production infrastructure template (EC2, RDS, S3, ALB) with deployment scripts
 
 ## How Nova Is Used
 
@@ -41,7 +45,8 @@ Nova on Bedrock (`LiveNovaClassifierProvider`) enriches findings with AI-powered
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                    React Frontend                        │
-│   Submit → Run (live events) → Report → History/Diff    │
+│   Submit → Run (live events) → Report → History/Diff     │
+│   BenchmarkPage (multi-URL comparison)                   │
 └──────────────────────┬──────────────────────────────────┘
                        │ REST API
 ┌──────────────────────▼──────────────────────────────────┐
@@ -58,6 +63,11 @@ Nova on Bedrock (`LiveNovaClassifierProvider`) enriches findings with AI-powered
 │  │ Rule Engine  │  │ Taxonomy     │  │ Suppression   │  │
 │  │ (Heuristics) │  │ (Categories) │  │ Engine        │  │
 │  └──────────────┘  └──────────────┘  └───────────────┘  │
+└─────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────┐
+│              infrastructure/                              │
+│  CloudFormation (EC2, RDS, S3, ALB) + deploy scripts     │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -141,11 +151,12 @@ NOVA_MODEL_ID=us.amazon.nova-pro-v1:0
 
 ## Demo Flow
 
-1. **Submit page** — Enter a URL, see mode/readiness badges, launch an audit
+1. **Submit page** — Enter a URL, see mode/readiness badges, launch an audit; toggle "Benchmark Mode" for multi-URL comparison
 2. **Run page** — Watch live activity events and evidence capture in real time
-3. **Report page** — Trust score, scenario breakdown, finding cards with evidence, screenshot timeline, PDF download
+3. **Report page** — Trust score, scenario breakdown, finding cards with evidence, screenshot timeline, PDF download, "Session Recordings" video player section, and "Download Compliance Report" button
 4. **Persona diff** — Side-by-side comparison of how different personas experienced the site
 5. **History** — Browse past audits, filter by status, compare results, rerun audits
+6. **Benchmark page** — Side-by-side trust score comparison across multiple URLs
 
 Mock mode works immediately with no credentials — it seeds a demo audit on startup.
 
@@ -161,14 +172,18 @@ Mock mode works immediately with no credentials — it seeds a demo audit on sta
 | `GET` | `/api/audits/{id}/findings` | Get audit findings |
 | `GET` | `/api/audits/{id}/report` | Get HTML report |
 | `GET` | `/api/audits/{id}/report/pdf` | Download PDF report |
+| `GET` | `/api/audits/{id}/report/compliance-pdf` | Download regulatory compliance PDF |
+| `POST` | `/api/benchmarks` | Create benchmark (multi-URL audit) |
+| `GET` | `/api/benchmarks` | List all benchmarks |
+| `GET` | `/api/benchmarks/{id}` | Get benchmark details |
 
 ## Testing
 
 ```bash
-# Backend (253 tests)
+# Backend (416 tests)
 cd backend && .venv/bin/python -m pytest tests/ -v
 
-# Frontend (132 tests)
+# Frontend (220 tests)
 cd frontend && npm test
 
 # Full lint + type check
@@ -191,14 +206,20 @@ backend/
     services/            # Audit orchestrator, report service, provider registry
     templates/           # HTML report templates
   alembic/               # Database migrations
-  tests/                 # 253 backend tests
+  tests/                 # 416 backend tests
 frontend/
   src/
-    pages/               # SubmitPage, RunPage, ReportPage, HistoryPage, PersonaDiffPage, ComparePage
+    pages/               # SubmitPage, RunPage, ReportPage, HistoryPage, PersonaDiffPage, ComparePage, BenchmarkPage
     components/          # FindingCard, ModeBadge, ProgressMeter, Layout
     api/                 # API client and types
     constants/           # Frontend taxonomy (synced with backend)
     styles/              # Dark glassmorphism CSS theme
+infrastructure/
+  cloudformation.yaml    # AWS CloudFormation template (EC2, RDS, S3, ALB)
+  deploy.sh              # Deployment script
+  nginx/                 # Nginx configuration
+  systemd/               # Systemd service files
+  env.production.template # Production environment template
 ```
 
 ## Environment Variables
