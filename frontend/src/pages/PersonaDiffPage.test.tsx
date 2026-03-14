@@ -584,4 +584,129 @@ describe("PersonaDiffPage", () => {
 
     expect(screen.getByText("low")).toBeInTheDocument();
   });
+
+  // Video Section Tests
+  it("renders video links when video_urls is present for personas", async () => {
+    const audit = createMockAudit({
+      id: "audit-123",
+      selected_scenarios: ["cookie_consent", "checkout_flow"],
+      selected_personas: ["privacy_sensitive", "cost_sensitive"],
+      video_urls: {
+        "cookie_consent_privacy_sensitive": "/videos/cookie_privacy.webm",
+        "checkout_flow_privacy_sensitive": "/videos/checkout_privacy.webm",
+        "cookie_consent_cost_sensitive": "/videos/cookie_cost.webm",
+      },
+    });
+
+    mockGetAudit.mockResolvedValue(audit);
+    mockGetFindings.mockResolvedValue({ audit_id: "audit-123", findings: [] });
+
+    renderPersonaDiffPage();
+
+    await waitFor(() => {
+      expect(screen.getByText(/2 differences found/i)).toBeInTheDocument();
+    });
+
+    // Check that video links appear for personas with videos
+    // Privacy sensitive has 2 videos -> shows "Session Recordings" section with numbered links
+    // Cost sensitive has 1 video -> shows single "Watch session" link
+    expect(screen.getByText(/Watch session/i)).toBeInTheDocument();
+    expect(screen.getByText(/Session Recordings/i)).toBeInTheDocument();
+    expect(screen.getByText(/Watch #1/i)).toBeInTheDocument();
+    expect(screen.getByText(/Watch #2/i)).toBeInTheDocument();
+  });
+
+  it("renders multiple video links when persona has multiple videos", async () => {
+    const audit = createMockAudit({
+      id: "audit-123",
+      selected_scenarios: ["cookie_consent", "checkout_flow", "newsletter_signup"],
+      selected_personas: ["privacy_sensitive"],
+      video_urls: {
+        "cookie_consent_privacy_sensitive": "/videos/1.webm",
+        "checkout_flow_privacy_sensitive": "/videos/2.webm",
+        "newsletter_signup_privacy_sensitive": "/videos/3.webm",
+      },
+    });
+
+    mockGetAudit.mockResolvedValue(audit);
+    mockGetFindings.mockResolvedValue({ audit_id: "audit-123", findings: [] });
+
+    renderPersonaDiffPage();
+
+    await waitFor(() => {
+      expect(screen.getByText("Session Recordings")).toBeInTheDocument();
+    });
+
+    // Should show "Watch #1", "Watch #2", "Watch #3" for multiple videos
+    expect(screen.getByText(/Watch #1/i)).toBeInTheDocument();
+    expect(screen.getByText(/Watch #2/i)).toBeInTheDocument();
+    expect(screen.getByText(/Watch #3/i)).toBeInTheDocument();
+  });
+
+  it("does not show video links when video_urls is null", async () => {
+    const audit = createMockAudit({
+      id: "audit-123",
+      selected_personas: ["privacy_sensitive"],
+      video_urls: null,
+    });
+
+    mockGetAudit.mockResolvedValue(audit);
+    mockGetFindings.mockResolvedValue({ audit_id: "audit-123", findings: [] });
+
+    renderPersonaDiffPage();
+
+    await waitFor(() => {
+      expect(screen.getByText(/Privacy Sensitive/i)).toBeInTheDocument();
+    });
+
+    // No video link should appear
+    expect(screen.queryByText(/Watch session/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Session Recordings/i)).not.toBeInTheDocument();
+  });
+
+  it("does not show video links when video_urls is empty", async () => {
+    const audit = createMockAudit({
+      id: "audit-123",
+      selected_personas: ["privacy_sensitive"],
+      video_urls: {},
+    });
+
+    mockGetAudit.mockResolvedValue(audit);
+    mockGetFindings.mockResolvedValue({ audit_id: "audit-123", findings: [] });
+
+    renderPersonaDiffPage();
+
+    await waitFor(() => {
+      expect(screen.getByText(/Privacy Sensitive/i)).toBeInTheDocument();
+    });
+
+    // No video link should appear
+    expect(screen.queryByText(/Watch session/i)).not.toBeInTheDocument();
+  });
+
+  it("correctly parses multi-word scenario and persona names in video keys", async () => {
+    const audit = createMockAudit({
+      id: "audit-123",
+      selected_scenarios: ["cookie_consent", "newsletter_signup"],
+      selected_personas: ["privacy_sensitive", "exit_intent"],
+      video_urls: {
+        "cookie_consent_privacy_sensitive": "/videos/cookie_privacy.webm",
+        "newsletter_signup_exit_intent": "/videos/newsletter_exit.webm",
+      },
+    });
+
+    mockGetAudit.mockResolvedValue(audit);
+    mockGetFindings.mockResolvedValue({ audit_id: "audit-123", findings: [] });
+
+    renderPersonaDiffPage();
+
+    await waitFor(() => {
+      // Video links should appear for both personas with correct video URLs
+      expect(screen.getAllByText(/Watch session/i)).toHaveLength(2);
+    });
+
+    // Verify specific video links have correct hrefs
+    const privacyLink = screen.getAllByText(/Watch session/i)[0].closest("a");
+    expect(privacyLink).toHaveAttribute("href", "/videos/cookie_privacy.webm");
+  });
 });

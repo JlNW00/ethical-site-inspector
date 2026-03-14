@@ -6,6 +6,7 @@ import type { Audit, Finding, PersonaComparison } from "../api/types";
 import { FindingCard } from "../components/FindingCard";
 import { Layout } from "../components/Layout";
 import { titleize } from "../lib/format";
+import { parseVideoUrls } from "../lib/video";
 
 interface PersonaData {
   persona: string;
@@ -152,17 +153,19 @@ export function PersonaDiffPage() {
         });
       });
 
-      // Collect video URLs for this persona
+      // Collect video URLs for this persona using proper key parsing
       const personaVideos: string[] = [];
       if (audit.video_urls) {
-        Object.entries(audit.video_urls).forEach(([key, url]) => {
-          // Key format: "{scenario}_{persona}"
-          const parts = key.split(/[_-]/);
-          const videoPersona = parts[1] ?? "";
-          if (videoPersona === persona) {
-            personaVideos.push(url);
+        const parsedVideos = parseVideoUrls(
+          audit.video_urls,
+          audit.selected_scenarios,
+          audit.selected_personas,
+        );
+        for (const video of parsedVideos) {
+          if (video.persona === persona) {
+            personaVideos.push(video.url);
           }
-        });
+        }
       }
 
       return {

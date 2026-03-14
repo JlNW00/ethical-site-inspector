@@ -1,0 +1,45 @@
+{
+  "featureId": "fix-nova-act-video-url-collection",
+  "reviewedAt": "2026-03-14T09:30:00.000Z",
+  "commitId": "9a1b0cd",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The fix correctly addresses the blocking issue from the prior review (video-nova-act-integration). The original problem was that NovaActAuditProvider.run_audit() returned video_urls={} (hardcoded empty dict) because scenario methods had no mechanism to propagate video URLs back. The fix introduces a thread-safe shared dict (video_urls + video_urls_lock) in run_audit(), passes them through _run_scenario_with_personas → _run_single_persona_with_progress → each scenario method. All 6 scenario methods now accept optional video_urls/video_urls_lock params and add extracted video URLs to the shared dict under the lock. BrowserRunResult correctly returns the populated dict. Four comprehensive tests cover: single scenario, multiple scenarios×personas, parallel execution thread safety, and empty video case. The implementation is sound and consistent across all scenario methods.",
+    "issues": [
+      {
+        "file": "backend/app/providers/nova_act_browser.py",
+        "line": 317,
+        "severity": "non_blocking",
+        "description": "Minor: `video_urls if video_urls else {}` is redundant since video_urls is already initialized as {} and the expression just returns {} again when empty (empty dict is falsy). Could simply be `video_urls=video_urls`. Not a bug — functionally correct in both empty and populated cases."
+      },
+      {
+        "file": "backend/app/providers/nova_act_browser.py",
+        "line": 412,
+        "severity": "non_blocking",
+        "description": "Pre-existing: Dead code _run_single_persona() (old method without video_urls params) is still present. It was flagged in the prior review as non-blocking. The fix feature was not scoped to address this."
+      },
+      {
+        "file": "backend/app/providers/nova_act_browser.py",
+        "line": 689,
+        "severity": "non_blocking",
+        "description": "Pre-existing: Inconsistent cleanup patterns across scenario methods. cookie_consent uses contextlib.suppress(Exception) for shutil.rmtree, while all other scenarios use try/except with logger.warning. Flagged in prior review, not in scope for this fix."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "The pattern for propagating data from parallel threaded scenario methods back to run_audit() uses a shared dict + threading.Lock passed through multiple call layers (run_audit → _run_scenario_with_personas → _run_single_persona_with_progress → scenario method). This works but creates a 3-level parameter threading chain. AGENTS.md doesn't document this pattern for collecting results from threaded execution, which was the root cause of the original bug (the worker didn't know they needed to wire the data back).",
+      "evidence": "nova_act_browser.py lines 252-264: video_urls/video_urls_lock created in run_audit(), passed through 3 intermediate methods before reaching scenario methods. The prior feature worker returned video_urls={} because they expected the orchestrator to collect URLs via events — a reasonable but incorrect assumption that better documentation could prevent."
+    },
+    {
+      "area": "conventions",
+      "observation": "The handoff commitId field contains 'fb60604ddcd317e71a84af5e4b6e8fe5' (appears to be a full MD5 hash or partial SHA) while the actual git commit is 9a1b0cd. The discrepancy suggests the handoff was written before the final commit was created (e.g., amend or squash happened after handoff generation).",
+      "evidence": "Handoff file shows commitId 'fb60604ddcd317e71a84af5e4b6e8fe5', but git log shows commit 9a1b0cd4936426f9ef566667d852bd24bae3784a. The feature status in features.json references session 4bec57bd-6fc2-4f0a-873c-a64ae61803f5."
+    }
+  ],
+  "addressesFailureFrom": "C:\\EthicalSiteInspector\\.factory\\validation\\video-replay\\scrutiny\\reviews\\video-nova-act-integration.json",
+  "summary": "PASS. The fix adequately addresses the original blocking issue. The core problem — NovaActAuditProvider.run_audit() returning hardcoded empty video_urls — is resolved by introducing a thread-safe shared dict that is passed through the call chain to all 6 scenario methods. Each scenario method now adds its video URL to the dict after extraction. The BrowserRunResult correctly returns the populated dict. Four well-structured tests verify single-scenario, multi-scenario, parallel-execution, and no-video edge cases. The implementation follows the same pattern used by video URL collection in all scenario methods consistently. No blocking issues found. Non-blocking issues are pre-existing from the prior feature and were not in scope for this fix."
+}

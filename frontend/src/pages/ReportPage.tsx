@@ -7,6 +7,7 @@ import { FindingCard } from "../components/FindingCard";
 import { Layout } from "../components/Layout";
 import { ProgressMeter } from "../components/ProgressMeter";
 import { titleize } from "../lib/format";
+import { parseVideoUrls, type VideoEntry } from "../lib/video";
 
 interface ScreenshotEntry {
   url: string;
@@ -158,23 +159,7 @@ function prettyAction(action: string) {
   return trimText(clean, 80);
 }
 
-interface VideoEntry {
-  url: string;
-  scenario: string;
-  persona: string;
-  key: string;
-}
-
-function parseVideoUrls(videoUrls: Record<string, string> | null | undefined): VideoEntry[] {
-  if (!videoUrls) return [];
-  return Object.entries(videoUrls).map(([key, url]) => {
-    // Key format: "{scenario}_{persona}" or "{scenario}-{persona}"
-    const parts = key.split(/[_-]/);
-    const scenario = parts[0] ?? "unknown";
-    const persona = parts[1] ?? "unknown";
-    return { url, scenario, persona, key };
-  });
-}
+// VideoEntry type is now imported from ../lib/video
 
 interface VideoPlayerProps {
   url: string;
@@ -226,14 +211,16 @@ function VideoPlayer({ url, scenario, persona }: VideoPlayerProps) {
 
 interface VideoSectionProps {
   videoUrls: Record<string, string> | null | undefined;
+  scenarios: string[];
+  personas: string[];
 }
 
-function VideoSection({ videoUrls }: VideoSectionProps) {
-  const videos = parseVideoUrls(videoUrls);
+function VideoSection({ videoUrls, scenarios, personas }: VideoSectionProps) {
+  const videos = parseVideoUrls(videoUrls, scenarios, personas);
   const hasVideos = videos.length > 0;
 
   return (
-    <section className="video-section content-panel">
+    <section className="video-section content-panel" data-testid="video-section">
       <div className="section-header">
         <div>
           <h2 className="section-title">Session Recordings</h2>
@@ -772,7 +759,11 @@ export function ReportPage() {
       </section>
 
       {/* Session Recordings Section */}
-      <VideoSection videoUrls={audit?.video_urls} />
+      <VideoSection
+        videoUrls={audit?.video_urls}
+        scenarios={audit?.selected_scenarios ?? []}
+        personas={audit?.selected_personas ?? []}
+      />
 
       {/* Expanded Image Modal */}
       {expandedImage && (

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent, within } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 
 import { ReportPage } from "./ReportPage";
@@ -614,6 +614,8 @@ describe("ReportPage", () => {
   it("renders Session Recordings section when video_urls is present", async () => {
     const audit = createMockAudit({
       id: "audit-123",
+      selected_scenarios: ["cookie_consent", "checkout_flow"],
+      selected_personas: ["privacy_sensitive", "cost_sensitive"],
       video_urls: {
         "cookie_consent_privacy_sensitive": "/artifacts/videos/cookie_privacy.webm",
         "checkout_flow_cost_sensitive": "/artifacts/videos/checkout_cost.webm",
@@ -629,11 +631,12 @@ describe("ReportPage", () => {
       expect(screen.getByText("Session Recordings")).toBeInTheDocument();
     });
 
-    // Should show video cards with scenario and persona labels (using getAllByText since they appear in hero pills too)
-    expect(screen.getAllByText("Cookie Consent").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Privacy Sensitive").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Checkout Flow").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Cost Sensitive").length).toBeGreaterThan(0);
+    // Scoped assertions within video section using data-testid
+    const videoSection = screen.getByTestId("video-section");
+    expect(within(videoSection).getByText("Cookie Consent")).toBeInTheDocument();
+    expect(within(videoSection).getByText("Privacy Sensitive")).toBeInTheDocument();
+    expect(within(videoSection).getByText("Checkout Flow")).toBeInTheDocument();
+    expect(within(videoSection).getByText("Cost Sensitive")).toBeInTheDocument();
   });
 
   it("shows 'No recordings available' when video_urls is null", async () => {
@@ -648,7 +651,9 @@ describe("ReportPage", () => {
       expect(screen.getByText("Session Recordings")).toBeInTheDocument();
     });
 
-    expect(screen.getByText("No recordings available")).toBeInTheDocument();
+    // Scoped assertion within video section
+    const videoSection = screen.getByTestId("video-section");
+    expect(within(videoSection).getByText("No recordings available")).toBeInTheDocument();
   });
 
   it("shows 'No recordings available' when video_urls is empty", async () => {
@@ -663,12 +668,16 @@ describe("ReportPage", () => {
       expect(screen.getByText("Session Recordings")).toBeInTheDocument();
     });
 
-    expect(screen.getByText("No recordings available")).toBeInTheDocument();
+    // Scoped assertion within video section
+    const videoSection = screen.getByTestId("video-section");
+    expect(within(videoSection).getByText("No recordings available")).toBeInTheDocument();
   });
 
   it("renders video elements with controls and preload attributes", async () => {
     const audit = createMockAudit({
       id: "audit-123",
+      selected_scenarios: ["cookie_consent"],
+      selected_personas: ["privacy_sensitive"],
       video_urls: {
         "cookie_consent_privacy_sensitive": "/artifacts/videos/cookie_privacy.webm",
       },
@@ -720,6 +729,8 @@ describe("ReportPage", () => {
   it("renders multiple video cards correctly", async () => {
     const audit = createMockAudit({
       id: "audit-123",
+      selected_scenarios: ["cookie_consent", "checkout_flow"],
+      selected_personas: ["privacy_sensitive", "cost_sensitive"],
       video_urls: {
         "cookie_consent_privacy_sensitive": "/videos/1.webm",
         "cookie_consent_cost_sensitive": "/videos/2.webm",
@@ -736,22 +747,16 @@ describe("ReportPage", () => {
       expect(screen.getByText("Session Recordings")).toBeInTheDocument();
     });
 
-    // Check that scenario and persona names appear in video cards (may appear elsewhere too)
+    // Scoped assertions within video section using data-testid
+    const videoSection = screen.getByTestId("video-section");
     // We have 3 videos: 2 cookie consent + 1 checkout flow, and 2 personas (privacy + cost)
-    // Scenario names should appear in video section
-    const cookieCards = screen.getAllByText("Cookie Consent");
-    const checkoutCards = screen.getAllByText("Checkout Flow");
-    expect(cookieCards.length).toBeGreaterThanOrEqual(1); // At least one for the video card
-    expect(checkoutCards.length).toBeGreaterThanOrEqual(1);
+    expect(within(videoSection).getAllByText("Cookie Consent")).toHaveLength(2); // Two cookie videos
+    expect(within(videoSection).getByText("Checkout Flow")).toBeInTheDocument();
+    expect(within(videoSection).getAllByText("Privacy Sensitive")).toHaveLength(2); // Two privacy videos
+    expect(within(videoSection).getByText("Cost Sensitive")).toBeInTheDocument();
 
     // Check that videos exist
     const videos = document.querySelectorAll("video");
     expect(videos.length).toBe(3);
-
-    // Check for persona names in video cards
-    const privacyCards = screen.getAllByText("Privacy Sensitive");
-    const costCards = screen.getAllByText("Cost Sensitive");
-    expect(privacyCards.length).toBeGreaterThanOrEqual(1);
-    expect(costCards.length).toBeGreaterThanOrEqual(1);
   });
 });
