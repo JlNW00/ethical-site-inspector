@@ -178,7 +178,7 @@ describe("ReportPage", () => {
     });
 
     expect(screen.getByText(/Trust Score/i)).toBeInTheDocument();
-    expect(screen.getByText(/75/i)).toBeInTheDocument();
+    expect(screen.getByText(/75\s*\/\s*100/)).toBeInTheDocument();
   });
 
   it("shows failed audit state when audit.status is failed", async () => {

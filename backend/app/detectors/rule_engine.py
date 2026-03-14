@@ -135,10 +135,16 @@ def build_rule_findings(observation: JourneyObservation) -> list[RuleFindingDraf
     if observation.scenario == "checkout_flow" and price_delta > 0.01 and len(distinct_price_states) >= 2:
         first_price = prices[0]
         last_price = prices[-1]
+        first_raw = first_price.get("raw", "${:.2f}".format(first_price.get("value", 0)))
+        last_raw = last_price.get("raw", "${:.2f}".format(last_price.get("value", 0)))
+        first_label = str(first_price.get("label", ""))[:110]
+        last_label = str(last_price.get("label", ""))[:110]
+        first_state = first_price.get("state_label", "state 1")
+        last_state = last_price.get("state_label", "state 2")
         price_excerpt = (
-            f'{first_price.get("raw", f"${first_price['value']:.2f}")} in "{str(first_price.get("label", ""))[:110]}" '
-            f"({first_price.get('state_label', 'state 1')}) changed to {last_price.get('raw', f'${last_price["value"]:.2f}')} "
-            f'in "{str(last_price.get("label", ""))[:110]}" ({last_price.get("state_label", "state 2")}) '
+            f'{first_raw} in "{first_label}" '
+            f"({first_state}) changed to {last_raw} "
+            f'in "{last_label}" ({last_state}) '
             f"({price_delta:+.2f})."
         )
         add_or_merge(
