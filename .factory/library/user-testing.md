@@ -47,7 +47,9 @@ Testing surface, tools, and resource cost classification for validation.
 - Each validator uses its own browser session (pass `--session` flag)
 
 **Pre-created test data:**
-- Mock audit WITH video URLs: `e2ed0938-ca82-4e84-b76d-ec788e860c51` (4 video URLs, trust_score=100, mode=mock, completed)
+- Mock audit WITH video URLs (FRESH - round 3, fix applied): `08d0b4d2-967a-4ea6-afb5-dd888efc8a15` (4 video URLs, trust_score=100, mode=mock, completed, 185-byte known-good WebM files from mathiasbynens/small)
+- Mock audit WITH video URLs (round 3 pre-fix): `c99e3e8f-856d-421e-8f0f-dcf8c41b2232` (4 video URLs, 212-byte invalid WebM files)
+- Mock audit WITH video URLs (round 1-2, potentially stale): `e2ed0938-ca82-4e84-b76d-ec788e860c51` (4 video URLs, trust_score=100, mode=mock, completed)
 - Old audit WITHOUT video URLs: `48fcd4cc-a0a4-454f-8444-4b3b302dd595` (video_urls=null, mode=mock, completed)
 
 **Browser session naming:** Use `{worker-session-prefix}__{group-id}` pattern

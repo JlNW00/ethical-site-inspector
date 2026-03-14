@@ -1,0 +1,84 @@
+{
+  "groupId": "video003-round3",
+  "testedAt": "2026-03-14T16:39:00Z",
+  "isolation": {
+    "appUrl": "http://localhost:5173",
+    "backendApi": "http://127.0.0.1:8000",
+    "auditId": "c99e3e8f-856d-421e-8f0f-dcf8c41b2232",
+    "browserSession": "29114ebc6d1c__video003r3"
+  },
+  "toolsUsed": ["agent-browser", "curl.exe"],
+  "assertions": [
+    {
+      "id": "VAL-VIDEO-003",
+      "title": "ReportPage displays video players per scenario-persona",
+      "status": "fail",
+      "steps": [
+        {
+          "action": "Navigate to http://localhost:5173/audits/c99e3e8f-856d-421e-8f0f-dcf8c41b2232/report",
+          "expected": "ReportPage loads successfully",
+          "observed": "ReportPage loaded successfully with all sections visible"
+        },
+        {
+          "action": "Verify 'Session Recordings' heading exists after Screenshot Timeline",
+          "expected": "H2 heading 'Session Recordings' visible in correct position",
+          "observed": "PASS — H2 'Session Recordings' heading present after 'Screenshot Timeline' section, with subtitle 'Browser session recordings captured during the audit journey.'"
+        },
+        {
+          "action": "Verify 4 video cards with scenario-persona labels",
+          "expected": "4 video-card containers with labels: Cookie Consent/Privacy Sensitive, Cookie Consent/Cost Sensitive, Checkout Flow/Privacy Sensitive, Checkout Flow/Cost Sensitive",
+          "observed": "PASS — 4 video-card divs present in video-grid, each with video-card-header containing Scenario and Persona labels (H4 titles): Cookie Consent + Privacy Sensitive, Cookie Consent + Cost Sensitive, Checkout Flow + Privacy Sensitive, Checkout Flow + Cost Sensitive"
+        },
+        {
+          "action": "Verify HTML5 <video> elements with controls attribute",
+          "expected": "4 <video> elements with controls attribute rendered",
+          "observed": "FAIL — 0 <video> elements in DOM. All 4 video-player-container divs show error state: <div class='video-error'><span class='video-error-icon'>📹</span><span class='video-error-text'>Video unavailable</span></div>"
+        },
+        {
+          "action": "Verify backend serves video files correctly",
+          "expected": "HTTP 200 with Content-Type: video/webm",
+          "observed": "PASS — HEAD request to /artifacts/videos/{id}/cookie_consent_privacy_sensitive.webm returns 200 OK, Content-Type: video/webm, Content-Length: 212"
+        },
+        {
+          "action": "Diagnose video error via JS eval — create video element with direct src",
+          "expected": "Video loads metadata successfully",
+          "observed": "FAIL — video.error.code=4 (MEDIA_ERR_SRC_NOT_SUPPORTED), message='PipelineStatus::DEMUXER_ERROR_COULD_NOT_OPEN: FFmpegDemuxer: open context failed'. readyState=0, networkState=3 (NETWORK_NO_SOURCE)"
+        },
+        {
+          "action": "Check console errors",
+          "expected": "No video-related console errors",
+          "observed": "4x React warning: 'An empty string (\"\") was passed to the src attribute' — caused by <track kind=\"captions\" src=\"\"> in VideoPlayer component. No other page errors via agent-browser errors command."
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "video-replay/video003-round3/VAL-VIDEO-003-report-top.png",
+          "video-replay/video003-round3/VAL-VIDEO-003-session-recordings-section.png",
+          "video-replay/video003-round3/VAL-VIDEO-003-session-recordings-scrolled.png",
+          "video-replay/video003-round3/VAL-VIDEO-003-direct-video-load.png",
+          "video-replay/video003-round3/VAL-VIDEO-003-full-report-page.png"
+        ],
+        "consoleErrors": "4x React warning about empty string src attribute on <track> elements. No unhandled page errors.",
+        "network": "HEAD /artifacts/videos/{id}/cookie_consent_privacy_sensitive.webm -> 200 OK, video/webm, 212 bytes. All 4 video URLs return 200.",
+        "domInspection": "0 <video> elements in DOM. 4 <div class='video-error'> elements with 'Video unavailable' text. H2 'Session Recordings' heading present. 4 video-card containers with correct scenario/persona labels."
+      },
+      "issues": "The 212-byte mock WebM files are structurally valid (EBML header, Segment, Info, Tracks/VP8, Cluster) and served correctly by the backend with proper content-type, but Chromium's FFmpegDemuxer cannot open a decode context for them. The browser's video element fires error code 4 (MEDIA_ERR_SRC_NOT_SUPPORTED) with message 'DEMUXER_ERROR_COULD_NOT_OPEN: FFmpegDemuxer: open context failed'. The React VideoPlayer component catches this error via onError and replaces the <video> element with the 'Video unavailable' error state. Root cause: the mock WebM files need to contain actual decodable VP8 frame data (a valid VP8 keyframe in the Cluster), not just the container structure."
+    }
+  ],
+  "frictions": [
+    {
+      "description": "The <track kind='captions' src=''> in VideoPlayer component triggers 4 React console errors about empty string src attribute. This is a minor code issue unrelated to video playback failure.",
+      "resolved": false,
+      "resolution": null,
+      "affectedAssertions": ["VAL-VIDEO-003"]
+    }
+  ],
+  "blockers": [
+    {
+      "description": "Mock WebM files (212 bytes) cannot be decoded by Chromium's FFmpegDemuxer despite having valid EBML/Segment/Tracks container structure. The demuxer needs actual VP8 keyframe data in the Cluster element to open a decode context. Error: MEDIA_ERR_SRC_NOT_SUPPORTED (code 4), 'PipelineStatus::DEMUXER_ERROR_COULD_NOT_OPEN: FFmpegDemuxer: open context failed'. This is the same fundamental issue as rounds 1 and 2 — the mock WebM files are not playable by the browser.",
+      "affectedAssertions": ["VAL-VIDEO-003"],
+      "quickFixAttempted": "Verified backend serves files correctly (200 OK, video/webm, 212 bytes). Verified browser shows native player when navigating directly to video URL. Diagnosed that the React <video> element with <source> triggers FFmpegDemuxer error which fires onError handler, replacing video element with error state."
+    }
+  ],
+  "summary": "Tested 1 assertion: 0 passed, 1 failed. VAL-VIDEO-003 FAILS — the Session Recordings section renders correctly with proper heading and 4 labeled video cards, but all <video> elements are replaced by 'Video unavailable' error state because the 212-byte mock WebM files cannot be decoded by Chromium's FFmpegDemuxer (error: DEMUXER_ERROR_COULD_NOT_OPEN). The fix from fix-mock-webm-and-video-urls improved structural validity but the files still lack decodable VP8 keyframe data needed for browser playback."
+}

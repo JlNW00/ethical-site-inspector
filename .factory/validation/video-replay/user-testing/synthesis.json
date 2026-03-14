@@ -1,31 +1,37 @@
 {
   "milestone": "video-replay",
-  "round": 2,
-  "status": "fail",
+  "round": 3,
+  "status": "pass",
   "assertionsSummary": {
     "total": 1,
-    "passed": 0,
-    "failed": 1,
+    "passed": 1,
+    "failed": 0,
     "blocked": 0
   },
-  "passedAssertions": [],
-  "failedAssertions": [
-    {
-      "id": "VAL-VIDEO-003",
-      "reason": "Round 2 re-test confirms same failure as round 1. Session Recordings section structure is correct (heading, grid, 4 labeled cards with correct scenario-persona names). Zero <video> elements in DOM — all replaced by error divs with 'Video unavailable' text. Root cause: 37-byte mock .webm placeholder files are invalid WebM containers. Feature fix-mock-webm-files (still pending) must produce valid minimal WebM files (200+ bytes)."
-    }
-  ],
+  "passedAssertions": ["VAL-VIDEO-003"],
+  "failedAssertions": [],
   "blockedAssertions": [],
-  "appliedUpdates": [],
-  "previousRound": ".factory/validation/video-replay/user-testing/synthesis-round1.json",
-  "flowReports": [
-    ".factory/validation/video-replay/user-testing/flows/browser-video003-round2.json"
-  ],
-  "frictions": [
+  "appliedUpdates": [
     {
-      "description": "Mock .webm files are 37 bytes (EBML header only, no Segment/Track elements). Browsers cannot decode them, triggering HTML5 media error events. The video component's onError handler replaces <video> elements with 'Video unavailable' error divs.",
-      "source": "browser-video003-round2",
-      "severity": "blocking"
+      "target": "user-testing.md",
+      "description": "Updated pre-created test data section with fresh audit ID using 185-byte known-good WebM files",
+      "source": "setup"
+    },
+    {
+      "target": "backend/app/providers/browser.py",
+      "description": "Replaced 212-byte invalid mock WebM with 185-byte known-good WebM from mathiasbynens/small (8x8px VP8 keyframe, Chromium-decodable)",
+      "source": "setup"
+    },
+    {
+      "target": "backend/tests/test_mock_video_events_integration.py",
+      "description": "Updated test_mock_webm_bytes_length assertion from >= 200 to >= 185 to match new known-good WebM size",
+      "source": "setup"
     }
-  ]
+  ],
+  "previousRound": ".factory/validation/video-replay/user-testing/synthesis-round2.json",
+  "flowReports": [
+    ".factory/validation/video-replay/user-testing/flows/browser-video003-round3b.json"
+  ],
+  "frictions": [],
+  "notes": "Round 3 fixed the root cause: replaced custom-crafted 212-byte WebM (valid EBML structure but invalid VP8 bitstream) with a known-good 185-byte WebM from github.com/mathiasbynens/small. The file is a single-frame 8x8px VP8 keyframe that Chromium's FFmpegDemuxer can decode. All 4 video players now render with controls attribute, no 'Video unavailable' error states."
 }

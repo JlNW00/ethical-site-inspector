@@ -495,13 +495,13 @@ class TestMockWebMValidity:
     def test_mock_webm_bytes_length(self):
         """
         VAL-VIDEO-003: Mock WebM file must be > 100 bytes to be valid.
-        The old 37-byte placeholder was invalid; the new one is 212 bytes.
+        The known-good minimal WebM from mathiasbynens/small is 185 bytes.
         """
         from app.providers.browser import MockBrowserAuditProvider
 
         webm_bytes = MockBrowserAuditProvider.MOCK_WEBM_BYTES
         assert len(webm_bytes) > 100, f"Mock WebM should be > 100 bytes, got {len(webm_bytes)}"
-        assert len(webm_bytes) >= 200, f"Mock WebM should be at least 200 bytes, got {len(webm_bytes)}"
+        assert len(webm_bytes) >= 185, f"Mock WebM should be at least 185 bytes, got {len(webm_bytes)}"
 
     def test_mock_webm_has_ebml_header(self):
         """

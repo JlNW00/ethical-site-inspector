@@ -1,0 +1,98 @@
+{
+  "groupId": "video003-round3b",
+  "testedAt": "2026-03-14T16:51:00Z",
+  "isolation": {
+    "appUrl": "http://localhost:5173",
+    "backendApi": "http://127.0.0.1:8000",
+    "auditId": "08d0b4d2-967a-4ea6-afb5-dd888efc8a15",
+    "browserSession": "29114ebc6d1c__video003r3b"
+  },
+  "toolsUsed": ["agent-browser"],
+  "assertions": [
+    {
+      "id": "VAL-VIDEO-003",
+      "title": "ReportPage displays video players per scenario-persona",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Navigate to http://localhost:5173/audits/08d0b4d2-967a-4ea6-afb5-dd888efc8a15/report",
+          "expected": "ReportPage loads with audit data",
+          "observed": "ReportPage loaded showing Trust Audit Report with trust score 100/100, 0 findings, 2 scenarios, 2 personas"
+        },
+        {
+          "action": "Scroll down past Screenshot Timeline to find Session Recordings section",
+          "expected": "Session Recordings heading visible after Screenshot Timeline",
+          "observed": "H2 'Session Recordings' heading found positioned after H2 'Screenshot Timeline', with subtitle 'Browser session recordings captured during the audit journey.'"
+        },
+        {
+          "action": "Check DOM for <video> elements count",
+          "expected": "4 video elements (one per scenario-persona combination)",
+          "observed": "4 <video> elements found via document.querySelectorAll('video').length"
+        },
+        {
+          "action": "Check all video elements have controls attribute",
+          "expected": "All videos have controls=true",
+          "observed": "All 4 videos have hasAttribute('controls') === true"
+        },
+        {
+          "action": "Check video element readyState and error status",
+          "expected": "Videos loaded successfully with no errors",
+          "observed": "All 4 videos: readyState=4 (HAVE_ENOUGH_DATA), error=null, preload='metadata'"
+        },
+        {
+          "action": "Check video source URLs",
+          "expected": "Each video has a valid WebM source URL",
+          "observed": "4 <source> elements with type='video/webm' pointing to /artifacts/videos/08d0b4d2-.../cookie_consent_privacy_sensitive.webm, cookie_consent_cost_sensitive.webm, checkout_flow_privacy_sensitive.webm, checkout_flow_cost_sensitive.webm"
+        },
+        {
+          "action": "Verify video containers have scenario and persona labels",
+          "expected": "Each video card shows scenario name and persona name",
+          "observed": "4 labeled containers: (1) Cookie Consent / Privacy Sensitive, (2) Cookie Consent / Cost Sensitive, (3) Checkout Flow / Privacy Sensitive, (4) Checkout Flow / Cost Sensitive"
+        },
+        {
+          "action": "Verify videos are NOT replaced by 'Video unavailable' error messages",
+          "expected": "No error state elements visible",
+          "observed": "Zero elements matching [class*=error] or [class*=unavailable] containing 'video' or 'unavailable' text. Videos render with playback controls (play, volume, fullscreen, time 0:00/0:01)"
+        },
+        {
+          "action": "Check browser console for media errors",
+          "expected": "No media-related errors",
+          "observed": "No media errors. 4 React dev warnings about empty src attributes (from Screenshot Timeline section img elements, not video elements). Standard React Router future flag warnings. No video decode or playback errors."
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "video-replay/video003-round3b/VAL-VIDEO-003-report-page-top.png",
+          "video-replay/video003-round3b/VAL-VIDEO-003-scroll-1.png",
+          "video-replay/video003-round3b/VAL-VIDEO-003-scroll-2-videos.png",
+          "video-replay/video003-round3b/VAL-VIDEO-003-full-page.png"
+        ],
+        "consoleErrors": "4 React dev warnings about empty src attributes (screenshot section, not videos). No media/video errors.",
+        "domInspection": {
+          "videoCount": 4,
+          "allVideosHaveControls": true,
+          "allVideosLoaded": true,
+          "allVideosNoError": true,
+          "videoErrorElements": [],
+          "sessionRecordingsHeading": "H2, positioned after Screenshot Timeline H2",
+          "videoSources": [
+            "http://localhost:5173/artifacts/videos/08d0b4d2-967a-4ea6-afb5-dd888efc8a15/cookie_consent_privacy_sensitive.webm",
+            "http://localhost:5173/artifacts/videos/08d0b4d2-967a-4ea6-afb5-dd888efc8a15/cookie_consent_cost_sensitive.webm",
+            "http://localhost:5173/artifacts/videos/08d0b4d2-967a-4ea6-afb5-dd888efc8a15/checkout_flow_privacy_sensitive.webm",
+            "http://localhost:5173/artifacts/videos/08d0b4d2-967a-4ea6-afb5-dd888efc8a15/checkout_flow_cost_sensitive.webm"
+          ],
+          "containerLabels": [
+            "Cookie Consent — Privacy Sensitive",
+            "Cookie Consent — Cost Sensitive",
+            "Checkout Flow — Privacy Sensitive",
+            "Checkout Flow — Cost Sensitive"
+          ]
+        }
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [],
+  "blockers": [],
+  "summary": "Tested 1 assertion: 1 passed. VAL-VIDEO-003 PASSES — ReportPage displays 4 HTML5 <video> elements with controls attribute, each inside a labeled container showing scenario and persona names. The 'Session Recordings' H2 heading appears after Screenshot Timeline. All videos loaded successfully (readyState=4) with the 185-byte known-good WebM files from mathiasbynens/small. No 'Video unavailable' error states. No media-related console errors."
+}
