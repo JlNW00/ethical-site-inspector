@@ -66,6 +66,15 @@ function trimText(value: string, limit = 80) {
   return value.length <= limit ? value : `${value.slice(0, limit - 1).trimEnd()}…`;
 }
 
+function hasRegulatoryFindings(findings: Finding[]): boolean {
+  return findings.some(
+    (finding) =>
+      !finding.suppressed &&
+      finding.regulatory_categories &&
+      finding.regulatory_categories.length > 0
+  );
+}
+
 function parseStepFromUrl(url: string): { scenario: string; persona: string; step: string } {
   // URL format: .../{scenario}_{persona}_{step}.png or similar
   const parts =
@@ -469,6 +478,17 @@ export function ReportPage() {
             {auditId ? (
               <a className="btn btn-primary" href={api.getPdfUrl(auditId)} target="_blank" rel="noreferrer">
                 Download PDF
+              </a>
+            ) : null}
+            {auditId && hasRegulatoryFindings(findings) ? (
+              <a
+                className="btn btn-secondary"
+                href={api.getCompliancePdfUrl(auditId)}
+                target="_blank"
+                rel="noreferrer"
+                data-testid="compliance-report-button"
+              >
+                Download Compliance Report
               </a>
             ) : null}
             {auditId ? (

@@ -46,4 +46,7 @@ export const api = {
     }),
   getBenchmark: (benchmarkId: string) => request<Benchmark>(`/api/benchmarks/${benchmarkId}`),
   getBenchmarks: () => request<Benchmark[]>("/api/benchmarks"),
+
+  // Compliance PDF method
+  getCompliancePdfUrl: (auditId: string) => `${API_BASE_URL}/api/audits/${auditId}/report/compliance-pdf`,
 };

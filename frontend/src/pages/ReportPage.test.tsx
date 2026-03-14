@@ -21,6 +21,7 @@ vi.mock("../api/client", () => ({
     getFindings: vi.fn(),
     getReportUrl: (id: string) => `/api/audits/${id}/report`,
     getPdfUrl: (id: string) => `/api/audits/${id}/report/pdf`,
+    getCompliancePdfUrl: (id: string) => `/api/audits/${id}/report/compliance-pdf`,
   },
 }));
 
@@ -788,5 +789,111 @@ describe("ReportPage", () => {
     // Check that videos exist
     const videos = document.querySelectorAll("video");
     expect(videos.length).toBe(3);
+  });
+
+  // Compliance PDF Button Tests
+  it("shows Download Compliance Report button when findings have regulatory_categories", async () => {
+    const audit = createMockAudit({ id: "audit-123" });
+    const findings = [
+      createMockFinding({ id: "f1", regulatory_categories: ["FTC", "GDPR"] }),
+      createMockFinding({ id: "f2", regulatory_categories: ["GDPR"] }),
+    ];
+
+    mockGetAudit.mockResolvedValue(audit);
+    mockGetFindings.mockResolvedValue({ audit_id: "audit-123", findings });
+
+    renderReportPage();
+
+    await waitFor(() => {
+      expect(screen.getByText("Trust Audit Report")).toBeInTheDocument();
+    });
+
+    const complianceButton = screen.getByText(/Download Compliance Report/i).closest("a");
+    expect(complianceButton).toBeInTheDocument();
+    expect(complianceButton).toHaveAttribute("href", "/api/audits/audit-123/report/compliance-pdf");
+    expect(complianceButton).toHaveAttribute("target", "_blank");
+  });
+
+  it("hides Download Compliance Report button when no regulatory findings exist", async () => {
+    const audit = createMockAudit({ id: "audit-123" });
+    const findings = [
+      createMockFinding({ id: "f1", regulatory_categories: [] }),
+      createMockFinding({ id: "f2", regulatory_categories: [] }),
+    ];
+
+    mockGetAudit.mockResolvedValue(audit);
+    mockGetFindings.mockResolvedValue({ audit_id: "audit-123", findings });
+
+    renderReportPage();
+
+    await waitFor(() => {
+      expect(screen.getByText("Trust Audit Report")).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText(/Download Compliance Report/i)).not.toBeInTheDocument();
+  });
+
+  it("hides Download Compliance Report button when all suppressed findings have regulatory_categories", async () => {
+    const audit = createMockAudit({ id: "audit-123" });
+    const findings = [
+      createMockFinding({ id: "f1", regulatory_categories: ["FTC"], suppressed: true }),
+      createMockFinding({ id: "f2", regulatory_categories: ["GDPR"], suppressed: true }),
+    ];
+
+    mockGetAudit.mockResolvedValue(audit);
+    mockGetFindings.mockResolvedValue({ audit_id: "audit-123", findings });
+
+    renderReportPage();
+
+    await waitFor(() => {
+      expect(screen.getByText("Trust Audit Report")).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText(/Download Compliance Report/i)).not.toBeInTheDocument();
+  });
+
+  it("shows Download Compliance Report button when at least one non-suppressed finding has regulatory_categories", async () => {
+    const audit = createMockAudit({ id: "audit-123" });
+    const findings = [
+      createMockFinding({ id: "f1", regulatory_categories: ["FTC"], suppressed: true }),
+      createMockFinding({ id: "f2", regulatory_categories: ["GDPR"], suppressed: false }),
+    ];
+
+    mockGetAudit.mockResolvedValue(audit);
+    mockGetFindings.mockResolvedValue({ audit_id: "audit-123", findings });
+
+    renderReportPage();
+
+    await waitFor(() => {
+      expect(screen.getByText("Trust Audit Report")).toBeInTheDocument();
+    });
+
+    expect(screen.getByText(/Download Compliance Report/i)).toBeInTheDocument();
+  });
+
+  it("ensures existing Download PDF button still works alongside compliance button", async () => {
+    const audit = createMockAudit({ id: "audit-123" });
+    const findings = [createMockFinding({ id: "f1", regulatory_categories: ["FTC"] })];
+
+    mockGetAudit.mockResolvedValue(audit);
+    mockGetFindings.mockResolvedValue({ audit_id: "audit-123", findings });
+
+    renderReportPage();
+
+    await waitFor(() => {
+      expect(screen.getByText("Trust Audit Report")).toBeInTheDocument();
+    });
+
+    // Both buttons should be present
+    const complianceButton = screen.getByText(/Download Compliance Report/i).closest("a");
+    const pdfButton = screen.getByText(/Download PDF/i).closest("a");
+
+    expect(complianceButton).toBeInTheDocument();
+    expect(complianceButton).toHaveAttribute("href", "/api/audits/audit-123/report/compliance-pdf");
+    expect(complianceButton).toHaveAttribute("target", "_blank");
+
+    expect(pdfButton).toBeInTheDocument();
+    expect(pdfButton).toHaveAttribute("href", "/api/audits/audit-123/report/pdf");
+    expect(pdfButton).toHaveAttribute("target", "_blank");
   });
 });
