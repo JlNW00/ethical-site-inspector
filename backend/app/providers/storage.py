@@ -36,9 +36,10 @@ class LocalStorageProvider(StorageProvider):
         absolute_path = self.root / relative_key
         absolute_path.parent.mkdir(parents=True, exist_ok=True)
         absolute_path.write_bytes(payload)
-        public_url = f"/artifacts/{relative_key.replace('\\', '/')}"
+        normalized_key = relative_key.replace("\\", "/")
+        public_url = f"/artifacts/{normalized_key}"
         return StorageObject(
-            relative_key=relative_key.replace("\\", "/"),
+            relative_key=normalized_key,
             absolute_path=str(absolute_path),
             public_url=public_url,
         )
