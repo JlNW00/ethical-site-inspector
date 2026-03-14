@@ -1,0 +1,142 @@
+{
+  "groupId": "stab-group",
+  "testedAt": "2026-03-13T05:22:00Z",
+  "isolation": {
+    "backendApi": "http://127.0.0.1:8000",
+    "seededAuditId": "87a270b4-ab32-4068-92df-204ddca23e00",
+    "backendDir": "C:\\EthicalSiteInspector\\backend",
+    "backendVenv": "C:\\EthicalSiteInspector\\backend\\.venv\\Scripts\\python.exe"
+  },
+  "toolsUsed": ["python-urllib", "pytest", "file-reader"],
+  "assertions": [
+    {
+      "id": "VAL-STAB-001",
+      "title": "Failed audits reach terminal state",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Read audit_orchestrator.py run_audit() method",
+          "expected": "Top-level try/except wrapping _run_audit_internal()",
+          "observed": "run_audit() has try/except that calls _handle_audit_failure() on any exception"
+        },
+        {
+          "action": "Read _handle_audit_failure() method",
+          "expected": "Sets status='failed', completed_at, and error summary",
+          "observed": "Method sets audit.status='failed', audit.completed_at=datetime.now(UTC), audit.summary=error_summary"
+        },
+        {
+          "action": "Verify unit test test_audit_reaches_failed_state_on_exception",
+          "expected": "Test passes, asserting status='failed' with error details",
+          "observed": "Test PASSED - asserts status='failed', completed_at not None, summary contains 'error' or 'failed'"
+        },
+        {
+          "action": "Run pytest - TestTerminalFailureStates tests",
+          "expected": "All terminal failure tests pass",
+          "observed": "test_audit_reaches_failed_state_on_exception PASSED (uses CompleteFailStubBrowserProvider where both primary and fallback fail)"
+        }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "N/A - code inspection and pytest verification",
+        "codeFiles": [
+          "backend/app/services/audit_orchestrator.py (run_audit lines 47-58, _handle_audit_failure lines 60-89)",
+          "backend/tests/test_audit_lifecycle.py (TestTerminalFailureStates class)"
+        ],
+        "testResults": "test_audit_reaches_failed_state_on_exception PASSED"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-STAB-002",
+      "title": "Error events emitted on failure",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Read _handle_audit_failure() in audit_orchestrator.py",
+          "expected": "Creates AuditEvent with phase='error' containing failure details",
+          "observed": "Method creates AuditEvent with phase='error', status='error', message with exception details, and details dict containing error_type, error_message, audit_id"
+        },
+        {
+          "action": "Verify unit test test_terminal_error_event_emitted",
+          "expected": "Test passes, asserting error event exists with correct structure",
+          "observed": "Test PASSED - asserts error_events >= 1, status='error', message contains exception/failed, details contains error_type"
+        }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "N/A - code inspection and pytest verification",
+        "codeFiles": [
+          "backend/app/services/audit_orchestrator.py (_handle_audit_failure method)",
+          "backend/tests/test_audit_lifecycle.py (TestTerminalFailureStates::test_terminal_error_event_emitted)"
+        ],
+        "testResults": "test_terminal_error_event_emitted PASSED"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-STAB-003",
+      "title": "Timeout handling for long scenarios",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Read NovaActAuditProvider timeout configuration in nova_act_browser.py",
+          "expected": "Configurable per-scenario timeouts with defaults",
+          "observed": "DEFAULT_SCENARIO_TIMEOUT=120s, per-scenario overrides: cookie_consent=120, checkout_flow=180, newsletter_signup=90, etc. Custom timeouts via constructor parameter."
+        },
+        {
+          "action": "Read _run_scenario_with_personas timeout handling",
+          "expected": "TimeoutError caught gracefully, audit continues with remaining scenarios",
+          "observed": "future.result(timeout=scenario_timeout) with try/except TimeoutError. On timeout: logs error, creates error_observation with timeout message, emits 'warning' progress event, continues to next persona."
+        },
+        {
+          "action": "Read run_audit partial completion logic",
+          "expected": "Partial completion when some scenarios fail",
+          "observed": "If all scenarios fail -> status='failed'. If some succeed -> status='completed' with partial_failure=True flag."
+        },
+        {
+          "action": "Run pytest timeout tests",
+          "expected": "All timeout-related tests pass",
+          "observed": "3 timeout tests PASSED: test_default_scenario_timeouts, test_custom_scenario_timeouts, test_get_scenario_timeout_method. Plus test_partial_completion_marked_completed PASSED."
+        }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "N/A - code inspection and pytest verification",
+        "codeFiles": [
+          "backend/app/providers/nova_act_browser.py (SCENARIO_TIMEOUTS, _get_scenario_timeout, _run_scenario_with_personas TimeoutError handling)",
+          "backend/tests/test_audit_lifecycle.py (TestScenarioTimeouts, TestPartialScenarioFailure)"
+        ],
+        "testResults": "test_default_scenario_timeouts PASSED, test_custom_scenario_timeouts PASSED, test_get_scenario_timeout_method PASSED, test_partial_completion_marked_completed PASSED"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-STAB-004",
+      "title": "Backend test suite passes",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Run: cd backend && .venv\\Scripts\\python.exe -m pytest tests/ -v --tb=short",
+          "expected": "All tests pass",
+          "observed": "183 passed, 1 warning in 6.87s. Warning is non-critical DeprecationWarning about httpx content parameter."
+        }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "N/A",
+        "testResults": "183 passed, 0 failed, 1 warning (non-critical). Test files: test_audit_lifecycle.py (21), test_audits_api.py (19), test_config.py (11), test_health_api.py (4), test_nova_act_provider.py (27), test_provider_registry.py (6), test_rule_engine.py (10), test_schemas.py (10), test_storage.py (7), test_taxonomy.py (68)"
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [
+    {
+      "description": "Cannot trigger a real terminal failure via the live API because Nova Act SDK is not installed; the orchestrator gracefully falls back to mock provider. Terminal failure state testing relies on unit tests with CompleteFailStubBrowserProvider.",
+      "resolved": true,
+      "resolution": "Verified terminal failure handling via unit tests (TestTerminalFailureStates) which use stubs that make both primary and fallback providers fail, plus code inspection of _handle_audit_failure().",
+      "affectedAssertions": ["VAL-STAB-001", "VAL-STAB-002"]
+    }
+  ],
+  "blockers": [],
+  "summary": "Tested 4 assertions: 4 passed, 0 failed, 0 blocked. All 183 backend tests pass. Terminal failure handling (VAL-STAB-001/002) verified via code inspection and dedicated unit tests. Timeout handling (VAL-STAB-003) verified via configurable per-scenario timeouts with graceful TimeoutError handling. Full test suite (VAL-STAB-004) passes with 183 tests green."
+}

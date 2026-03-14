@@ -256,6 +256,7 @@ class AuditOrchestrator:
             audit.risk_level = risk_level
             audit.status = "completed"
             audit.completed_at = datetime.now(UTC)
+            audit.video_urls = run_result.video_urls
             audit.findings.clear()
             db.add_all(finding_models)
             db.flush()

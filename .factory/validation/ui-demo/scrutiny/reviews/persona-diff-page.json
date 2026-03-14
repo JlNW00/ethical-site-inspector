@@ -1,0 +1,79 @@
+{
+  "featureId": "persona-diff-page",
+  "reviewedAt": "2026-03-13T08:00:00Z",
+  "commitId": "a5e07f9",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "PersonaDiffPage implementation is solid and covers all feature requirements. The page correctly renders side-by-side persona columns with findings, paths, prices, UI controls, and visual difference highlighting. Route /audits/:id/diff is properly added to App.tsx. ReportPage updated with 'Compare Personas' button. 16 comprehensive tests cover loading, error, rendering, navigation, and edge cases. TypeScript strict mode passes, lint passes, build succeeds. Several non-blocking code quality issues found: duplicated utility functions, unnecessary type casts, committed dev artifacts, and committed node_modules files.",
+    "issues": [
+      {
+        "file": "frontend/src/pages/PersonaDiffPage.tsx",
+        "line": 11,
+        "severity": "non_blocking",
+        "description": "Duplicated utility functions: trimText, extractQuoted, prettyAction, prettyPath are copy-pasted from FindingCard.tsx (lines 8-42). These should be extracted to a shared module (e.g., lib/format.ts or lib/evidence.ts) to maintain DRY principle and avoid drift between the two copies."
+      },
+      {
+        "file": "frontend/src/pages/PersonaDiffPage.tsx",
+        "line": 117,
+        "severity": "non_blocking",
+        "description": "Unnecessary type assertion: `(f.evidence_payload as { interacted_controls?: string[] }).interacted_controls` — the worker already added `interacted_controls` to the evidence_payload interface in types.ts, so the cast is redundant. Direct property access `f.evidence_payload.interacted_controls` would suffice."
+      },
+      {
+        "file": "frontend/src/pages/PersonaDiffPage.tsx",
+        "line": 119,
+        "severity": "non_blocking",
+        "description": "Same redundant type cast on the `findingWithPath?.evidence_payload` access. Should use the typed interface directly."
+      },
+      {
+        "file": "frontend/dev-server.log",
+        "line": 1,
+        "severity": "non_blocking",
+        "description": "Dev server log file committed to repository. This is a transient development artifact that should be in .gitignore and not tracked in version control."
+      },
+      {
+        "file": "PersonaDiffPage_screenshot.png",
+        "line": 1,
+        "severity": "non_blocking",
+        "description": "Screenshot artifact committed to project root. Development/debugging screenshots should not be committed to the repository."
+      },
+      {
+        "file": "node_modules/ethical-site-inspector-frontend/src/pages/PersonaDiffPage.tsx",
+        "line": 1,
+        "severity": "non_blocking",
+        "description": "19 files committed under node_modules/ethical-site-inspector-frontend/ including full source copies, dist builds, and vite cache. This appears to be a symlinked workspace package that mirrors the frontend/ directory. These files bloat the commit significantly. While this is a systemic project configuration issue (not specific to this worker), the worker should have excluded node_modules from staging."
+      },
+      {
+        "file": "frontend/src/pages/PersonaDiffPage.tsx",
+        "line": 243,
+        "severity": "non_blocking",
+        "description": "The hero-pills section uses `new URL(audit.target_url).host` which could throw if target_url is malformed. While there's a ternary guard for null/undefined, a try-catch or URL validation would be more robust."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "Worker committed dev artifacts (frontend/dev-server.log, PersonaDiffPage_screenshot.png) and node_modules files. AGENTS.md says 'Only stage files relevant to the current feature' but doesn't explicitly list what should never be committed (log files, screenshots, node_modules). A .gitignore addition or explicit convention about excluding dev artifacts would prevent this.",
+      "evidence": "git show a5e07f9 --stat shows frontend/dev-server.log, PersonaDiffPage_screenshot.png, and 19 files under node_modules/ethical-site-inspector-frontend/ committed."
+    },
+    {
+      "area": "conventions",
+      "observation": "Worker duplicated utility functions (trimText, extractQuoted, prettyAction, prettyPath) from FindingCard.tsx into PersonaDiffPage.tsx instead of extracting to a shared module. AGENTS.md doesn't mention a convention for shared frontend utilities beyond 'API client in src/api/client.ts, types in src/api/types.ts'. Adding a convention about shared utility extraction (e.g., 'Reusable helpers go in src/lib/') would help.",
+      "evidence": "PersonaDiffPage.tsx lines 11-52 are identical to FindingCard.tsx lines 8-42 (trimText, extractQuoted, prettyAction, prettyPath functions)."
+    },
+    {
+      "area": "skills",
+      "observation": "Worker followed the frontend-dev skill procedure (read context, write tests, implement, verify with typecheck/lint/build, manual verification via agent-browser). The worker spent significant time (~30+ tool calls) trying to start backend/frontend services for manual verification that never came up, reading non-existent log files repeatedly. The skill says 'Start the dev server' and 'Open the page in browser' but doesn't document that services may fail to start in CI-like environments or provide fallback guidance.",
+      "evidence": "Transcript shows 20+ repeated attempts to read droid-bg-1773383566601.out (ENOENT errors), multiple curl health checks returning 'not ready', and services that never started. Worker eventually did browser check but mostly saw error state due to no backend."
+    },
+    {
+      "area": "conventions",
+      "observation": "The node_modules/ethical-site-inspector-frontend/ directory appears to be a npm workspace symlink that duplicates all frontend source files in git commits. This is a systemic project configuration issue — .gitignore should exclude this path, or the workspace configuration should be adjusted to prevent committed duplication.",
+      "evidence": "Every ui-demo commit (history-page, persona-diff-page, compare-page, etc.) includes duplicate files under node_modules/ethical-site-inspector-frontend/."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "PersonaDiffPage implementation passes review. All feature requirements are met: side-by-side persona columns with findings, paths, prices, UI controls, and visual difference highlighting; route at /audits/:id/diff; accessible from ReportPage; 16 comprehensive tests. TypeScript, lint, and build all pass. Non-blocking issues found: duplicated utility functions (DRY violation), unnecessary type casts, committed dev artifacts (log file, screenshot), and node_modules files committed. The implementation quality is good — the component properly uses useMemo for expensive computations, handles loading/error/empty states, and follows the glass-morphism CSS conventions."
+}

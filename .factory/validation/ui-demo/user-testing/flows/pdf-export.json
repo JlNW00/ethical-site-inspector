@@ -1,0 +1,54 @@
+{
+  "groupId": "pdf-export",
+  "testedAt": "2026-03-13T03:44:00.000Z",
+  "isolation": {
+    "appUrl": "http://127.0.0.1:5173",
+    "apiUrl": "http://127.0.0.1:8000",
+    "auditId": "44315460-1610-4bee-9b32-7d544c5bbb12",
+    "sessionName": "567889bf48f0"
+  },
+  "toolsUsed": ["agent-browser", "curl"],
+  "assertions": [
+    {
+      "id": "VAL-UI-009",
+      "title": "PDF export",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Navigate to report page at /audits/44315460-1610-4bee-9b32-7d544c5bbb12/report",
+          "expected": "Report page loads with trust score, risk level, and Download PDF button visible",
+          "observed": "Report page loaded showing Trust Audit Report with score 100/100, LOW RISK level, and Download PDF button clearly visible"
+        },
+        {
+          "action": "Take annotated screenshot of report page",
+          "expected": "Screenshot shows Download PDF button among page elements",
+          "observed": "Screenshot captured; Download PDF button identified as element @e5 (link 'Download PDF')"
+        },
+        {
+          "action": "Verify PDF API endpoint via curl GET /api/audits/{id}/report/pdf",
+          "expected": "HTTP 200 with application/pdf content type and valid PDF content",
+          "observed": "HTTP 200 returned, content-type: application/pdf, file size: 6169 bytes, header starts with %PDF-1.4 (valid PDF)"
+        },
+        {
+          "action": "Check browser console for errors",
+          "expected": "No console errors",
+          "observed": "No console errors found"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "ui-demo/pdf-export/VAL-UI-009-report-page.png"
+        ],
+        "downloadedFiles": [
+          "ui-demo/pdf-export/VAL-UI-009-downloaded.pdf"
+        ],
+        "consoleErrors": "none",
+        "network": "GET /api/audits/44315460-1610-4bee-9b32-7d544c5bbb12/report/pdf -> 200 (application/pdf, 6169 bytes, valid %PDF-1.4 header)"
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [],
+  "blockers": [],
+  "summary": "Tested 1 assertion: 1 passed. VAL-UI-009 (PDF export) confirmed working — report page displays Download PDF button, and the PDF API endpoint returns a valid PDF (6169 bytes, %PDF-1.4 header) with HTTP 200 and correct content-type."
+}

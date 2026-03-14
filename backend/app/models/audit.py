@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from typing import Any
 
 from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -24,7 +25,8 @@ class Audit(Base):
     selected_personas: Mapped[list[str]] = mapped_column(JSON, default=list)
     report_path: Mapped[str | None] = mapped_column(String(2048))
     report_public_url: Mapped[str | None] = mapped_column(String(2048))
-    raw_run: Mapped[dict] = mapped_column(JSON, default=dict)
+    video_urls: Mapped[dict[str, str] | None] = mapped_column(JSON, default=None, nullable=True)
+    raw_run: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
     metrics: Mapped[dict] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(

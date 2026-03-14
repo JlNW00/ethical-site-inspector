@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0b1020"/>
+      <stop offset="100%" stop-color="#111827"/>
+    </linearGradient>
+  </defs>
+  <rect width="1440" height="900" fill="url(#bg)"/>
+  <rect x="80" y="90" width="1280" height="720" rx="32" fill="#f8fafc"/>
+  <rect x="80" y="90" width="1280" height="84" rx="32" fill="#0f766e"/>
+  <text x="128" y="142" fill="#f8fafc" font-family="Segoe UI, Arial" font-size="28" font-weight="700">EthicalSiteInspector Mock Capture</text>
+  <text x="128" y="245" fill="#0f172a" font-family="Segoe UI, Arial" font-size="48" font-weight="700">Checkout Flow</text>
+  <text x="128" y="302" fill="#334155" font-family="Segoe UI, Arial" font-size="28">Privacy Sensitive persona on example.com</text>
+  <rect x="128" y="360" width="1184" height="220" rx="24" fill="#e2e8f0"/>
+  <text x="164" y="430" fill="#0f172a" font-family="Segoe UI, Arial" font-size="34" font-weight="700">Captured signal</text>
+  <text x="164" y="486" fill="#334155" font-family="Segoe UI, Arial" font-size="26">Stored-card preference pre-selected</text>
+  <rect x="128" y="628" width="280" height="72" rx="18" fill="#0f766e"/>
+  <text x="176" y="672" fill="#f8fafc" font-family="Segoe UI, Arial" font-size="28" font-weight="700">Primary CTA</text>
+  <rect x="438" y="628" width="280" height="72" rx="18" fill="#cbd5e1"/>
+  <text x="506" y="672" fill="#0f172a" font-family="Segoe UI, Arial" font-size="28" font-weight="700">Secondary action</text>
+</svg>

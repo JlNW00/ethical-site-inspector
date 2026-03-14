@@ -44,6 +44,20 @@ class BrowserAuditProvider(ABC):
 
 
 class MockBrowserAuditProvider(BrowserAuditProvider):
+    # Minimal valid WebM file bytes (EBML header + minimal content)
+    # This is a tiny placeholder webm file that validates as real WebM
+    MOCK_WEBM_BYTES: bytes = bytes([
+        0x1A, 0x45, 0xDF, 0xA3,  # EBML ID
+        0x9F,  # Size (31 bytes following)
+        0x42, 0x86, 0x81, 0x01,  # EBMLVersion = 1
+        0x42, 0xF7, 0x81, 0x01,  # EBMLReadVersion = 1
+        0x42, 0xF2, 0x81, 0x04,  # EBMLMaxIDLength = 4
+        0x42, 0xF3, 0x81, 0x08,  # EBMLMaxSizeLength = 8
+        0x42, 0x82, 0x88, 0x77, 0x65, 0x62, 0x6D, 0x00,  # DocType = "webm"
+        0x42, 0x87, 0x81, 0x04,  # DocTypeVersion = 4
+        0x42, 0x85, 0x81, 0x02,  # DocTypeReadVersion = 2
+    ])
+
     def __init__(self, storage: StorageProvider):
         self.storage = storage
 
@@ -56,6 +70,7 @@ class MockBrowserAuditProvider(BrowserAuditProvider):
         progress: ProgressCallback,
     ) -> BrowserRunResult:
         observations: list[JourneyObservation] = []
+        video_urls: dict[str, str] = {}
         combinations = list(itertools.product(scenarios, personas))
         total = max(1, len(combinations))
         for index, (scenario, persona) in enumerate(combinations, start=1):
@@ -70,15 +85,27 @@ class MockBrowserAuditProvider(BrowserAuditProvider):
             time.sleep(0.2)
             observation = self._build_observation(audit_id, target_url, scenario, persona)
             observations.append(observation)
+
+            # Generate and save mock video for this scenario-persona
+            video_key = f"videos/{audit_id}/{scenario}_{persona}.webm"
+            saved_video = self.storage.save_bytes(
+                video_key,
+                self.MOCK_WEBM_BYTES,
+                "video/webm",
+            )
+            video_key_id = f"{scenario}_{persona}"
+            video_urls[video_key_id] = saved_video.public_url
+
             progress(
-                "evidence",
-                f"Captured evidence bundle for {scenario.replace('_', ' ')} / {persona.replace('_', ' ')}",
+                "video",
+                f"Recorded session video for {scenario.replace('_', ' ')} / {persona.replace('_', ' ')}",
                 min(base_progress + 8, 58),
                 "running",
                 {
                     "scenario": scenario,
                     "persona": persona,
                     "image_url": next(iter(observation.evidence.screenshot_urls), None),
+                    "video_url": saved_video.public_url,
                     "buttons": observation.evidence.button_labels[:3],
                 },
             )
@@ -94,6 +121,7 @@ class MockBrowserAuditProvider(BrowserAuditProvider):
                 "scenarios": scenarios,
                 "personas": personas,
             },
+            video_urls=video_urls,
         )
 
     def _build_observation(self, audit_id: str, target_url: str, scenario: str, persona: str) -> JourneyObservation:

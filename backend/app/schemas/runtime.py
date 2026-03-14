@@ -55,3 +55,4 @@ class ClassifiedFinding:
 class BrowserRunResult:
     observations: list[JourneyObservation]
     summary: dict[str, Any]
+    video_urls: dict[str, str] | None = None

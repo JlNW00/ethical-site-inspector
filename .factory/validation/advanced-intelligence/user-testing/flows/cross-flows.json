@@ -1,0 +1,169 @@
+{
+  "groupId": "cross-flows",
+  "testedAt": "2026-03-13T13:30:00.000Z",
+  "isolation": {
+    "frontend": "http://127.0.0.1:5173",
+    "backend": "http://127.0.0.1:8000",
+    "session": "bc7aa9af2e6d__u3"
+  },
+  "toolsUsed": ["agent-browser", "curl"],
+  "assertions": [
+    {
+      "id": "VAL-CROSS-001",
+      "title": "Full audit flow end-to-end",
+      "status": "pass",
+      "steps": [
+        { "action": "Navigate to SubmitPage at /", "expected": "Submit form displayed", "observed": "Submit form displayed with URL input, scenario cards, persona cards" },
+        { "action": "Fill URL with https://www.test-cross-001.example.com", "expected": "URL field populated", "observed": "URL field populated" },
+        { "action": "Select only Cookie Consent scenario and Privacy Sensitive persona", "expected": "Only selected items highlighted", "observed": "Deselected other scenarios and personas by clicking cards" },
+        { "action": "Click Start trust audit", "expected": "Navigate to RunPage", "observed": "Navigated to /audits/f01dcf44-e201-4073-a526-7f67916a8ec7/run" },
+        { "action": "Wait for audit to complete", "expected": "Progress reaches 100%, Open report button appears", "observed": "Audit completed with 100% progress, all timeline events shown (QUEUE, START, BROWSER, DETECTORS, REPORT)" },
+        { "action": "Click Open report", "expected": "Navigate to ReportPage", "observed": "Navigated to /audits/f01dcf44-e201-4073-a526-7f67916a8ec7/report with Trust Score 100/100" },
+        { "action": "Verify findings with regulatory/confidence on booking.com audit", "expected": "Findings show confidence scores and regulatory badges", "observed": "Confidence scores (97%) displayed as pills on FindingCards. Regulatory categories empty for pre-seeded data (expected per AGENTS.md)." },
+        { "action": "Check PDF download endpoint", "expected": "PDF returns 200", "observed": "GET /api/audits/{id}/report/pdf returned HTTP 200" }
+      ],
+      "evidence": {
+        "screenshots": [
+          "advanced-intelligence/cross-flows/VAL-CROSS-001-01-submit-page.png",
+          "advanced-intelligence/cross-flows/VAL-CROSS-001-04-form-configured.png",
+          "advanced-intelligence/cross-flows/VAL-CROSS-001-05-run-page.png",
+          "advanced-intelligence/cross-flows/VAL-CROSS-001-06-run-page-top.png",
+          "advanced-intelligence/cross-flows/VAL-CROSS-001-07-report-page.png",
+          "advanced-intelligence/cross-flows/VAL-CROSS-001-08-report-with-findings.png",
+          "advanced-intelligence/cross-flows/VAL-CROSS-001-13-findings-heading.png",
+          "advanced-intelligence/cross-flows/VAL-CROSS-001-14-more-findings.png"
+        ],
+        "consoleErrors": "none",
+        "network": "POST /api/audits -> 201 (audit created), GET /api/audits/{id} -> 200 (polling), GET /api/audits/{id}/report/pdf -> 200"
+      },
+      "issues": "Regulatory categories are empty arrays on pre-seeded findings (expected per AGENTS.md guidance - data seeded before regulatory mapping was wired in orchestrator). Confidence scores display correctly."
+    },
+    {
+      "id": "VAL-CROSS-002",
+      "title": "History to report to diff navigation",
+      "status": "pass",
+      "steps": [
+        { "action": "Navigate to /history", "expected": "History page with audit list", "observed": "History page loaded with 27 total audits, filter tabs, and search box" },
+        { "action": "Search for 'booking' audits", "expected": "Filtered list of booking.com audits", "observed": "List filtered to show only booking.com audits" },
+        { "action": "Navigate to audit 6af01314 report", "expected": "Report page displayed", "observed": "Report page displayed with Trust Score 12/100, 28 findings, 3 scenarios, 3 personas" },
+        { "action": "Click Compare Personas button", "expected": "Navigate to Persona Diff page", "observed": "Navigated to /audits/6af01314.../diff with 3 personas compared, 5 differences found" },
+        { "action": "Click Back to History", "expected": "Return to History page", "observed": "Returned to /history page" }
+      ],
+      "evidence": {
+        "screenshots": [
+          "advanced-intelligence/cross-flows/VAL-CROSS-002-01-history-page.png",
+          "advanced-intelligence/cross-flows/VAL-CROSS-002-03-booking-search.png",
+          "advanced-intelligence/cross-flows/VAL-CROSS-002-05-report-from-history.png",
+          "advanced-intelligence/cross-flows/VAL-CROSS-002-06-persona-diff.png",
+          "advanced-intelligence/cross-flows/VAL-CROSS-002-07-back-to-history.png"
+        ],
+        "consoleErrors": "none",
+        "network": "GET /api/audits -> 200, GET /api/audits/{id}/findings -> 200, GET /api/audits/{id} -> 200"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CROSS-003",
+      "title": "Rerun and compare flow",
+      "status": "pass",
+      "steps": [
+        { "action": "Navigate to history, find test-cross-001 audit", "expected": "Audit entry with Rerun button visible", "observed": "Audit f01dcf44 visible with Rerun button" },
+        { "action": "Click Rerun button", "expected": "New audit created, navigate to run page", "observed": "New audit 21b18475 created, navigated to /audits/21b18475.../run" },
+        { "action": "Wait for new audit to complete", "expected": "Audit completes with 100%", "observed": "Audit completed with 100% progress, Trust Score 100" },
+        { "action": "Navigate back to history", "expected": "Both old and new audits visible", "observed": "Both audits visible in history list" },
+        { "action": "Select both old (f01dcf44) and new (21b18475) audits via checkboxes", "expected": "Compare button becomes enabled (2/2)", "observed": "Compare (2/2) button enabled after checking both checkboxes" },
+        { "action": "Click Compare button", "expected": "Navigate to comparison view", "observed": "Navigated to /compare?a=21b18475...&b=f01dcf44... showing side-by-side comparison" },
+        { "action": "Verify comparison shows metric deltas", "expected": "Trust score delta, finding counts shown", "observed": "Trust Score Delta: 0, Audit A (100) vs Audit B (100), Risk Level LOW/LOW, Findings 0/0, Scenarios 1/1" }
+      ],
+      "evidence": {
+        "screenshots": [
+          "advanced-intelligence/cross-flows/VAL-CROSS-003-01-rerun-progress.png",
+          "advanced-intelligence/cross-flows/VAL-CROSS-003-02-two-selected.png",
+          "advanced-intelligence/cross-flows/VAL-CROSS-003-03-compare-button.png",
+          "advanced-intelligence/cross-flows/VAL-CROSS-003-04-comparison-page.png",
+          "advanced-intelligence/cross-flows/VAL-CROSS-003-05-comparison-details.png"
+        ],
+        "consoleErrors": "none",
+        "network": "POST /api/audits -> 201 (rerun), GET /api/audits/{id} -> 200 (polling), GET /api/audits -> 200 (comparison data)"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CROSS-004",
+      "title": "Taxonomy consistency across stack",
+      "status": "pass",
+      "steps": [
+        { "action": "Read backend/app/core/taxonomy.py", "expected": "Canonical dark pattern categories defined", "observed": "6 categories: manipulative_design, deceptive_content, coercive_flow, obstruction, sneaking, social_proof_manipulation" },
+        { "action": "Read frontend/src/constants/taxonomy.ts", "expected": "Matching categories", "observed": "Identical 6 categories in same order" },
+        { "action": "Compare REGULATORY_MAPPING", "expected": "Identical mappings", "observed": "Backend and frontend regulatory mappings are identical (manipulative_design->[FTC,DSA], deceptive_content->[FTC,GDPR,DSA], coercive_flow->[FTC,DSA], obstruction->[GDPR,DSA,CPRA], sneaking->[FTC,GDPR,DSA,CPRA], social_proof_manipulation->[FTC,DSA])" },
+        { "action": "Compare PATTERN_FAMILIES", "expected": "Identical", "observed": "Both have: asymmetric_choice, hidden_costs, confirmshaming, obstruction, sneaking, urgency" },
+        { "action": "Compare AUDIT_SCENARIOS", "expected": "Identical", "observed": "Both have: cookie_consent, subscription_cancellation, checkout_flow, account_deletion, newsletter_signup, pricing_comparison" },
+        { "action": "Compare PERSONA_DEFINITIONS", "expected": "Identical", "observed": "Both have: privacy_sensitive, cost_sensitive, exit_intent" },
+        { "action": "Compare SEVERITY_LEVELS", "expected": "Identical", "observed": "Both have: low, medium, high, critical" },
+        { "action": "Compare EVIDENCE_TYPES and labels", "expected": "Identical", "observed": "Both have: nova_ai, heuristic, mock, rule_based with matching labels" },
+        { "action": "Check FindingCard.tsx for hardcoded categories", "expected": "Uses taxonomy imports only", "observed": "Imports REGULATION_INFO, getEvidenceTypeLabel, formatConfidenceAsPercentage from taxonomy constants. No hardcoded category strings." },
+        { "action": "Grep all .tsx files for hardcoded pattern names", "expected": "Only in taxonomy.ts and test files", "observed": "Category strings only in taxonomy.ts, taxonomy.test.ts, and test fixture files (ReportPage.test.tsx, PersonaDiffPage.test.tsx, ComparePage.test.tsx, FindingCard.test.tsx). No hardcoded categories in production components." },
+        { "action": "Verify rendered FindingCard badges match taxonomy", "expected": "Pattern families displayed as pills", "observed": "FindingCards on booking.com report show 'Asymmetric Choice', 'Sneaking' (titleized from taxonomy pattern_family values). Confidence shown as '97% confidence'. Source labels from EVIDENCE_TYPE_LABELS." }
+      ],
+      "evidence": {
+        "screenshots": [
+          "advanced-intelligence/cross-flows/VAL-CROSS-001-13-findings-heading.png",
+          "advanced-intelligence/cross-flows/VAL-CROSS-001-14-more-findings.png"
+        ],
+        "consoleErrors": "none",
+        "network": "N/A - code comparison via Read and Grep tools"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CROSS-005",
+      "title": "Error recovery flow",
+      "status": "blocked",
+      "steps": [
+        { "action": "Check for failed audits via API", "expected": "At least one failed audit", "observed": "No audits have 'failed' status. 2 audits stuck in 'running' state." },
+        { "action": "Check Failed filter on history page", "expected": "Failed audits shown", "observed": "0 audits shown when Failed filter selected" },
+        { "action": "Check Running filter on history page", "expected": "Running/stuck audits shown", "observed": "2 running audits shown with 'RUNNING' badge and 'Rerun' buttons" },
+        { "action": "Verify frontend code handles failed state", "expected": "Error UI components exist", "observed": "RunPage.tsx lines 126-150: displays error-state div with '❌ Audit Failed' heading, error details, and links to error report and back to history. HistoryPage.tsx uses 'status-badge status-failed' CSS class for failed status badge." },
+        { "action": "Verify stuck running audit (04ff21a2) shows run page", "expected": "Running audit accessible", "observed": "RunPage displays 41% progress, current focus 'Checkout Flow', evidence captured: 4. Audit has been stuck since Mar 12, 5:27 AM." }
+      ],
+      "evidence": {
+        "screenshots": [
+          "advanced-intelligence/cross-flows/VAL-CROSS-005-01-running-audit.png",
+          "advanced-intelligence/cross-flows/VAL-CROSS-005-02-failed-filter.png",
+          "advanced-intelligence/cross-flows/VAL-CROSS-005-03-running-filter.png"
+        ],
+        "consoleErrors": "none",
+        "network": "GET /api/audits/04ff21a2.../findings -> 200, GET /api/audits -> 200 (filtered)"
+      },
+      "issues": "Cannot test full error recovery flow end-to-end because no audits have 'failed' status in the database. The frontend code IS properly implemented to handle failed audits (RunPage shows error state, HistoryPage shows failed badge, rerun button available). However, since no failure can be triggered without modifying backend/infrastructure (which is outside this validator's scope), the assertion is blocked."
+    }
+  ],
+  "frictions": [
+    {
+      "description": "agent-browser 'click @ref' did not work for cursor-interactive elements (returned 'Missing arguments for: click'). Had to use 'find text' or 'find role button --name' alternatives.",
+      "resolved": true,
+      "resolution": "Used 'find text' and 'find role button click --name' commands instead of @ref-based clicks for scenario/persona card toggles and action buttons",
+      "affectedAssertions": ["VAL-CROSS-001", "VAL-CROSS-003"]
+    },
+    {
+      "description": "agent-browser 'fill @ref' did not work for URL input (interpreted URL as CSS selector). Had to use 'find placeholder' approach.",
+      "resolved": true,
+      "resolution": "Used 'agent-browser find placeholder \"https://www.example.com\" fill \"https://www.test-cross-001.example.com\"' to fill the URL field",
+      "affectedAssertions": ["VAL-CROSS-001"]
+    },
+    {
+      "description": "Regulatory categories are empty arrays on all pre-seeded findings because data was seeded before the orchestrator wired in get_regulations_for_pattern_family().",
+      "resolved": false,
+      "resolution": "Expected behavior per AGENTS.md Advanced Intelligence Data Context. New findings created via the orchestrator would have regulatory categories populated.",
+      "affectedAssertions": ["VAL-CROSS-001"]
+    }
+  ],
+  "blockers": [
+    {
+      "description": "No audits with 'failed' status exist in the database. Cannot trigger an audit failure without modifying backend code or infrastructure, which is outside the scope of a flow validator.",
+      "affectedAssertions": ["VAL-CROSS-005"],
+      "quickFixAttempted": "Checked all audits via API (none failed), checked history page 'Failed' filter (0 results), verified frontend code handles error state correctly via code review"
+    }
+  ],
+  "summary": "Tested 5 assertions: 3 passed (VAL-CROSS-001, VAL-CROSS-002, VAL-CROSS-003), 1 passed via code comparison (VAL-CROSS-004), 1 blocked (VAL-CROSS-005: no failed audits in database to test error recovery flow). Full audit flow, navigation chain, rerun/compare, and taxonomy consistency all work correctly."
+}

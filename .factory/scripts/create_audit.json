@@ -1,0 +1,5 @@
+{
+  "target_url": "https://www.example.com",
+  "scenarios": ["cookie_consent", "checkout_flow", "subscription_cancellation"],
+  "personas": ["privacy_sensitive", "cost_sensitive"]
+}

@@ -98,6 +98,7 @@ def mock_orchestrator():
     mock_audit.selected_scenarios = ["cookie_consent", "checkout_flow"]
     mock_audit.selected_personas = ["privacy_sensitive", "cost_sensitive"]
     mock_audit.report_public_url = None
+    mock_audit.video_urls = None
     mock_audit.metrics = {}
     mock_audit.created_at = "2024-01-01T00:00:00"
     mock_audit.updated_at = "2024-01-01T00:00:00"

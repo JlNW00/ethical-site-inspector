@@ -1,0 +1,72 @@
+{
+  "groupId": "report-evidence",
+  "testedAt": "2026-03-13T12:00:00Z",
+  "isolation": {
+    "appUrl": "http://127.0.0.1:5173",
+    "backendApi": "http://127.0.0.1:8000",
+    "auditId": "adcde59c-d03d-41c5-be90-9fdf4d3e96f8",
+    "session": "7b3986a5a96e__report"
+  },
+  "toolsUsed": ["agent-browser"],
+  "assertions": [
+    {
+      "id": "VAL-UI-007",
+      "title": "Screenshot timeline on report",
+      "status": "pass",
+      "steps": [
+        { "action": "Navigate to /audits/adcde59c-d03d-41c5-be90-9fdf4d3e96f8/report", "expected": "Report page loads", "observed": "Report page loaded successfully with all sections" },
+        { "action": "Scroll to Screenshot Timeline section", "expected": "Timeline section with chronological screenshots", "observed": "Screenshot Timeline heading (h2) present with description 'Chronological evidence captured during the audit journey'" },
+        { "action": "Verify timeline entries", "expected": "Screenshots with captions showing scenario, persona, and step context", "observed": "6 timeline entries found: Step 1-6, each with persona label (Privacy Sensitive, Cost Sensitive, Exit Intent), step context (Live 1, Live 2), scenario (Checkout Flow), and timestamp (Mar 12, 2026, 6:41 AM). Each entry includes a clickable screenshot thumbnail." }
+      ],
+      "evidence": {
+        "screenshots": [
+          "ui-demo/report-evidence/VAL-UI-007-screenshot-timeline.png",
+          "ui-demo/report-evidence/VAL-UI-007-screenshot-timeline-more.png",
+          "ui-demo/report-evidence/VAL-UI-007-screenshot-timeline-steps3-6.png"
+        ],
+        "consoleErrors": "none",
+        "network": "Page loaded successfully, screenshot images loaded from backend API"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-UI-008",
+      "title": "Findings grouped by scenario",
+      "status": "pass",
+      "steps": [
+        { "action": "Scroll to Findings and evidence section", "expected": "Findings grouped by scenario with headings", "observed": "Findings and evidence heading (h2) with description 'Grouped by scenario and persona so stakeholder teams can triage remediations quickly'" },
+        { "action": "Verify scenario grouping", "expected": "Scenario heading as group title", "observed": "'Checkout Flow' heading (h3) present as the scenario group heading" },
+        { "action": "Verify persona sub-groups", "expected": "Persona sub-groups within each scenario", "observed": "Three persona sub-groups found under Checkout Flow: 'Privacy Sensitive', 'Cost Sensitive', 'Exit Intent'. Each sub-group contains a finding card with severity badge, obstruction category, confidence percentage, and detailed evidence." }
+      ],
+      "evidence": {
+        "screenshots": [
+          "ui-demo/report-evidence/VAL-UI-008-findings-grouped-top.png",
+          "ui-demo/report-evidence/VAL-UI-008-findings-cost-sensitive.png"
+        ],
+        "consoleErrors": "none",
+        "network": "Findings data loaded from GET /api/audits/{id}/findings"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-UI-009",
+      "title": "PDF export",
+      "status": "fail",
+      "steps": [
+        { "action": "Locate Download PDF button on report page", "expected": "Download PDF button visible and clickable", "observed": "Download PDF button present, styled as a green pill button, links to http://127.0.0.1:8000/api/audits/adcde59c-d03d-41c5-be90-9fdf4d3e96f8/report/pdf" },
+        { "action": "Verify PDF URL is accessible", "expected": "PDF file downloads with valid content containing trust score, risk level, and findings", "observed": "Backend returns HTTP 500 error: 'PDF generation failed: Invalid color value <css function: var(--line)>'. The HTML report endpoint (/api/audits/{id}/report) works fine (returns 200 with valid HTML), but the PDF conversion fails due to a CSS variable resolution error in the backend PDF generator." }
+      ],
+      "evidence": {
+        "screenshots": [
+          "ui-demo/report-evidence/VAL-UI-009-pdf-button.png"
+        ],
+        "consoleErrors": "none",
+        "network": "GET /api/audits/{id}/report/pdf -> 500 Internal Server Error"
+      },
+      "issues": "PDF generation fails with HTTP 500: 'PDF generation failed: Invalid color value <css function: var(--line)>'. The CSS custom property var(--line) is not being resolved before being passed to the PDF renderer. The Download PDF button UI element exists and links correctly, but the backend PDF generation pipeline has a CSS variable resolution bug."
+    }
+  ],
+  "frictions": [],
+  "blockers": [],
+  "summary": "Tested 3 assertions: 2 passed (VAL-UI-007 screenshot timeline, VAL-UI-008 findings grouped by scenario), 1 failed (VAL-UI-009 PDF export - backend PDF generation returns 500 due to unresolved CSS variable)."
+}

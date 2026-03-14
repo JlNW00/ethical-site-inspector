@@ -1,0 +1,56 @@
+{
+  "featureId": "pdf-export-api",
+  "reviewedAt": "2026-03-13T07:50:00.000Z",
+  "commitId": "28cbb8bac2d5fc26731314b1a69a0d6adcacef44",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "Clean, well-structured implementation of the PDF export endpoint. The feature adds a new GET /api/audits/{audit_id}/report/pdf endpoint using xhtml2pdf for HTML-to-PDF conversion. The pdf_service.py module is focused and properly typed. The endpoint handles all expected error cases (missing audit, missing report_path, missing file, PDF generation failure) with appropriate HTTP status codes. Tests cover 8 cases across success paths, 404 scenarios, 500 error handling, and edge cases like failed audits with existing reports. The implementation fully satisfies the feature description and expectedBehavior requirements.",
+    "issues": [
+      {
+        "file": "backend/tests/test_pdf_export.py",
+        "line": 18,
+        "severity": "non_blocking",
+        "description": "Unused import: BytesIO is imported but never used in the test file. Would be flagged by ruff."
+      },
+      {
+        "file": "backend/tests/test_pdf_export.py",
+        "line": 19,
+        "severity": "non_blocking",
+        "description": "Unused import: MagicMock is imported but never used in the test file. Would be flagged by ruff."
+      },
+      {
+        "file": "backend/tests/test_pdf_export.py",
+        "line": 42,
+        "severity": "non_blocking",
+        "description": "The api_test_client fixture duplicates most of the test_client fixture in conftest.py but adds the audits_router. This pattern of creating per-file test clients that include additional routers could be consolidated into a parameterizable conftest fixture to reduce duplication."
+      },
+      {
+        "file": "backend/app/api/routes/audits.py",
+        "line": 125,
+        "severity": "non_blocking",
+        "description": "The error detail f'PDF generation failed: {e}' may expose internal error details (file paths, library internals) to API consumers. In production, consider using a generic error message and logging the full exception server-side."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "AGENTS.md states 'API routes return Pydantic models; never raw dicts.' The PDF endpoint returns a raw Response with binary content, and the existing get_report endpoint returns a FileResponse. These are valid patterns for binary/file content, but the convention as written doesn't account for endpoints that serve files rather than JSON. The convention could be clarified to say 'API routes return Pydantic models for JSON endpoints; file endpoints use Response/FileResponse.'",
+      "evidence": "backend/app/api/routes/audits.py:95 (get_report returns FileResponse), backend/app/api/routes/audits.py:130 (get_report_pdf returns Response). AGENTS.md 'Coding Conventions' section states the rule."
+    },
+    {
+      "area": "conventions",
+      "observation": "The handoff commitId field (65f12aebb7026079e9b707e7c58b5e5b8f204) doesn't match the actual git commit hash (28cbb8bac2d5fc26731314b1a69a0d6adcacef44). This appears to be a truncated/corrupted hash in the handoff metadata.",
+      "evidence": "Handoff file commitId: '65f12aebb7026079e9b707e7c58b5e5b8f204' vs git log showing commit 28cbb8b for the PDF export feature."
+    },
+    {
+      "area": "skills",
+      "observation": "Worker did not strictly follow the TDD approach specified in the backend-dev skill ('Write Tests First'). The transcript shows the worker discovered the feature was partially pre-implemented from a previous session attempt, then verified existing tests and ran them rather than writing failing tests first. This deviation was reasonable given the context — the code and tests already existed from the prior worker session.",
+      "evidence": "Transcript skeleton shows worker reading existing pdf_service.py and test_pdf_export.py before running tests, rather than writing tests first. Feature had 2 workerSessionIds indicating a retry."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "The pdf-export-api feature is well-implemented. It adds a clean PDF generation service using xhtml2pdf and a properly structured API endpoint with comprehensive error handling (404 for missing audit/report, 500 for generation failures). The 8 tests cover all critical paths including edge cases. Non-blocking issues are limited to unused imports in the test file and a minor information disclosure concern in error messages. The implementation satisfies all requirements from the feature description: PDF contains trust score/risk level/findings, Content-Type is application/pdf, Content-Disposition has filename, and proper 404/500 error responses. Pass."
+}

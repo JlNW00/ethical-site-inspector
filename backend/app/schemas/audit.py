@@ -86,6 +86,7 @@ class AuditRead(BaseModel):
     selected_scenarios: list[str]
     selected_personas: list[str]
     report_public_url: str | None
+    video_urls: dict[str, str] | None
     metrics: dict[str, Any]
     created_at: datetime
     updated_at: datetime

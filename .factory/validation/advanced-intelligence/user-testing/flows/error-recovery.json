@@ -1,0 +1,28 @@
+{
+  "flowId": "error-recovery",
+  "assertions": {
+    "VAL-CROSS-005": {
+      "status": "pass",
+      "reason": "Full error recovery flow verified: (1) RunPage at /audits/37e42845.../run shows clear error state with 'Audit Failed' heading, red X icon, error details ('Nova Act session timeout exceeded during cookie_consent scenario'), 'Failed Status' badge, and 'Back to History'/'View Error Report' buttons. (2) History page shows the failed audit with red 'FAILED' badge and Trust Score 0. (3) Clicking the 'Rerun' button on the failed audit entry created a new audit (ID 4126bc55-c272-4893-af90-74393dfbda7a) and redirected to its RunPage. (4) The new audit completed successfully with 'Completed Status' badge, 100% progress, and Trust Score 100. (5) History page shows both the new completed audit (green 'COMPLETED' badge, Trust Score 100) and the original failed audit (red 'FAILED' badge, Trust Score 0), confirming the full error recovery cycle.",
+      "evidence": [
+        "advanced-intelligence/error-recovery/VAL-CROSS-005-runpage-error-state.png",
+        "advanced-intelligence/error-recovery/VAL-CROSS-005-runpage-error-scrolled.png",
+        "advanced-intelligence/error-recovery/VAL-CROSS-005-history-failed-badge.png",
+        "advanced-intelligence/error-recovery/VAL-CROSS-005-history-failed-entry.png",
+        "advanced-intelligence/error-recovery/VAL-CROSS-005-rerun-new-audit.png",
+        "advanced-intelligence/error-recovery/VAL-CROSS-005-rerun-completed.png",
+        "advanced-intelligence/error-recovery/VAL-CROSS-005-history-rerun-completed.png"
+      ]
+    }
+  },
+  "frictions": [
+    {
+      "description": "The RunPage route is /audits/:id/run (not /audits/:id as suggested in the task). Navigating to /audits/:id redirects to home page since there's no route matching that pattern.",
+      "resolved": true,
+      "resolution": "Discovered correct route from App.tsx routing configuration and navigated to /audits/{id}/run instead",
+      "affectedAssertions": ["VAL-CROSS-005"]
+    }
+  ],
+  "blockers": [],
+  "toolsUsed": ["agent-browser", "curl"]
+}
