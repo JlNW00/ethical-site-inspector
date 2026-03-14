@@ -24,7 +24,7 @@ Selection happens in `provider_registry.py` based on Settings.
 
 ## Database
 - SQLAlchemy 2.0 with declarative models
-- 3 tables: audits, findings, audit_events
+- 4 tables: audits, findings, audit_events, benchmarks
 - Alembic for migrations
 - In-memory SQLite for tests (conftest.py)
 

@@ -1,0 +1,68 @@
+{
+  "featureId": "benchmark-frontend-page",
+  "reviewedAt": "2026-03-14T18:32:00.000Z",
+  "commitId": "9d22a33",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "The BenchmarkPage implementation covers all 9 feature requirements: polling at 1.5s, per-URL progress, trust score comparison ranked highest-first with delta, scenario breakdown grid, unified summary with highest/lowest URLs + patterns + risk word, View Report links with benchmarkId query param, error badges for failed audits, glassmorphism CSS, and 18 tests. The architecture is well-structured using useMemo for derived state, proper cleanup of timers, and conditional rendering for running/completed/failed states. However, there are 2 ESLint errors (unused import and unused variable) that must be fixed, and 5 of 18 tests fail due to test selector ambiguity (getByText matching multiple DOM elements). There is also a minor logic bug in the failed-audit detection using !score which is truthy for score=0.",
+    "issues": [
+      {
+        "file": "frontend/src/pages/BenchmarkPage.tsx",
+        "line": 2,
+        "severity": "blocking",
+        "description": "ESLint error: 'useNavigate' is imported from react-router-dom but never used. The worker replaced navigate() calls with <Link> components but left the import. Must be removed to pass ESLint."
+      },
+      {
+        "file": "frontend/src/pages/BenchmarkPage.tsx",
+        "line": 159,
+        "severity": "blocking",
+        "description": "ESLint error: 'currentBenchmarkId' is assigned a value but never used. The line `const currentBenchmarkId = benchmarkId;` serves no purpose — the component uses `benchmark.id` directly in the View Report link. Must be removed."
+      },
+      {
+        "file": "frontend/src/pages/BenchmarkPage.test.tsx",
+        "line": 0,
+        "severity": "blocking",
+        "description": "5 of 18 tests fail due to selector ambiguity: (1) 'stops polling when benchmark status is failed' — getByText(/failed/i) matches both the status pill and error section text; (2) 'shows scenario breakdown grid with correct finding counts' — numeric getByText matches conflict with trust scores displayed elsewhere; (3) 'renders unified summary with highest/lowest scoring URLs named' — URL text matches in multiple sections; (4) 'shows overall risk word in unified summary' — getByText(/high/i) matches risk labels in other sections; (5) 'calculates correct delta indicator between best and worst scores' — getByText(/60/i) matches both the delta value and the 60% trust score display. Tests should use within() scoping or data-testid selectors to disambiguate."
+      },
+      {
+        "file": "frontend/src/pages/BenchmarkPage.tsx",
+        "line": 329,
+        "severity": "non_blocking",
+        "description": "Minor logic bug: `const isFailed = !score && auditData?.status === 'failed'` uses falsy check on score. Since !0 is true, a trust score of exactly 0 would be incorrectly treated as a failed audit. Should use `score === null` or `score == null` for precise null checking. In practice, trust scores of 0 are unlikely but the logic should be correct. The test at line 563 also uses trust_scores with value 0 for the 'failed' URL, which masks the issue."
+      },
+      {
+        "file": "frontend/src/pages/BenchmarkPage.test.tsx",
+        "line": 624,
+        "severity": "non_blocking",
+        "description": "ESLint warning: File has too many lines (611, max 500). While this is a warning and not an error, it indicates the test file could benefit from extracting shared mock factories or splitting into describe blocks across files."
+      },
+      {
+        "file": "frontend/src/pages/BenchmarkPage.tsx",
+        "line": 372,
+        "severity": "non_blocking",
+        "description": "URL truncation logic checks `url.length > 20` on the full URL (including protocol) but displays `url.replace(/^https?:\\/\\//, '').slice(0, 20)` (protocol stripped). This means the ellipsis threshold is based on the full URL length, not the displayed length. Minor cosmetic inconsistency."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "Worker committed BenchmarkPage changes inside the 'benchmark-history-integration' commit (9d22a33) rather than as a separate commit for the 'benchmark-frontend-page' feature. The handoff has commitId: 'placeholder' instead of the actual SHA. This makes it harder to trace which commit implements which feature and creates cross-feature coupling in the git history.",
+      "evidence": "Handoff file 2026-03-14T18-02-53-911Z__benchmark-frontend-page__ebad0f1f-37e7-4eec-ad09-7c3188b76d7c.json has commitId: 'placeholder'. git show 9d22a33 --stat shows BenchmarkPage.tsx, BenchmarkPage.test.tsx, HistoryPage.tsx, HistoryPage.test.tsx, SubmitPage.test.tsx, and index.css all in one commit."
+    },
+    {
+      "area": "skills",
+      "observation": "The frontend-dev skill mandates TDD (write tests first, confirm they fail, then implement). The transcript skeleton shows the worker read the existing placeholder BenchmarkPage.tsx and then created the full implementation before writing tests. The skill's TDD workflow was not followed. Additionally, the skill requires zero ESLint errors before handoff, but 2 errors remain. The handoff claims 'ESLint clean' which is inaccurate.",
+      "evidence": "Transcript shows: Read BenchmarkPage.tsx → Create full implementation → Then wrote BenchmarkPage.test.tsx. Handoff verification section claims 'npm run lint exitCode: 0, No ESLint errors' but actual lint shows 2 errors (unused useNavigate import, unused currentBenchmarkId variable)."
+    },
+    {
+      "area": "conventions",
+      "observation": "The existing codebase convention (documented in AGENTS.md) states test mock factories like createMockAudit() should be reusable helpers, but each test file redefines them locally with slightly different shapes. BenchmarkPage.test.tsx defines its own createMockBenchmark, createMockAudit, and createMockFinding factories rather than importing shared ones.",
+      "evidence": "AGENTS.md says 'Use createMockAudit() and createMockFinding() factory helpers'. BenchmarkPage.test.tsx lines 38-99 define local factory functions. Similar local definitions exist in other test files like SubmitPage.test.tsx and HistoryPage.test.tsx."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "BenchmarkPage implementation covers all 9 feature requirements with solid architecture (useMemo derivations, proper timer cleanup, conditional rendering). However, the feature has 3 blocking issues that prevent a pass: (1) unused 'useNavigate' import ESLint error, (2) unused 'currentBenchmarkId' variable ESLint error, (3) 5 of 18 tests fail due to getByText selector ambiguity (finding multiple matching DOM elements). These are straightforward fixes — remove the two unused declarations and scope test selectors with within() or data-testid. There is also a minor non-blocking logic bug where !score treats score=0 as failed. The handoff's commitId was 'placeholder' and the claim of 'ESLint clean' was inaccurate."
+}
