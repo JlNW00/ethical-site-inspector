@@ -1,0 +1,80 @@
+{
+  "featureId": "regpdf-backend-template-and-endpoint",
+  "reviewedAt": "2026-03-14T20:35:00.000Z",
+  "commitId": "3325f97",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "Solid implementation of regulatory compliance PDF backend. Five files changed (1650 insertions): REGULATION_CITATIONS and REGULATION_FULL_NAMES added to taxonomy.py, new compliance_report.html Jinja2 template, CompliancePdfService in compliance_pdf_service.py, GET /api/audits/{id}/report/compliance-pdf endpoint in audits.py, and 18 comprehensive tests. The implementation follows existing patterns (mirrors pdf_service.py for CSS variable inlining, follows audits.py routing conventions), all validation contract assertions are satisfied, and no blocking issues were found.",
+    "issues": [
+      {
+        "file": "backend/app/services/compliance_pdf_service.py",
+        "line": 24,
+        "severity": "non_blocking",
+        "description": "Code duplication: _extract_css_variables and _inline_css_variables (lines 24-63) are copy-pasted from pdf_service.py (lines 14-53). Should be refactored into a shared utility module (e.g., app/services/html_utils.py) to avoid divergence."
+      },
+      {
+        "file": "backend/app/services/compliance_pdf_service.py",
+        "line": 389,
+        "severity": "non_blocking",
+        "description": "Lazy import: 'import logging' is inside the error handler block (line 389) instead of at module level. PEP 8 recommends module-level imports. Move to top of file."
+      },
+      {
+        "file": "backend/app/services/compliance_pdf_service.py",
+        "line": 305,
+        "severity": "non_blocking",
+        "description": "Invalid type comment: 'reg_key = reg  # type: RegulationType' is a non-standard type comment. Use typing.cast() or proper variable annotation: 'reg_key: RegulationType = reg' for mypy to process correctly."
+      },
+      {
+        "file": "backend/app/services/compliance_pdf_service.py",
+        "line": 207,
+        "severity": "non_blocking",
+        "description": "Video URL key parsing bug: _build_video_references uses rsplit('_', 1) to split keys like 'cookie_consent_privacy_sensitive', yielding scenario='cookie_consent_privacy', persona='sensitive' — incorrect since both scenario and persona contain underscores. Should use known scenario/persona lists for disambiguation. Cosmetic-only: affects display names, not URLs."
+      },
+      {
+        "file": "backend/app/api/routes/audits.py",
+        "line": 152,
+        "severity": "non_blocking",
+        "description": "Redundant query: selectinload(Audit.findings) eagerly loads findings, but findings are immediately re-queried on line 157. Either use the eager-loaded audit.findings or remove the selectinload to avoid the extra join."
+      },
+      {
+        "file": "backend/app/api/routes/audits.py",
+        "line": 174,
+        "severity": "non_blocking",
+        "description": "Error message exposure: 'f\"PDF generation failed: {e}\"' passes raw exception details to the HTTP 500 response. Could leak implementation details (file paths, library names). Consider a generic message and log the full error server-side."
+      },
+      {
+        "file": "backend/app/services/compliance_pdf_service.py",
+        "line": 394,
+        "severity": "non_blocking",
+        "description": "HTML preview in error logs: logging first 1000 chars of processed HTML may include user-supplied data (target URLs, finding titles). AGENTS.md requires log scrubbing of sensitive data. Consider limiting to non-content metadata or sanitizing before logging."
+      },
+      {
+        "file": "backend/app/services/compliance_pdf_service.py",
+        "line": 137,
+        "severity": "non_blocking",
+        "description": "_get_applicable_citations always returns the first 2 citations regardless of relevance to the finding's pattern. Comment says 'for now' — acceptable for MVP but should be noted for future improvement."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "Worker duplicated CSS variable inlining utility functions (_extract_css_variables, _inline_css_variables) from pdf_service.py into compliance_pdf_service.py rather than extracting to a shared module. AGENTS.md doesn't document that xhtml2pdf services should share a common CSS processing utility.",
+      "evidence": "backend/app/services/compliance_pdf_service.py lines 24-63 are identical to backend/app/services/pdf_service.py lines 14-53."
+    },
+    {
+      "area": "conventions",
+      "observation": "Worker exposed raw exception messages in HTTP 500 responses (f\"PDF generation failed: {e}\"). AGENTS.md mentions log scrubbing but doesn't explicitly cover error response sanitization for API endpoints.",
+      "evidence": "backend/app/api/routes/audits.py line 174 — same pattern exists in the original get_report_pdf endpoint at line 127, so this is a pre-existing convention gap."
+    },
+    {
+      "area": "knowledge",
+      "observation": "The video URL key format '{scenario}_{persona}' is ambiguous when both parts contain underscores. The architecture.md and video-data-model.md should document the canonical key format and parsing strategy for video_urls dict keys.",
+      "evidence": "backend/app/services/compliance_pdf_service.py line 207 uses rsplit('_', 1) which incorrectly parses 'cookie_consent_privacy_sensitive' as scenario='cookie_consent_privacy', persona='sensitive'."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "PASS. The implementation fully covers the feature description and all 10 validation contract assertions (VAL-REGPDF-002 through VAL-REGPDF-010, VAL-CROSS-004). REGULATION_CITATIONS with articles for FTC/GDPR/DSA/CPRA, professional Jinja2 template with executive summary/regulation sections/compliance matrix/evidence references/video evidence/header-footer, CompliancePdfService using xhtml2pdf, API endpoint with correct Content-Type/Content-Disposition, 404 for missing/no-regulatory-findings audits, and 18 comprehensive tests. Eight non-blocking issues identified: code duplication of CSS utilities, lazy logging import, invalid type comment, video URL key parsing cosmetic bug, redundant query, error message exposure, HTML in error logs, and citation truncation. Worker followed the backend-dev skill procedure (TDD, lint, typecheck, full test suite). All 321 tests pass."
+}
