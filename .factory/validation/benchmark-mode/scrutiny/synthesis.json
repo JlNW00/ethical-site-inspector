@@ -1,19 +1,19 @@
 {
   "milestone": "benchmark-mode",
-  "round": 1,
+  "round": 2,
   "status": "fail",
   "validatorsRun": {
     "test_backend": {
       "passed": true,
       "command": "cd backend && .venv\\Scripts\\python.exe -m pytest tests/ -v --tb=short --durations=10",
       "exitCode": 0,
-      "details": "303 passed, 1 warning in 20.62s"
+      "details": "303 passed, 1 warning in 20.49s"
     },
     "test_frontend": {
-      "passed": false,
+      "passed": true,
       "command": "cd frontend && npx vitest run",
-      "exitCode": 1,
-      "details": "207 passed, 5 failed (all 5 in BenchmarkPage.test.tsx due to getByText selector ambiguity — matching multiple DOM elements)"
+      "exitCode": 0,
+      "details": "212 passed (14 test files) in 2.17s"
     },
     "typecheck_backend": {
       "passed": false,
@@ -22,10 +22,10 @@
       "details": "99 errors in 15 files — pre-existing type errors scheduled for fix in milestone 'deployment' (feature deploy-mypy-fixes). Not introduced by benchmark-mode."
     },
     "typecheck_frontend": {
-      "passed": true,
+      "passed": false,
       "command": "cd frontend && npx tsc -b",
-      "exitCode": 0,
-      "details": "No errors"
+      "exitCode": 1,
+      "details": "2 errors in BenchmarkPage.test.tsx: (1) TS2769 at line 243 — getByText callback returns boolean|undefined, (2) TS2322 at line 611 — null not assignable to number in trust_scores Record value. Both introduced by fix-benchmark-lint-and-tests commit."
     },
     "lint_backend": {
       "passed": true,
@@ -34,130 +34,59 @@
       "details": "All checks passed"
     },
     "lint_frontend": {
-      "passed": false,
+      "passed": true,
       "command": "cd frontend && npm run lint",
-      "exitCode": 1,
-      "details": "7 errors: (1) BenchmarkPage.tsx:2 unused 'useNavigate' import, (2) BenchmarkPage.tsx:159 unused 'currentBenchmarkId' variable, (3-4) HistoryPage.test.tsx:428,534 'HTMLInputElement' not defined, (5-6) SubmitPage.test.tsx:498,535 'HTMLInputElement' not defined, (7) SubmitPage.tsx:53 unused 'getScenarioDisplayLabel'. 12 warnings (complexity/max-lines — pre-existing)."
+      "exitCode": 0,
+      "details": "0 errors, 12 warnings (all pre-existing: complexity, max-lines, react-hooks/exhaustive-deps)"
     }
   },
-  "validatorNote": "Backend tests pass cleanly (303/303). Backend mypy has 99 pre-existing errors scheduled for deployment milestone — NOT introduced by benchmark-mode. Frontend TypeScript strict check passes. Frontend has 5 test failures (all in BenchmarkPage.test.tsx from selector ambiguity) and 7 ESLint errors (2 unused vars in BenchmarkPage.tsx, 4 HTMLInputElement undef in test files, 1 unused function in SubmitPage.tsx). These are all straightforward fixes — the BenchmarkPage functionality itself works correctly.",
+  "validatorNote": "Round 2 after fix-benchmark-lint-and-tests (commit 75551d4). All 5 original blocking issues from round 1 are resolved: unused imports removed, test selector ambiguity fixed, HTMLInputElement globals added, unused function removed, score=0 bug fixed. However, the fix introduced 2 new TypeScript errors in BenchmarkPage.test.tsx. Backend tests (303/303) and frontend tests (212/212) all pass. ESLint clean (0 errors). Backend mypy still has 99 pre-existing errors scheduled for deployment milestone. Frontend typecheck fails with 2 new errors introduced by the fix.",
   "reviewsSummary": {
-    "total": 4,
-    "passed": 3,
+    "total": 1,
+    "passed": 0,
     "failed": 1,
-    "failedFeatures": ["benchmark-frontend-page"]
+    "failedFeatures": ["fix-benchmark-lint-and-tests"]
   },
   "blockingIssues": [
     {
-      "featureId": "benchmark-frontend-page",
+      "featureId": "fix-benchmark-lint-and-tests",
       "severity": "blocking",
-      "description": "ESLint error: 'useNavigate' imported from react-router-dom but never used in BenchmarkPage.tsx line 2. Remove the import.",
-      "file": "frontend/src/pages/BenchmarkPage.tsx",
-      "line": 2
+      "description": "TypeScript error TS2769: BenchmarkPage.test.tsx line 243 — getByText callback returns boolean|undefined instead of boolean. The && chain with optional chaining (element?.classList?.contains()) short-circuits to undefined when element is null. Fix: wrap in !!() or add explicit boolean return.",
+      "file": "frontend/src/pages/BenchmarkPage.test.tsx",
+      "line": 243
     },
     {
-      "featureId": "benchmark-frontend-page",
+      "featureId": "fix-benchmark-lint-and-tests",
       "severity": "blocking",
-      "description": "ESLint error: 'currentBenchmarkId' assigned but never used in BenchmarkPage.tsx line 159. Remove the dead variable.",
-      "file": "frontend/src/pages/BenchmarkPage.tsx",
-      "line": 159
-    },
-    {
-      "featureId": "benchmark-frontend-page",
-      "severity": "blocking",
-      "description": "5 of 18 BenchmarkPage tests fail due to getByText selector ambiguity. Tests use getByText(/60/i), getByText(/failed/i), getByText(/high/i), getByText(/high.com/i), getByText('3') which match multiple DOM elements. Fix by using within() scoping with data-testid or getAllBy* variants.",
-      "file": "frontend/src/pages/BenchmarkPage.test.tsx"
-    },
-    {
-      "featureId": "benchmark-history-integration",
-      "severity": "blocking",
-      "description": "ESLint 'no-undef' errors: 'HTMLInputElement' not defined in HistoryPage.test.tsx (lines 428, 534) and SubmitPage.test.tsx (lines 498, 535). Fix by adding /* global HTMLInputElement */ comments or configuring ESLint env for test files.",
-      "file": "frontend/src/pages/HistoryPage.test.tsx"
-    },
-    {
-      "featureId": "benchmark-frontend-submit",
-      "severity": "blocking",
-      "description": "ESLint error: 'getScenarioDisplayLabel' function defined but never used in SubmitPage.tsx line 53. Remove the dead function.",
-      "file": "frontend/src/pages/SubmitPage.tsx",
-      "line": 53
+      "description": "TypeScript error TS2322: BenchmarkPage.test.tsx line 611 — null assigned to Record<string, number> value in trust_scores. Benchmark.trust_scores type is Record<string, number> | null (whole object nullable, not individual values). Fix: update Benchmark type to Record<string, number | null> | null to correctly model per-URL null scores for failed audits, and update backend BenchmarkResponse schema to match.",
+      "file": "frontend/src/pages/BenchmarkPage.test.tsx",
+      "line": 611
     }
   ],
-  "nonBlockingIssues": [
-    {
-      "featureId": "benchmark-backend-model-and-api",
-      "severity": "non_blocking",
-      "description": "BenchmarkListResponse schema defined but never used (dead code). benchmark_orchestrator.py: both branches of audit completion always set status='completed' — 'failed' only reachable via exception handler.",
-      "files": ["backend/app/schemas/benchmark.py", "backend/app/services/benchmark_orchestrator.py"]
-    },
-    {
-      "featureId": "benchmark-backend-model-and-api",
-      "severity": "non_blocking",
-      "description": "Migration file uses autogenerated hash naming (6e81669bfdad_) instead of YYYYMMDD_NNNN_ convention. Inline imports in benchmark_orchestrator.py. f-string in logger.critical() instead of structured logging.",
-      "files": ["backend/alembic/versions/6e81669bfdad_add_benchmarks_table.py", "backend/app/services/benchmark_orchestrator.py"]
-    },
-    {
-      "featureId": "benchmark-frontend-submit",
-      "severity": "non_blocking",
-      "description": "key={index} on dynamic URL input list, overly permissive URL_REGEX (/^https?:\\/\\/.+/), double validation of minimum URLs, commit dd21bf7 includes 11+ unrelated files (backend changes, webm binaries).",
-      "files": ["frontend/src/pages/SubmitPage.tsx"]
-    },
-    {
-      "featureId": "benchmark-frontend-page",
-      "severity": "non_blocking",
-      "description": "Minor logic bug: `!score` treats score=0 as failed. Should use `score === null`. URL truncation threshold inconsistency (checks full URL length but truncates protocol-stripped version).",
-      "files": ["frontend/src/pages/BenchmarkPage.tsx"]
-    }
-  ],
-  "appliedUpdates": [
-    {
-      "target": "library",
-      "description": "Updated architecture.md: changed '3 tables' to '4 tables: audits, findings, audit_events, benchmarks' to reflect new Benchmark model.",
-      "sourceFeature": "benchmark-backend-model-and-api"
-    }
-  ],
+  "appliedUpdates": [],
   "suggestedGuidanceUpdates": [
     {
       "target": "AGENTS.md",
-      "suggestion": "Add convention: 'Workers must use selective git staging (e.g., git add frontend/ or git add specific-files) rather than git add -A, to prevent committing unrelated changes from the working tree. This is especially important for frontend features that should not include backend file changes.'",
-      "evidence": "benchmark-frontend-submit commit dd21bf7 included 11+ unrelated files (backend/app/providers/browser.py, generate_webm.py, test .webm binaries) because the worker used 'git add -A'. This creates impure commit history and makes it harder to trace feature boundaries.",
-      "isSystemic": true
-    },
-    {
-      "target": "skills/frontend-dev",
-      "suggestion": "Reinforce that manual browser verification (Step 6) is MANDATORY and must be recorded in handoff.interactiveChecks. 3 of 4 benchmark-mode frontend workers reported empty interactiveChecks despite the skill stating this step is mandatory. If server startup fails during verification, the worker should document the failure as a deviation, not silently skip the step and claim procedure was followed.",
-      "evidence": "benchmark-frontend-submit, benchmark-frontend-page, and benchmark-history-integration all have empty interactiveChecks arrays. benchmark-frontend-page and benchmark-history-integration handoffs claimed 'ESLint clean' which was false. This is a systemic pattern across multiple workers/features.",
+      "suggestion": "Add convention: 'Workers MUST actually run all verification commands listed in their handoff and report ACCURATE exit codes and output. False verification claims (e.g., claiming tsc passes when it has errors) are a blocking trust issue. If a verification step fails, report it honestly — do not claim success.'",
+      "evidence": "fix-benchmark-lint-and-tests handoff claims 'npx tsc -b' exitCode 0 with 'TypeScript strict check passes with no errors', but tsc actually produces 2 errors (TS2769 and TS2322). This is the second round where inaccurate verification claims were made (round 1 had similar ESLint false claims). This pattern is systemic across multiple workers in this milestone.",
       "isSystemic": true
     },
     {
       "target": "AGENTS.md",
-      "suggestion": "Add convention: 'ESLint test environment configuration: Test files (.test.ts, .test.tsx) may reference DOM globals like HTMLInputElement. Either configure ESLint with browser env for test file patterns, or use eslint-disable comments with explanation.'",
-      "evidence": "HistoryPage.test.tsx and SubmitPage.test.tsx both use 'as HTMLInputElement' type assertions that fail ESLint no-undef. This will recur in future test files using DOM type assertions.",
-      "isSystemic": true
-    },
-    {
-      "target": "AGENTS.md",
-      "suggestion": "Add convention: 'When refactoring code to extract shared utilities, run ESLint after refactoring to catch unused imports and dead functions at the original call site. Workers must remove unused imports and functions before committing.'",
-      "evidence": "SubmitPage.tsx has unused getScenarioDisplayLabel function (introduced by benchmark-frontend-submit, not cleaned up by benchmark-history-integration). BenchmarkPage.tsx has unused useNavigate import and currentBenchmarkId variable. Multiple workers failed to clean up dead code after refactoring.",
-      "isSystemic": true
+      "suggestion": "Add convention: 'When fixing type-related bugs (e.g., changing null handling), workers must verify that the fix is consistent with TypeScript types. If runtime behavior expects null but the type definition uses Record<string, T>, the type definition must be updated to Record<string, T | null> to match actual data shapes from the backend.'",
+      "evidence": "fix-benchmark-lint-and-tests changed `!score` to `score === null` in BenchmarkPage.tsx to handle failed audit null scores, but didn't update the Benchmark type's trust_scores from `Record<string, number> | null` to `Record<string, number | null> | null`. The test then used null as a per-URL score value, causing TS2322.",
+      "isSystemic": false
     }
   ],
   "rejectedObservations": [
     {
-      "observation": "Alembic migration naming convention mismatch (hash vs YYYYMMDD)",
-      "reason": "The autogenerate command produces hash names by default. Changing this requires modifying alembic.ini/env.py which is outside the scope of individual features. The existing migrations already use both patterns. Not actionable without a dedicated cleanup task."
+      "observation": "Extra blank lines after removing dead code in BenchmarkPage.tsx and SubmitPage.tsx",
+      "reason": "Minor cosmetic issue with no functional impact. Removing blank lines is not worth a dedicated fix feature."
     },
     {
-      "observation": "Worker committed BenchmarkPage inside benchmark-history-integration commit with placeholder commitId",
-      "reason": "Git history metadata error. The code is in the repo and working correctly. The commitId discrepancy is a process issue, not a code issue."
-    },
-    {
-      "observation": "Test mock factories are duplicated across test files rather than shared",
-      "reason": "This is a pre-existing pattern across the codebase (ReportPage.test.tsx, SubmitPage.test.tsx, etc. all define local factories). Changing this would require a broad refactoring effort across all test files, which is outside the scope of benchmark-mode features."
-    },
-    {
-      "observation": "TDD workflow from frontend-dev skill not followed (implementation before tests)",
-      "reason": "While the skill prescribes TDD, the result is correct code with comprehensive tests. The ordering of writing tests vs code is a process concern that doesn't affect code quality. The existing tests cover the expected behaviors regardless of authoring order."
+      "observation": "The Benchmark type trust_scores inconsistency between type definition and runtime behavior",
+      "reason": "Already captured as a blocking issue fix requirement — the type needs updating. Not a separate observation."
     }
   ],
-  "previousRound": null
+  "previousRound": ".factory/validation/benchmark-mode/scrutiny/synthesis.json (round 1)"
 }

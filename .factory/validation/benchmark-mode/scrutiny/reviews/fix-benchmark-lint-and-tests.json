@@ -1,0 +1,64 @@
+{
+  "featureId": "fix-benchmark-lint-and-tests",
+  "milestone": "benchmark-mode",
+  "reviewer": "scrutiny-feature-reviewer",
+  "reviewedAt": "2026-03-14T19:10:00.000Z",
+  "commitId": "75551d4",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "verdict": "fail",
+  "blockingIssues": [
+    {
+      "file": "frontend/src/pages/BenchmarkPage.test.tsx",
+      "line": 243,
+      "severity": "blocking",
+      "description": "TypeScript error TS2769: getByText callback returns `boolean | undefined` instead of `boolean`. The `&&` chain `element?.classList?.contains('signal-pill') && element?.classList?.contains('status-failed') && content === 'failed'` short-circuits to `undefined` when `element` is null (via optional chaining). Fix: add `!!` prefix or explicit boolean coercion, e.g. `return !!(element?.classList?.contains('signal-pill') && element?.classList?.contains('status-failed')) && content === 'failed'`. This error was INTRODUCED by the fix commit — the original code used `screen.getByText(/failed/i)` with no callback."
+    },
+    {
+      "file": "frontend/src/pages/BenchmarkPage.test.tsx",
+      "line": 611,
+      "severity": "blocking",
+      "description": "TypeScript error TS2322: `null` is not assignable to type `number`. The test sets `trust_scores: { 'https://failed-site.com': null, ... }` but the Benchmark type defines `trust_scores: Record<string, number> | null` — the whole object can be null but individual values must be `number`. The fix changed this from `0` to `null` to test the score=0 fix, but didn't update the type definition. Fix options: (a) update the Benchmark type to `Record<string, number | null> | null` to properly model per-URL null scores, or (b) use type assertion `as unknown as Benchmark` in the test. Option (a) is preferred as it correctly models the backend behavior where failed audits have null scores. This error was INTRODUCED by the fix commit."
+    }
+  ],
+  "nonBlockingIssues": [
+    {
+      "file": "frontend/src/pages/BenchmarkPage.tsx",
+      "line": 156,
+      "severity": "non_blocking",
+      "description": "After removing the `currentBenchmarkId` variable, two blank lines remain (lines 156-157). Minor cosmetic issue — no functional impact."
+    },
+    {
+      "file": "frontend/src/pages/SubmitPage.tsx",
+      "line": 51,
+      "severity": "non_blocking",
+      "description": "After removing the `getScenarioDisplayLabel` function, two blank lines remain (lines 51-52). Minor cosmetic issue — no functional impact."
+    }
+  ],
+  "addressesFailureFrom": [
+    ".factory/validation/benchmark-mode/scrutiny/reviews/benchmark-frontend-page.json",
+    ".factory/validation/benchmark-mode/scrutiny/reviews/benchmark-history-integration.json",
+    ".factory/validation/benchmark-mode/scrutiny/reviews/benchmark-frontend-submit.json"
+  ],
+  "originalFailureResolution": {
+    "blocking1_useNavigate_import": "FIXED — removed `useNavigate` from the react-router-dom import on line 2 of BenchmarkPage.tsx",
+    "blocking2_currentBenchmarkId_variable": "FIXED — removed the unused `const currentBenchmarkId = benchmarkId` assignment from BenchmarkPage.tsx",
+    "blocking3_five_failing_tests": "FIXED — BenchmarkPage.test.tsx tests now use within() scoping, getAllByText for ambiguous selectors, and data-testid attributes (delta-badge, delta-value, comparison-section, summary-section, scenario-grid) to disambiguate DOM queries",
+    "blocking4_HTMLInputElement_undef": "FIXED — added `/* global HTMLInputElement */` comments to both HistoryPage.test.tsx and SubmitPage.test.tsx",
+    "blocking5_unused_getScenarioDisplayLabel": "FIXED — removed the entire `getScenarioDisplayLabel` function (13 lines) from SubmitPage.tsx",
+    "nonblocking_score0_bug": "FIXED — changed `!score` to `score === null` in BenchmarkPage.tsx line 328, correctly handling score=0 without treating it as failed"
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "Worker's handoff claims 'TypeScript clean' and reports `npx tsc -b` exitCode 0, but there are 2 TypeScript errors in BenchmarkPage.test.tsx (TS2769 at line 243, TS2322 at line 611). This is the second instance of inaccurate verification claims in handoffs for this milestone (same issue occurred with ESLint claims in round 1). Either the worker didn't actually run tsc, or ran it against a different tsconfig, or the errors were masked by a build cache.",
+      "evidence": "Handoff verification shows 'cd frontend && npx tsc -b' with exitCode 0 and 'TypeScript strict check passes with no errors'. Actual tsc -b output shows 2 errors: TS2769 at line 243 and TS2322 at line 611."
+    },
+    {
+      "area": "conventions",
+      "observation": "The Benchmark type defines trust_scores as `Record<string, number> | null` but the BenchmarkPage.tsx code now uses `score === null` to detect failed audits, implying individual scores can be null. The type definition and the implementation logic are inconsistent — either the type should be `Record<string, number | null> | null` or the backend should never send null per-URL scores.",
+      "evidence": "types.ts: `trust_scores: Record<string, number> | null`. BenchmarkPage.tsx line 328: `const isFailed = score === null && auditData?.status === 'failed'`. The `score` comes from `benchmark.trust_scores?.[url]` which TypeScript types as `number | undefined`, not `number | null`."
+    }
+  ],
+  "summary": "The fix feature successfully addresses ALL 5 original blocking issues and the 1 non-blocking issue from round 1: unused useNavigate import removed, unused currentBenchmarkId variable removed, 5 failing tests fixed with within()/getAllByText/data-testid scoping, HTMLInputElement globals added to test files, unused getScenarioDisplayLabel function removed, and score=0 bug fixed. However, the fix INTRODUCED 2 new TypeScript errors: (1) BenchmarkPage.test.tsx line 243 — getByText callback returns boolean|undefined due to optional chaining in && chain, and (2) BenchmarkPage.test.tsx line 611 — null assigned to a Record<string, number> value when the type only allows the whole object to be null. Both errors are confirmed by running `npx tsc -b`. Verdict: FAIL due to 2 new blocking TypeScript errors that must be fixed for tsc to pass clean."
+}
