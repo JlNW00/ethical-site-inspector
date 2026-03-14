@@ -7,7 +7,7 @@ import { FindingCard } from "../components/FindingCard";
 import { Layout } from "../components/Layout";
 import { ProgressMeter } from "../components/ProgressMeter";
 import { titleize } from "../lib/format";
-import { parseVideoUrls, type VideoEntry } from "../lib/video";
+import { parseVideoUrls } from "../lib/video";
 
 interface ScreenshotEntry {
   url: string;
