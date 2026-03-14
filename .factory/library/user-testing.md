@@ -129,6 +129,28 @@ Testing surface, tools, and resource cost classification for validation.
 
 **Benchmark audit for VAL-CROSS-007:** Use `94843e6d-5bfc-4ba5-a58b-3988450889ee` from benchmark `9b9d3b22-9571-4591-b6dd-4f4f199e17f3` — note this benchmark audit has 0 findings (no regulatory categories), so the compliance PDF button should NOT be visible on its ReportPage. For testing CROSS-007 (per-URL regulatory PDF from benchmark), use the manually seeded `regpdf-test-with-findings` audit which HAS regulatory findings but is NOT part of a benchmark. Alternatively, test that the button is correctly ABSENT when there are no regulatory findings.
 
+## Flow Validator Guidance: Deployment File Checks
+
+**Surface:** Local filesystem — infrastructure files in `C:\EthicalSiteInspector\infrastructure\`
+
+**Tool:** File reading (Read tool), shell commands (grep/search), curl.exe for backend API
+
+**Isolation rules:**
+- All validators are read-only file checks — no shared state concerns
+- Mypy check requires backend venv but doesn't modify anything
+- No servers need to be started for file content checks
+
+**Infrastructure files:**
+- CloudFormation template: `infrastructure/cloudformation.yaml`
+- Deployment script: `infrastructure/deploy.sh`
+- Nginx config: `infrastructure/nginx/ethicalsiteinspector.conf`
+- Systemd service: `infrastructure/systemd/ethicalsiteinspector.service`
+- Production env template: `infrastructure/env.production.template`
+
+**Mypy check:**
+- Run from: `cd C:\EthicalSiteInspector\backend && .venv\Scripts\python.exe -m mypy app/ --ignore-missing-imports`
+- Expected: exit code 0, zero errors
+
 ## Known Constraints
 - Mock mode only for development — no real Nova Act or AWS Bedrock
 - Videos in mock mode will be placeholder .webm files

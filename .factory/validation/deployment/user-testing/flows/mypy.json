@@ -1,0 +1,35 @@
+{
+  "groupId": "mypy",
+  "testedAt": "2026-03-14T18:30:00Z",
+  "isolation": {
+    "workingDirectory": "C:\\EthicalSiteInspector\\backend",
+    "venv": ".venv\\Scripts\\python.exe",
+    "command": "cd C:\\EthicalSiteInspector\\backend && .venv\\Scripts\\python.exe -m mypy app/ --ignore-missing-imports"
+  },
+  "toolsUsed": ["Execute"],
+  "assertions": [
+    {
+      "id": "VAL-DEPLOY-011",
+      "title": "Mypy type errors fully resolved",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Run mypy app/ --ignore-missing-imports from backend directory using venv python",
+          "expected": "Exit code 0, zero errors reported",
+          "observed": "Exit code 0, output: 'Success: no issues found in 39 source files'"
+        }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "N/A (CLI check)",
+        "mypyOutput": "Success: no issues found in 39 source files",
+        "exitCode": 0,
+        "evidenceFile": "deployment/mypy/VAL-DEPLOY-011-mypy-output.txt"
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [],
+  "blockers": [],
+  "summary": "Tested 1 assertion: 1 passed. VAL-DEPLOY-011 confirmed — mypy reports zero errors across 39 source files with exit code 0."
+}

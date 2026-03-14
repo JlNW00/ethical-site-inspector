@@ -1,0 +1,36 @@
+{
+  "milestone": "deployment",
+  "round": 1,
+  "status": "pass",
+  "assertionsSummary": {
+    "total": 13,
+    "passed": 13,
+    "failed": 0,
+    "blocked": 0
+  },
+  "passedAssertions": [
+    "VAL-DEPLOY-001",
+    "VAL-DEPLOY-002",
+    "VAL-DEPLOY-003",
+    "VAL-DEPLOY-004",
+    "VAL-DEPLOY-005",
+    "VAL-DEPLOY-006",
+    "VAL-DEPLOY-007",
+    "VAL-DEPLOY-008",
+    "VAL-DEPLOY-009",
+    "VAL-DEPLOY-010",
+    "VAL-DEPLOY-011",
+    "VAL-DEPLOY-012",
+    "VAL-DEPLOY-013"
+  ],
+  "failedAssertions": [],
+  "blockedAssertions": [],
+  "appliedUpdates": [
+    {
+      "target": "user-testing.md",
+      "description": "Added 'Flow Validator Guidance: Deployment File Checks' section with file paths, isolation rules, and mypy command",
+      "source": "setup"
+    }
+  ],
+  "previousRound": null
+}

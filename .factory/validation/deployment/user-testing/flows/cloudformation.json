@@ -1,0 +1,175 @@
+{
+  "groupId": "cloudformation",
+  "testedAt": "2026-03-14T19:00:00Z",
+  "isolation": {
+    "surface": "filesystem",
+    "directory": "C:\\EthicalSiteInspector\\infrastructure\\",
+    "access": "read-only"
+  },
+  "toolsUsed": ["Read", "Execute"],
+  "assertions": [
+    {
+      "id": "VAL-DEPLOY-001",
+      "title": "CloudFormation template syntactic validity",
+      "status": "pass",
+      "steps": [
+        { "action": "Parse infrastructure/cloudformation.yaml with Python yaml.load using CloudFormation tag constructors", "expected": "YAML parses without errors", "observed": "YAML parsing: SUCCESS, exit code 0" },
+        { "action": "Verify CloudFormation structure (required top-level keys)", "expected": "AWSTemplateFormatVersion, Description, Parameters, Resources, Outputs present", "observed": "All required keys present: ['AWSTemplateFormatVersion', 'Description', 'Parameters', 'Conditions', 'Resources', 'Outputs']" },
+        { "action": "Count template elements", "expected": "Non-zero resources, parameters, outputs", "observed": "39 resources, 7 parameters, 3 conditions, 6 outputs" }
+      ],
+      "evidence": {
+        "screenshots": ["deployment/cloudformation/VAL-DEPLOY-001-yaml-validation.txt"],
+        "consoleErrors": "N/A - file check",
+        "network": "N/A - file check",
+        "validationOutput": "YAML VALID: YES, exit code: 0"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-DEPLOY-002",
+      "title": "CloudFormation template contains all required resources",
+      "status": "pass",
+      "steps": [
+        { "action": "Extract all resource types from template", "expected": "EC2 Instance, RDS, S3, ALB, Security Groups, Route53 (conditional)", "observed": "All required resource types found" },
+        { "action": "Verify EC2 Instance uses Amazon Linux 2023", "expected": "AMI reference to al2023", "observed": "ImageId: {{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64}}" },
+        { "action": "Verify RDS uses PostgreSQL", "expected": "Engine: postgres", "observed": "Engine: postgres, EngineVersion: 15.4" },
+        { "action": "Verify Route53 is conditional", "expected": "Condition on DNS record", "observed": "DNSRecord has Condition: CreateDnsRecord" }
+      ],
+      "evidence": {
+        "screenshots": ["deployment/cloudformation/VAL-DEPLOY-002-resource-types.txt"],
+        "consoleErrors": "N/A - file check",
+        "network": "N/A - file check",
+        "resourceList": "AWS::EC2::Instance, AWS::RDS::DBInstance (postgres), AWS::S3::Bucket, AWS::ElasticLoadBalancingV2::LoadBalancer, 3x AWS::EC2::SecurityGroup, AWS::Route53::RecordSet (conditional)"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-DEPLOY-003",
+      "title": "Security groups enforce least-privilege",
+      "status": "pass",
+      "steps": [
+        { "action": "Extract ALB security group ingress rules", "expected": "Only ports 80/443 from 0.0.0.0/0", "observed": "TCP 80 from 0.0.0.0/0, TCP 443 from 0.0.0.0/0 — no other rules" },
+        { "action": "Extract EC2 security group ingress rules", "expected": "Only from ALB SG, no direct public access", "observed": "TCP 8000 from ALBSecurityGroup only (via separate SecurityGroupIngress resource)" },
+        { "action": "Extract RDS security group ingress rules", "expected": "Only port 5432 from EC2 SG", "observed": "TCP 5432 from EC2SecurityGroup only (via separate SecurityGroupIngress resource)" }
+      ],
+      "evidence": {
+        "screenshots": ["deployment/cloudformation/VAL-DEPLOY-003-security-groups.txt"],
+        "consoleErrors": "N/A - file check",
+        "network": "N/A - file check",
+        "ingressRules": {
+          "ALB_SG": ["TCP 80 from 0.0.0.0/0", "TCP 443 from 0.0.0.0/0"],
+          "EC2_SG": ["TCP 8000 from ALBSecurityGroup"],
+          "RDS_SG": ["TCP 5432 from EC2SecurityGroup"]
+        }
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-DEPLOY-008",
+      "title": "No hardcoded secrets in infrastructure files",
+      "status": "pass",
+      "steps": [
+        { "action": "Scan all 5 infrastructure files with regex patterns for AWS keys (AKIA), private keys, inline passwords, connection strings with credentials", "expected": "Zero matches", "observed": "0 potential secret findings across 5 files" },
+        { "action": "Verify credential management approach", "expected": "Secrets use dynamic references or placeholders", "observed": "Database credentials use {{resolve:secretsmanager}} dynamic references; env template has placeholder values only" }
+      ],
+      "evidence": {
+        "screenshots": ["deployment/cloudformation/VAL-DEPLOY-008-secrets-scan.txt"],
+        "consoleErrors": "N/A - file check",
+        "network": "N/A - file check",
+        "filesScanned": ["cloudformation.yaml", "deploy.sh", "env.production.template", "nginx/ethicalsiteinspector.conf", "systemd/ethicalsiteinspector.service"],
+        "secretsFound": 0
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-DEPLOY-009",
+      "title": "CloudFormation outputs export essential values",
+      "status": "pass",
+      "steps": [
+        { "action": "Extract Outputs block from template", "expected": "ALB DNS, RDS endpoint, S3 bucket name, EC2 instance ID", "observed": "6 outputs found: ALBDnsName, RDSEndpoint, S3BucketName, EC2InstanceId, VPCId, DBSecretArn" },
+        { "action": "Verify each required output is present", "expected": "All 4 required outputs present", "observed": "ALBDnsName (GetAtt ALB.DNSName), RDSEndpoint (GetAtt DBInstance.Endpoint.Address), S3BucketName (Ref ArtifactBucket), EC2InstanceId (Ref EC2Instance) — all present with Export names" }
+      ],
+      "evidence": {
+        "screenshots": ["deployment/cloudformation/VAL-DEPLOY-009-outputs.txt"],
+        "consoleErrors": "N/A - file check",
+        "network": "N/A - file check",
+        "outputs": ["ALBDnsName", "RDSEndpoint", "S3BucketName", "EC2InstanceId", "VPCId", "DBSecretArn"]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-DEPLOY-010",
+      "title": "CloudFormation parameters enable customization",
+      "status": "pass",
+      "steps": [
+        { "action": "Extract Parameters block from template", "expected": "EC2 type, RDS class, RDS storage, SSH key, domain, environment", "observed": "7 parameters found with descriptions" },
+        { "action": "Verify EC2 instance type parameter", "expected": "With default value", "observed": "InstanceType: default t3.small, AllowedValues: [t3.micro, t3.small, t3.medium, t3.large]" },
+        { "action": "Verify RDS parameters", "expected": "Instance class and storage with defaults", "observed": "DBInstanceClass: default db.t3.micro; DBAllocatedStorage: default 20 (range 20-1000)" },
+        { "action": "Verify SSH key pair parameter", "expected": "KeyPair parameter present", "observed": "KeyPairName: Type AWS::EC2::KeyPair::KeyName (required, no default)" },
+        { "action": "Verify domain name parameter", "expected": "Optional parameter", "observed": "DomainName: default empty string (optional)" },
+        { "action": "Verify environment name parameter", "expected": "Environment/stage parameter", "observed": "EnvironmentName: default 'ethical-site-inspector'" }
+      ],
+      "evidence": {
+        "screenshots": ["deployment/cloudformation/VAL-DEPLOY-010-parameters.txt"],
+        "consoleErrors": "N/A - file check",
+        "network": "N/A - file check",
+        "parameters": {
+          "EnvironmentName": {"type": "String", "default": "ethical-site-inspector"},
+          "InstanceType": {"type": "String", "default": "t3.small"},
+          "DBInstanceClass": {"type": "String", "default": "db.t3.micro"},
+          "DBAllocatedStorage": {"type": "Number", "default": 20},
+          "KeyPairName": {"type": "AWS::EC2::KeyPair::KeyName", "default": "none (required)"},
+          "DomainName": {"type": "String", "default": "(empty, optional)"},
+          "HostedZoneId": {"type": "String", "default": "(empty, optional)"}
+        }
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-DEPLOY-012",
+      "title": "ALB health check targets /api/health",
+      "status": "pass",
+      "steps": [
+        { "action": "Extract ALBTargetGroup health check configuration", "expected": "Path /api/health, protocol HTTP, reasonable thresholds", "observed": "HealthCheckPath: /api/health, HealthCheckProtocol: HTTP, HealthyThresholdCount: 2, UnhealthyThresholdCount: 3, HealthCheckIntervalSeconds: 30, HealthCheckTimeoutSeconds: 5" }
+      ],
+      "evidence": {
+        "screenshots": ["deployment/cloudformation/VAL-DEPLOY-012-health-check.txt"],
+        "consoleErrors": "N/A - file check",
+        "network": "N/A - file check",
+        "healthCheck": {
+          "path": "/api/health",
+          "protocol": "HTTP",
+          "healthyThreshold": 2,
+          "unhealthyThreshold": 3,
+          "interval": 30,
+          "timeout": 5
+        }
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-DEPLOY-013",
+      "title": "S3 bucket has CORS configuration for video playback",
+      "status": "pass",
+      "steps": [
+        { "action": "Extract S3 bucket CorsConfiguration from template", "expected": "CORS rule allowing GET from application domain", "observed": "CorsRules with AllowedMethods: [GET, HEAD], AllowedOrigins: [http://${ALB.DNSName}, conditional https://${DomainName}], AllowedHeaders: ['*'], MaxAge: 3600" },
+        { "action": "Verify CORS enables video playback", "expected": "GET allowed, application origin included", "observed": "GET and HEAD methods allowed from ALB DNS origin, wildcard headers, 1-hour cache — sufficient for browser <video> cross-origin loading of .webm files" }
+      ],
+      "evidence": {
+        "screenshots": ["deployment/cloudformation/VAL-DEPLOY-013-s3-cors.txt"],
+        "consoleErrors": "N/A - file check",
+        "network": "N/A - file check",
+        "corsConfig": {
+          "allowedMethods": ["GET", "HEAD"],
+          "allowedOrigins": ["http://${ALB.DNSName}", "https://${DomainName} (conditional)"],
+          "allowedHeaders": ["*"],
+          "maxAge": 3600
+        }
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [],
+  "blockers": [],
+  "summary": "Tested 8 assertions: 8 passed, 0 failed, 0 blocked. All CloudFormation template checks confirm valid YAML structure, required resources (EC2/RDS/S3/ALB/SGs/Route53), least-privilege security groups, no hardcoded secrets, proper outputs, customizable parameters, correct ALB health check path, and S3 CORS configuration for video playback."
+}

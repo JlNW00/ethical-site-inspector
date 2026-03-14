@@ -1,0 +1,106 @@
+{
+  "groupId": "scripts-configs",
+  "testedAt": "2026-03-14T18:32:00Z",
+  "isolation": {
+    "access": "read-only",
+    "scope": "C:\\EthicalSiteInspector\\infrastructure\\, C:\\EthicalSiteInspector\\backend\\app\\core\\config.py",
+    "servers": "none required"
+  },
+  "toolsUsed": ["Read", "Glob"],
+  "assertions": [
+    {
+      "id": "VAL-DEPLOY-004",
+      "title": "Deployment script exists and covers all steps",
+      "status": "pass",
+      "steps": [
+        { "action": "Read infrastructure/deploy.sh", "expected": "File exists with shebang", "observed": "File exists, starts with #!/bin/bash" },
+        { "action": "Check for system packages step", "expected": "dnf/yum install commands", "observed": "step1_install_packages() with dnf update and dnf install for python3, nginx, nodejs, etc." },
+        { "action": "Check for venv creation", "expected": "python3 -m venv", "observed": "step2_create_venv() with python3 -m venv $VENV_DIR, skips if already exists" },
+        { "action": "Check for pip install", "expected": "pip install -r requirements", "observed": "step3_install_python_deps() with pip install -r requirements.txt and requirements-dev.txt" },
+        { "action": "Check for playwright install", "expected": "playwright install", "observed": "step4_install_playwright() with playwright install chromium --with-deps" },
+        { "action": "Check for alembic migrate", "expected": "alembic upgrade head", "observed": "step5_run_migrations() with alembic upgrade head" },
+        { "action": "Check for nginx config deployment", "expected": "cp nginx conf, nginx -t", "observed": "step6_configure_nginx() copies conf, runs nginx -t, creates www dir" },
+        { "action": "Check for systemd setup", "expected": "cp service file, systemctl enable/start", "observed": "step7_configure_systemd() copies service file, daemon-reload, enable, start/restart" },
+        { "action": "Check for frontend build/deployment", "expected": "npm build, copy to www", "observed": "step8_build_frontend() runs npm ci/install, npm run build, copies dist/* to www dir" },
+        { "action": "Check idempotent structure", "expected": "Checks before actions, re-runnable", "observed": "Each step checks preconditions (rpm -q, directory exists), supports --step N for individual steps, set -e for fail-fast" }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "files": ["deployment/scripts-configs/VAL-DEPLOY-004-deploy-sh-analysis.txt"],
+        "consoleErrors": "N/A (file check)",
+        "network": "N/A (file check)"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-DEPLOY-005",
+      "title": "Nginx configuration correctness",
+      "status": "pass",
+      "steps": [
+        { "action": "Read infrastructure/nginx/ethicalsiteinspector.conf", "expected": "Valid nginx config", "observed": "Complete nginx server block configuration" },
+        { "action": "Check listen port 80", "expected": "listen 80", "observed": "listen 80; and listen [::]:80; present" },
+        { "action": "Check SPA fallback", "expected": "try_files $uri $uri/ /index.html", "observed": "try_files $uri $uri/ /index.html; present in location / block with root /var/www/ethicalsiteinspector" },
+        { "action": "Check /api proxy", "expected": "proxy_pass to 127.0.0.1:8000", "observed": "location /api with proxy_pass http://backend; upstream backend { server 127.0.0.1:8000; }" },
+        { "action": "Check /artifacts proxy", "expected": "proxy_pass to 127.0.0.1:8000", "observed": "location /artifacts with proxy_pass http://backend;" },
+        { "action": "Check proxy headers - Host", "expected": "proxy_set_header Host", "observed": "proxy_set_header Host $host; in /api and /artifacts blocks" },
+        { "action": "Check proxy headers - X-Real-IP", "expected": "proxy_set_header X-Real-IP", "observed": "proxy_set_header X-Real-IP $remote_addr; in /api and /artifacts blocks" },
+        { "action": "Check proxy headers - X-Forwarded-For", "expected": "proxy_set_header X-Forwarded-For", "observed": "proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for; in /api and /artifacts blocks" },
+        { "action": "Check proxy headers - X-Forwarded-Proto", "expected": "proxy_set_header X-Forwarded-Proto", "observed": "proxy_set_header X-Forwarded-Proto $scheme; in /api and /artifacts blocks" }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "files": ["deployment/scripts-configs/VAL-DEPLOY-005-nginx-config-analysis.txt"],
+        "consoleErrors": "N/A (file check)",
+        "network": "N/A (file check)"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-DEPLOY-006",
+      "title": "Systemd service file for backend",
+      "status": "pass",
+      "steps": [
+        { "action": "Read infrastructure/systemd/ethicalsiteinspector.service", "expected": "Valid systemd unit file", "observed": "Complete [Unit], [Service], [Install] sections present" },
+        { "action": "Check non-root user", "expected": "User != root", "observed": "User=ec2-user, Group=ec2-user" },
+        { "action": "Check WorkingDirectory", "expected": "Correct backend path", "observed": "WorkingDirectory=/opt/ethicalsiteinspector/backend" },
+        { "action": "Check ExecStart", "expected": "Venv uvicorn on 127.0.0.1:8000", "observed": "ExecStart=/opt/ethicalsiteinspector/backend/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --workers 2" },
+        { "action": "Check Restart policy", "expected": "Restart=always or on-failure", "observed": "Restart=always with RestartSec=5" },
+        { "action": "Check EnvironmentFile", "expected": "Points to production .env", "observed": "EnvironmentFile=/opt/ethicalsiteinspector/.env" }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "files": ["deployment/scripts-configs/VAL-DEPLOY-006-systemd-service-analysis.txt"],
+        "consoleErrors": "N/A (file check)",
+        "network": "N/A (file check)"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-DEPLOY-007",
+      "title": "Production environment template completeness",
+      "status": "pass",
+      "steps": [
+        { "action": "Read infrastructure/env.production.template", "expected": "Template with all Settings fields", "observed": "Template with 18+ environment variables covering all Settings class fields" },
+        { "action": "Read backend/app/core/config.py Settings class", "expected": "List of all Settings fields", "observed": "18 fields: app_name, app_env, api_prefix, configured_mode, use_real_browser, database_url, local_storage_root, screenshots_dir, reports_dir, cors_origins, aws_region, nova_model_id, aws_access_key_id, aws_secret_access_key, aws_session_token, s3_bucket_name, s3_endpoint_url, s3_public_base_url" },
+        { "action": "Check APP_ENV=production", "expected": "Present", "observed": "APP_ENV=production present" },
+        { "action": "Check DATABASE_URL placeholder", "expected": "postgresql:// placeholder", "observed": "DATABASE_URL=REPLACE_WITH_YOUR_POSTGRESQL_CONNECTION_STRING (text placeholder under PostgreSQL section header)" },
+        { "action": "Check CORS_ORIGINS", "expected": "Present", "observed": "CORS_ORIGINS=https://your-domain.com,https://www.your-domain.com" },
+        { "action": "Check AWS credentials (placeholder only)", "expected": "Placeholder values, no real keys", "observed": "AWS_ACCESS_KEY_ID=YOUR_AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY=YOUR_AWS_SECRET_ACCESS_KEY (placeholders)" },
+        { "action": "Check S3 config", "expected": "S3 bucket, endpoint, public URL", "observed": "S3_BUCKET_NAME=your-app-artifacts-bucket, S3_ENDPOINT_URL=(empty), S3_PUBLIC_BASE_URL=https://your-bucket.s3.amazonaws.com" },
+        { "action": "Check AUDIT_MODE", "expected": "Present", "observed": "AUDIT_MODE=auto present" },
+        { "action": "Check no actual secrets", "expected": "All sensitive values are placeholders", "observed": "All sensitive fields use obvious placeholder text (YOUR_*, REPLACE_WITH_*), no real keys/passwords" },
+        { "action": "Cross-reference all 18 Settings fields", "expected": "All covered", "observed": "All 18 Settings class fields have corresponding environment variables in the template" }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "files": ["deployment/scripts-configs/VAL-DEPLOY-007-env-template-analysis.txt"],
+        "consoleErrors": "N/A (file check)",
+        "network": "N/A (file check)"
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [],
+  "blockers": [],
+  "summary": "Tested 4 assertions: 4 passed, 0 failed. All deployment infrastructure files (deploy.sh, nginx config, systemd service, env template) meet their validation contract requirements."
+}
