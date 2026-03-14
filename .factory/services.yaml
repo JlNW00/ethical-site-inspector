@@ -1,0 +1,27 @@
+commands:
+  install_backend: cd backend && .venv\Scripts\python.exe -m pip install -r requirements.txt
+  install_frontend: cd frontend && npm install
+  test_backend: cd backend && .venv\Scripts\python.exe -m pytest tests/ -v --tb=short --durations=10
+  test_frontend: cd frontend && npx vitest run
+  lint_backend: cd backend && .venv\Scripts\python.exe -m ruff check app/
+  lint_frontend: cd frontend && npm run lint
+  format_backend: cd backend && .venv\Scripts\python.exe -m ruff format app/
+  typecheck_backend: cd backend && .venv\Scripts\python.exe -m mypy app/ --ignore-missing-imports
+  typecheck_frontend: cd frontend && npx tsc -b
+  build_frontend: cd frontend && npm run build
+  migrate: cd backend && .venv\Scripts\python.exe -m alembic upgrade head
+
+services:
+  backend:
+    start: cd backend && .venv\Scripts\python.exe -m uvicorn app.main:app --reload --port 8000
+    stop: powershell -Command "Get-NetTCPConnection -LocalPort 8000 -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }"
+    healthcheck: curl -sf http://localhost:8000/api/health
+    port: 8000
+    depends_on: []
+
+  frontend:
+    start: cd frontend && npx vite --port 5173
+    stop: powershell -Command "Get-NetTCPConnection -LocalPort 5173 -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }"
+    healthcheck: curl -sf http://localhost:5173
+    port: 5173
+    depends_on: [backend]

@@ -48,5 +48,4 @@ playwright-report/
 # Environment
 frontend/.env
 
-# Factory mission infrastructure
-.factory/
+
