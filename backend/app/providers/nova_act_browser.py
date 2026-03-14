@@ -11,6 +11,7 @@ import contextlib
 import logging
 import shutil
 import tempfile
+import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any, ClassVar
@@ -247,6 +248,10 @@ class NovaActAuditProvider(BrowserAuditProvider):
         failed_scenarios: list[str] = []
         successful_observations: list[JourneyObservation] = []
 
+        # Thread-safe dict to collect video URLs from parallel scenario methods
+        video_urls: dict[str, str] = {}
+        video_urls_lock = threading.Lock()
+
         for scenario in valid_scenarios:
             scenario_observations = self._run_scenario_with_personas(
                 audit_id=audit_id,
@@ -256,6 +261,8 @@ class NovaActAuditProvider(BrowserAuditProvider):
                 nova_act=nova_act,
                 progress=progress,
                 base_progress=int((completed / total_combinations) * 50),
+                video_urls=video_urls,
+                video_urls_lock=video_urls_lock,
             )
 
             # Check if this scenario had any successful observations (not error observations)
@@ -303,12 +310,11 @@ class NovaActAuditProvider(BrowserAuditProvider):
         else:
             summary["status"] = "completed"
 
-        # Video URLs are collected by scenario methods via progress callback
-        # For now, return empty dict (will be populated by orchestrator via events)
+        # Video URLs collected by scenario methods via thread-safe dict
         return BrowserRunResult(
             observations=observations,
             summary=summary,
-            video_urls={},  # Will be populated via events in orchestrator
+            video_urls=video_urls if video_urls else {},
         )
 
     def _run_scenario_with_personas(
@@ -320,6 +326,8 @@ class NovaActAuditProvider(BrowserAuditProvider):
         nova_act: Any,
         progress: ProgressCallback,
         base_progress: int,
+        video_urls: dict[str, str],
+        video_urls_lock: threading.Lock,
     ) -> list[JourneyObservation]:
         """Run a single scenario across multiple personas in parallel with per-scenario timeouts."""
         observations: list[JourneyObservation] = []
@@ -338,6 +346,8 @@ class NovaActAuditProvider(BrowserAuditProvider):
                     persona,
                     nova_act,
                     progress,
+                    video_urls,
+                    video_urls_lock,
                 ): persona
                 for persona in personas
             }
@@ -422,13 +432,15 @@ class NovaActAuditProvider(BrowserAuditProvider):
         persona: PersonaType,
         nova_act: Any,
         progress: ProgressCallback,
+        video_urls: dict[str, str],
+        video_urls_lock: threading.Lock,
     ) -> JourneyObservation:
         """Run a single scenario for a single persona using Nova Act with progress callback."""
         scenario_method = getattr(self, f"_run_{scenario}_scenario", None)
         if scenario_method is None:
             raise ValueError(f"Unknown scenario: {scenario}")
 
-        return scenario_method(audit_id, target_url, persona, nova_act, progress)
+        return scenario_method(audit_id, target_url, persona, nova_act, progress, video_urls, video_urls_lock)
 
     def _run_cookie_consent_scenario(
         self,
@@ -437,6 +449,8 @@ class NovaActAuditProvider(BrowserAuditProvider):
         persona: PersonaType,
         nova_act: Any,
         progress: ProgressCallback | None = None,
+        video_urls: dict[str, str] | None = None,
+        video_urls_lock: threading.Lock | None = None,
     ) -> JourneyObservation:
         """Run cookie consent scenario with Nova Act."""
         # NovaAct is imported at module level
@@ -661,14 +675,19 @@ class NovaActAuditProvider(BrowserAuditProvider):
         video_url = self._extract_and_save_video(
             audit_id, logs_directory, session_id, "cookie_consent", persona, progress
         )
-        if video_url and progress:
-            progress(
-                "video",
-                f"Saved session video for cookie_consent/{persona}",
-                0,
-                "success",
-                {"scenario": "cookie_consent", "persona": persona, "video_url": video_url},
-            )
+        if video_url:
+            # Add video URL to thread-safe dict
+            if video_urls is not None and video_urls_lock is not None:
+                with video_urls_lock:
+                    video_urls[f"cookie_consent_{persona}"] = video_url
+            if progress:
+                progress(
+                    "video",
+                    f"Saved session video for cookie_consent/{persona}",
+                    0,
+                    "success",
+                    {"scenario": "cookie_consent", "persona": persona, "video_url": video_url},
+                )
 
         # Clean up temp directory
         if logs_directory:
@@ -714,6 +733,8 @@ class NovaActAuditProvider(BrowserAuditProvider):
         persona: PersonaType,
         nova_act: Any,
         progress: ProgressCallback | None = None,
+        video_urls: dict[str, str] | None = None,
+        video_urls_lock: threading.Lock | None = None,
     ) -> JourneyObservation:
         """Run checkout flow scenario with Nova Act."""
 
@@ -874,14 +895,19 @@ class NovaActAuditProvider(BrowserAuditProvider):
         video_url = self._extract_and_save_video(
             audit_id, logs_directory, session_id, "checkout_flow", persona, progress
         )
-        if video_url and progress:
-            progress(
-                "video",
-                f"Saved session video for checkout_flow/{persona}",
-                0,
-                "success",
-                {"scenario": "checkout_flow", "persona": persona, "video_url": video_url},
-            )
+        if video_url:
+            # Add video URL to thread-safe dict
+            if video_urls is not None and video_urls_lock is not None:
+                with video_urls_lock:
+                    video_urls[f"checkout_flow_{persona}"] = video_url
+            if progress:
+                progress(
+                    "video",
+                    f"Saved session video for checkout_flow/{persona}",
+                    0,
+                    "success",
+                    {"scenario": "checkout_flow", "persona": persona, "video_url": video_url},
+                )
 
         # Clean up temp directory
         if logs_directory:
@@ -899,6 +925,8 @@ class NovaActAuditProvider(BrowserAuditProvider):
         persona: PersonaType,
         nova_act: Any,
         progress: ProgressCallback | None = None,
+        video_urls: dict[str, str] | None = None,
+        video_urls_lock: threading.Lock | None = None,
     ) -> JourneyObservation:
         """Run subscription cancellation scenario with Nova Act."""
 
@@ -1068,14 +1096,19 @@ class NovaActAuditProvider(BrowserAuditProvider):
         video_url = self._extract_and_save_video(
             audit_id, logs_directory, session_id, "subscription_cancellation", persona, progress
         )
-        if video_url and progress:
-            progress(
-                "video",
-                f"Saved session video for subscription_cancellation/{persona}",
-                0,
-                "success",
-                {"scenario": "subscription_cancellation", "persona": persona, "video_url": video_url},
-            )
+        if video_url:
+            # Add video URL to thread-safe dict
+            if video_urls is not None and video_urls_lock is not None:
+                with video_urls_lock:
+                    video_urls[f"subscription_cancellation_{persona}"] = video_url
+            if progress:
+                progress(
+                    "video",
+                    f"Saved session video for subscription_cancellation/{persona}",
+                    0,
+                    "success",
+                    {"scenario": "subscription_cancellation", "persona": persona, "video_url": video_url},
+                )
 
         # Clean up temp directory
         if logs_directory:
@@ -1093,6 +1126,8 @@ class NovaActAuditProvider(BrowserAuditProvider):
         persona: PersonaType,
         nova_act: Any,
         progress: ProgressCallback | None = None,
+        video_urls: dict[str, str] | None = None,
+        video_urls_lock: threading.Lock | None = None,
     ) -> JourneyObservation:
         """Run account deletion scenario with Nova Act."""
 
@@ -1256,14 +1291,19 @@ class NovaActAuditProvider(BrowserAuditProvider):
         video_url = self._extract_and_save_video(
             audit_id, logs_directory, session_id, "account_deletion", persona, progress
         )
-        if video_url and progress:
-            progress(
-                "video",
-                f"Saved session video for account_deletion/{persona}",
-                0,
-                "success",
-                {"scenario": "account_deletion", "persona": persona, "video_url": video_url},
-            )
+        if video_url:
+            # Add video URL to thread-safe dict
+            if video_urls is not None and video_urls_lock is not None:
+                with video_urls_lock:
+                    video_urls[f"account_deletion_{persona}"] = video_url
+            if progress:
+                progress(
+                    "video",
+                    f"Saved session video for account_deletion/{persona}",
+                    0,
+                    "success",
+                    {"scenario": "account_deletion", "persona": persona, "video_url": video_url},
+                )
 
         # Clean up temp directory
         if logs_directory:
@@ -1281,6 +1321,8 @@ class NovaActAuditProvider(BrowserAuditProvider):
         persona: PersonaType,
         nova_act: Any,
         progress: ProgressCallback | None = None,
+        video_urls: dict[str, str] | None = None,
+        video_urls_lock: threading.Lock | None = None,
     ) -> JourneyObservation:
         """Run newsletter signup scenario with Nova Act."""
 
@@ -1435,14 +1477,19 @@ class NovaActAuditProvider(BrowserAuditProvider):
         video_url = self._extract_and_save_video(
             audit_id, logs_directory, session_id, "newsletter_signup", persona, progress
         )
-        if video_url and progress:
-            progress(
-                "video",
-                f"Saved session video for newsletter_signup/{persona}",
-                0,
-                "success",
-                {"scenario": "newsletter_signup", "persona": persona, "video_url": video_url},
-            )
+        if video_url:
+            # Add video URL to thread-safe dict
+            if video_urls is not None and video_urls_lock is not None:
+                with video_urls_lock:
+                    video_urls[f"newsletter_signup_{persona}"] = video_url
+            if progress:
+                progress(
+                    "video",
+                    f"Saved session video for newsletter_signup/{persona}",
+                    0,
+                    "success",
+                    {"scenario": "newsletter_signup", "persona": persona, "video_url": video_url},
+                )
 
         # Clean up temp directory
         if logs_directory:
@@ -1460,6 +1507,8 @@ class NovaActAuditProvider(BrowserAuditProvider):
         persona: PersonaType,
         nova_act: Any,
         progress: ProgressCallback | None = None,
+        video_urls: dict[str, str] | None = None,
+        video_urls_lock: threading.Lock | None = None,
     ) -> JourneyObservation:
         """Run pricing comparison scenario with Nova Act."""
 
@@ -1628,14 +1677,19 @@ class NovaActAuditProvider(BrowserAuditProvider):
         video_url = self._extract_and_save_video(
             audit_id, logs_directory, session_id, "pricing_comparison", persona, progress
         )
-        if video_url and progress:
-            progress(
-                "video",
-                f"Saved session video for pricing_comparison/{persona}",
-                0,
-                "success",
-                {"scenario": "pricing_comparison", "persona": persona, "video_url": video_url},
-            )
+        if video_url:
+            # Add video URL to thread-safe dict
+            if video_urls is not None and video_urls_lock is not None:
+                with video_urls_lock:
+                    video_urls[f"pricing_comparison_{persona}"] = video_url
+            if progress:
+                progress(
+                    "video",
+                    f"Saved session video for pricing_comparison/{persona}",
+                    0,
+                    "success",
+                    {"scenario": "pricing_comparison", "persona": persona, "video_url": video_url},
+                )
 
         # Clean up temp directory
         if logs_directory:
