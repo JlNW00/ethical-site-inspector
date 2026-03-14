@@ -14,6 +14,7 @@ interface PersonaData {
   path: string;
   controls: string[];
   prices: Array<{ label: string; value: number; raw?: string }>;
+  videoUrls: string[];
 }
 
 function trimText(value: string, limit = 80) {
@@ -151,6 +152,19 @@ export function PersonaDiffPage() {
         });
       });
 
+      // Collect video URLs for this persona
+      const personaVideos: string[] = [];
+      if (audit.video_urls) {
+        Object.entries(audit.video_urls).forEach(([key, url]) => {
+          // Key format: "{scenario}_{persona}"
+          const parts = key.split(/[_-]/);
+          const videoPersona = parts[1] ?? "";
+          if (videoPersona === persona) {
+            personaVideos.push(url);
+          }
+        });
+      }
+
       return {
         persona,
         comparison,
@@ -158,6 +172,7 @@ export function PersonaDiffPage() {
         path: prettyPath(interactedControls),
         controls: Array.from(allControls),
         prices: allPrices,
+        videoUrls: personaVideos,
       };
     });
   }, [audit, findings]);
@@ -464,6 +479,40 @@ export function PersonaDiffPage() {
                       </span>
                     ))}
                   </div>
+                </div>
+              )}
+
+              {/* Session Recording Link */}
+              {persona.videoUrls.length > 0 && (
+                <div className="video-link-container">
+                  {persona.videoUrls.length === 1 ? (
+                    <a
+                      href={persona.videoUrls[0]}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="video-link"
+                    >
+                      🎬 Watch session
+                    </a>
+                  ) : (
+                    <div className="persona-section">
+                      <h4 className="section-label">Session Recordings</h4>
+                      <div className="pattern-pills">
+                        {persona.videoUrls.map((url, idx) => (
+                          <a
+                            key={idx}
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="video-link"
+                            style={{ fontSize: "12px" }}
+                          >
+                            🎬 Watch #{idx + 1}
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

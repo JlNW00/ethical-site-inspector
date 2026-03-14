@@ -158,6 +158,112 @@ function prettyAction(action: string) {
   return trimText(clean, 80);
 }
 
+interface VideoEntry {
+  url: string;
+  scenario: string;
+  persona: string;
+  key: string;
+}
+
+function parseVideoUrls(videoUrls: Record<string, string> | null | undefined): VideoEntry[] {
+  if (!videoUrls) return [];
+  return Object.entries(videoUrls).map(([key, url]) => {
+    // Key format: "{scenario}_{persona}" or "{scenario}-{persona}"
+    const parts = key.split(/[_-]/);
+    const scenario = parts[0] ?? "unknown";
+    const persona = parts[1] ?? "unknown";
+    return { url, scenario, persona, key };
+  });
+}
+
+interface VideoPlayerProps {
+  url: string;
+  scenario: string;
+  persona: string;
+}
+
+function VideoPlayer({ url, scenario, persona }: VideoPlayerProps) {
+  const [hasError, setHasError] = useState(false);
+
+  const handleError = () => {
+    setHasError(true);
+  };
+
+  return (
+    <div className="video-card">
+      <div className="video-card-header">
+        <div>
+          <span className="video-card-label">Scenario</span>
+          <h4 className="video-card-title">{titleize(scenario)}</h4>
+        </div>
+        <div style={{ textAlign: "right" }}>
+          <span className="video-card-label">Persona</span>
+          <h4 className="video-card-title">{titleize(persona)}</h4>
+        </div>
+      </div>
+      <div className="video-player-container">
+        {hasError ? (
+          <div className="video-error">
+            <span className="video-error-icon">📹</span>
+            <span className="video-error-text">Video unavailable</span>
+          </div>
+        ) : (
+          <video
+            className="video-player"
+            controls
+            preload="metadata"
+            onError={handleError}
+          >
+            <source src={url} type="video/webm" />
+            <track kind="captions" src="" label="No captions available" />
+            Your browser does not support the video tag.
+          </video>
+        )}
+      </div>
+    </div>
+  );
+}
+
+interface VideoSectionProps {
+  videoUrls: Record<string, string> | null | undefined;
+}
+
+function VideoSection({ videoUrls }: VideoSectionProps) {
+  const videos = parseVideoUrls(videoUrls);
+  const hasVideos = videos.length > 0;
+
+  return (
+    <section className="video-section content-panel">
+      <div className="section-header">
+        <div>
+          <h2 className="section-title">Session Recordings</h2>
+          <p className="section-subtitle">
+            {hasVideos
+              ? "Browser session recordings captured during the audit journey."
+              : "Browser session recordings are not available for this audit."}
+          </p>
+        </div>
+      </div>
+      {hasVideos ? (
+        <div className="video-grid">
+          {videos.map((video) => (
+            <VideoPlayer
+              key={video.key}
+              url={video.url}
+              scenario={video.scenario}
+              persona={video.persona}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="video-empty-state">
+          No recordings available
+        </div>
+      )}
+    </section>
+  );
+}
+
 export function ReportPage() {
   const { auditId } = useParams<{ auditId: string }>();
   const [audit, setAudit] = useState<Audit | null>(null);
@@ -664,6 +770,9 @@ export function ReportPage() {
           </div>
         )}
       </section>
+
+      {/* Session Recordings Section */}
+      <VideoSection videoUrls={audit?.video_urls} />
 
       {/* Expanded Image Modal */}
       {expandedImage && (

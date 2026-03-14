@@ -58,6 +58,7 @@ export interface Audit {
   selected_scenarios: string[];
   selected_personas: string[];
   report_public_url: string | null;
+  video_urls: Record<string, string> | null;
   metrics: {
     finding_count?: number;
     observation_count?: number;
@@ -72,6 +73,7 @@ export interface Audit {
   completed_at: string | null;
   events: AuditEvent[];
 }
+
 
 export interface PersonaComparison {
   persona: string;

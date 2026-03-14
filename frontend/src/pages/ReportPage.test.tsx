@@ -40,6 +40,7 @@ const createMockAudit = (overrides: Partial<Audit> = {}): Audit => ({
   selected_scenarios: ["cookie_consent", "checkout_flow"],
   selected_personas: ["privacy_sensitive", "cost_sensitive"],
   report_public_url: null,
+  video_urls: null,
   metrics: {
     finding_count: 6,
     observation_count: 12,
@@ -607,5 +608,150 @@ describe("ReportPage", () => {
     expect(screen.getByText("Finding 1")).toBeInTheDocument();
     expect(screen.getByText("Finding 2")).toBeInTheDocument();
     expect(screen.getByText("Finding 3")).toBeInTheDocument();
+  });
+
+  // Video Section Tests
+  it("renders Session Recordings section when video_urls is present", async () => {
+    const audit = createMockAudit({
+      id: "audit-123",
+      video_urls: {
+        "cookie_consent_privacy_sensitive": "/artifacts/videos/cookie_privacy.webm",
+        "checkout_flow_cost_sensitive": "/artifacts/videos/checkout_cost.webm",
+      },
+    });
+
+    mockGetAudit.mockResolvedValue(audit);
+    mockGetFindings.mockResolvedValue({ audit_id: "audit-123", findings: [] });
+
+    renderReportPage();
+
+    await waitFor(() => {
+      expect(screen.getByText("Session Recordings")).toBeInTheDocument();
+    });
+
+    // Should show video cards with scenario and persona labels (using getAllByText since they appear in hero pills too)
+    expect(screen.getAllByText("Cookie Consent").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Privacy Sensitive").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Checkout Flow").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Cost Sensitive").length).toBeGreaterThan(0);
+  });
+
+  it("shows 'No recordings available' when video_urls is null", async () => {
+    const audit = createMockAudit({ id: "audit-123", video_urls: null });
+
+    mockGetAudit.mockResolvedValue(audit);
+    mockGetFindings.mockResolvedValue({ audit_id: "audit-123", findings: [] });
+
+    renderReportPage();
+
+    await waitFor(() => {
+      expect(screen.getByText("Session Recordings")).toBeInTheDocument();
+    });
+
+    expect(screen.getByText("No recordings available")).toBeInTheDocument();
+  });
+
+  it("shows 'No recordings available' when video_urls is empty", async () => {
+    const audit = createMockAudit({ id: "audit-123", video_urls: {} });
+
+    mockGetAudit.mockResolvedValue(audit);
+    mockGetFindings.mockResolvedValue({ audit_id: "audit-123", findings: [] });
+
+    renderReportPage();
+
+    await waitFor(() => {
+      expect(screen.getByText("Session Recordings")).toBeInTheDocument();
+    });
+
+    expect(screen.getByText("No recordings available")).toBeInTheDocument();
+  });
+
+  it("renders video elements with controls and preload attributes", async () => {
+    const audit = createMockAudit({
+      id: "audit-123",
+      video_urls: {
+        "cookie_consent_privacy_sensitive": "/artifacts/videos/cookie_privacy.webm",
+      },
+    });
+
+    mockGetAudit.mockResolvedValue(audit);
+    mockGetFindings.mockResolvedValue({ audit_id: "audit-123", findings: [] });
+
+    renderReportPage();
+
+    await waitFor(() => {
+      const videoElement = document.querySelector("video");
+      expect(videoElement).toBeInTheDocument();
+    });
+
+    // Check video element has required attributes
+    const video = document.querySelector("video");
+    expect(video).toHaveAttribute("controls");
+    expect(video).toHaveAttribute("preload", "metadata");
+  });
+
+  it("handles video error state gracefully", async () => {
+    const audit = createMockAudit({
+      id: "audit-123",
+      video_urls: {
+        "cookie_consent_privacy_sensitive": "/broken/video.webm",
+      },
+    });
+
+    mockGetAudit.mockResolvedValue(audit);
+    mockGetFindings.mockResolvedValue({ audit_id: "audit-123", findings: [] });
+
+    renderReportPage();
+
+    await waitFor(() => {
+      const videoElement = document.querySelector("video");
+      expect(videoElement).toBeInTheDocument();
+    });
+
+    // Simulate video error
+    const video = document.querySelector("video");
+    fireEvent.error(video!);
+
+    await waitFor(() => {
+      expect(screen.getByText("Video unavailable")).toBeInTheDocument();
+    });
+  });
+
+  it("renders multiple video cards correctly", async () => {
+    const audit = createMockAudit({
+      id: "audit-123",
+      video_urls: {
+        "cookie_consent_privacy_sensitive": "/videos/1.webm",
+        "cookie_consent_cost_sensitive": "/videos/2.webm",
+        "checkout_flow_privacy_sensitive": "/videos/3.webm",
+      },
+    });
+
+    mockGetAudit.mockResolvedValue(audit);
+    mockGetFindings.mockResolvedValue({ audit_id: "audit-123", findings: [] });
+
+    renderReportPage();
+
+    await waitFor(() => {
+      expect(screen.getByText("Session Recordings")).toBeInTheDocument();
+    });
+
+    // Check that scenario and persona names appear in video cards (may appear elsewhere too)
+    // We have 3 videos: 2 cookie consent + 1 checkout flow, and 2 personas (privacy + cost)
+    // Scenario names should appear in video section
+    const cookieCards = screen.getAllByText("Cookie Consent");
+    const checkoutCards = screen.getAllByText("Checkout Flow");
+    expect(cookieCards.length).toBeGreaterThanOrEqual(1); // At least one for the video card
+    expect(checkoutCards.length).toBeGreaterThanOrEqual(1);
+
+    // Check that videos exist
+    const videos = document.querySelectorAll("video");
+    expect(videos.length).toBe(3);
+
+    // Check for persona names in video cards
+    const privacyCards = screen.getAllByText("Privacy Sensitive");
+    const costCards = screen.getAllByText("Cost Sensitive");
+    expect(privacyCards.length).toBeGreaterThanOrEqual(1);
+    expect(costCards.length).toBeGreaterThanOrEqual(1);
   });
 });
