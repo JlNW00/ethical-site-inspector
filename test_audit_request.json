@@ -1,0 +1,5 @@
+{
+  "target_url": "https://example.com",
+  "selected_scenarios": ["cookie_consent", "subscription_cancellation"],
+  "selected_personas": ["privacy_sensitive", "average_user"]
+}

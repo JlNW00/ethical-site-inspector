@@ -121,3 +121,21 @@ export interface AuditListParams {
   status?: string;
   url_contains?: string;
 }
+
+export type BenchmarkStatus = "queued" | "running" | "completed" | "failed";
+
+export interface Benchmark {
+  id: string;
+  status: BenchmarkStatus;
+  urls: string[];
+  audit_ids: string[];
+  trust_scores: Record<string, number> | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateBenchmarkRequest {
+  urls: string[];
+  scenarios: string[];
+  personas: string[];
+}

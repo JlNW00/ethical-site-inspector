@@ -1,4 +1,4 @@
-import type { Audit, CreateAuditRequest, FindingsResponse, Readiness } from "./types";
+import type { Audit, CreateAuditRequest, FindingsResponse, Readiness, Benchmark, CreateBenchmarkRequest } from "./types";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
 
@@ -37,4 +37,13 @@ export const api = {
     const query = searchParams.toString();
     return request<Audit[]>(`/api/audits${query ? `?${query}` : ""}`);
   },
+
+  // Benchmark methods
+  createBenchmark: (payload: CreateBenchmarkRequest) =>
+    request<Benchmark>("/api/benchmarks", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  getBenchmark: (benchmarkId: string) => request<Benchmark>(`/api/benchmarks/${benchmarkId}`),
+  getBenchmarks: () => request<Benchmark[]>("/api/benchmarks"),
 };

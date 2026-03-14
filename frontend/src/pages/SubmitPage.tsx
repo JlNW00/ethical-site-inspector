@@ -6,6 +6,7 @@ import { Layout } from "../components/Layout";
 import { useReadiness } from "../hooks/useReadiness";
 import { titleize } from "../lib/format";
 
+// Scenario options with correct backend values
 const scenarioOptions = [
   {
     value: "cookie_consent",
@@ -16,7 +17,7 @@ const scenarioOptions = [
     description: "Track hidden fees, upsells, urgency messaging, and bundled extras during purchase.",
   },
   {
-    value: "cancellation_flow",
+    value: "subscription_cancellation",
     description: "Measure cancellation friction, retention pressure, and confirmshaming on exit.",
   },
   {
@@ -33,6 +34,16 @@ const scenarioOptions = [
   },
 ] as const;
 
+// Display labels for scenarios (maps backend value to display name)
+const scenarioDisplayLabels: Record<string, string> = {
+  cookie_consent: "Cookie Consent",
+  checkout_flow: "Checkout Flow",
+  subscription_cancellation: "Cancellation Flow",
+  account_deletion: "Account Deletion",
+  newsletter_signup: "Newsletter Signup",
+  pricing_comparison: "Pricing Comparison",
+};
+
 const personaOptions = [
   {
     value: "privacy_sensitive",
@@ -48,14 +59,42 @@ const personaOptions = [
   },
 ] as const;
 
+// Get display label for a scenario value
+function getScenarioDisplayLabel(value: string): string {
+  const labels: Record<string, string> = {
+    cookie_consent: "Cookie Consent",
+    checkout_flow: "Checkout Flow",
+    subscription_cancellation: "Cancellation Flow",
+    account_deletion: "Account Deletion",
+    newsletter_signup: "Newsletter Signup",
+    pricing_comparison: "Pricing Comparison",
+  };
+  return labels[value] ?? titleize(value);
+}
+
+const MAX_BENCHMARK_URLS = 5;
+const MIN_BENCHMARK_URLS = 2;
+
+// URL validation regex
+const URL_REGEX = /^https?:\/\/.+/;
+
+function isValidUrl(url: string): boolean {
+  if (!url.trim()) return false;
+  return URL_REGEX.test(url.trim());
+}
+
 export function SubmitPage() {
   const navigate = useNavigate();
   const { data: readiness, loading: readinessLoading } = useReadiness();
   const [targetUrl, setTargetUrl] = useState("https://www.example.com");
+  const [benchmarkMode, setBenchmarkMode] = useState(false);
+  const [benchmarkUrls, setBenchmarkUrls] = useState<string[]>(["", ""]);
+  const [urlErrors, setUrlErrors] = useState<(string | null)[]>([]);
+  const [duplicateError, setDuplicateError] = useState<string | null>(null);
   const [selectedScenarios, setSelectedScenarios] = useState<string[]>([
     "cookie_consent",
     "checkout_flow",
-    "cancellation_flow",
+    "subscription_cancellation",
     "account_deletion",
     "newsletter_signup",
     "pricing_comparison",
@@ -83,21 +122,117 @@ export function SubmitPage() {
   const toggleSelection = (current: string[], value: string) =>
     current.includes(value) ? current.filter((item) => item !== value) : [...current, value];
 
+  const validateUrls = (): boolean => {
+    const errors = benchmarkUrls.map((url) => {
+      if (!url.trim()) return "URL is required";
+      if (!isValidUrl(url)) return "Invalid URL format (must start with http:// or https://)";
+      return null;
+    });
+    setUrlErrors(errors);
+
+    // Check for duplicates
+    const nonEmptyUrls = benchmarkUrls.filter((u) => u.trim());
+    const uniqueUrls = new Set(nonEmptyUrls);
+    if (uniqueUrls.size !== nonEmptyUrls.length) {
+      setDuplicateError("Duplicate URLs detected. Each URL must be unique.");
+      return false;
+    }
+    setDuplicateError(null);
+
+    // Check minimum URLs
+    const validUrls = benchmarkUrls.filter((url) => url.trim() && isValidUrl(url));
+    if (validUrls.length < MIN_BENCHMARK_URLS) {
+      setError(`At least ${MIN_BENCHMARK_URLS} valid URLs are required for benchmark mode.`);
+      return false;
+    }
+
+    return errors.every((e) => e === null);
+  };
+
+  const addUrl = () => {
+    if (benchmarkUrls.length < MAX_BENCHMARK_URLS) {
+      setBenchmarkUrls([...benchmarkUrls, ""]);
+      setUrlErrors([...urlErrors, null]);
+    }
+  };
+
+  const removeUrl = (index: number) => {
+    if (benchmarkUrls.length > MIN_BENCHMARK_URLS) {
+      const newUrls = benchmarkUrls.filter((_, i) => i !== index);
+      const newErrors = urlErrors.filter((_, i) => i !== index);
+      setBenchmarkUrls(newUrls);
+      setUrlErrors(newErrors);
+    }
+  };
+
+  const updateUrl = (index: number, value: string) => {
+    const newUrls = [...benchmarkUrls];
+    newUrls[index] = value;
+    setBenchmarkUrls(newUrls);
+
+    // Clear error for this field if it becomes valid
+    if (isValidUrl(value)) {
+      const newErrors = [...urlErrors];
+      newErrors[index] = null;
+      setUrlErrors(newErrors);
+    }
+
+    // Clear duplicate error when user edits
+    setDuplicateError(null);
+  };
+
+  const toggleBenchmarkMode = () => {
+    const newMode = !benchmarkMode;
+    setBenchmarkMode(newMode);
+    setError(null);
+    setDuplicateError(null);
+    setUrlErrors([]);
+
+    if (newMode) {
+      // Switching to benchmark mode: initialize with current URL + empty slot
+      setBenchmarkUrls([targetUrl, ""]);
+    } else {
+      // Switching to single mode: preserve first URL
+      setTargetUrl(benchmarkUrls[0] || "https://www.example.com");
+    }
+  };
+
   const startAudit = async () => {
     if (!selectedScenarios.length || !selectedPersonas.length) {
       setError("Select at least one scenario and one persona.");
       return;
     }
 
+    if (benchmarkMode) {
+      if (!validateUrls()) {
+        return;
+      }
+      const validUrls = benchmarkUrls.filter((url) => url.trim() && isValidUrl(url));
+      if (validUrls.length < MIN_BENCHMARK_URLS) {
+        setError(`At least ${MIN_BENCHMARK_URLS} valid URLs are required for benchmark mode.`);
+        return;
+      }
+    }
+
     setError(null);
     setSubmitting(true);
     try {
-      const audit = await api.createAudit({
-        target_url: targetUrl,
-        scenarios: selectedScenarios,
-        personas: selectedPersonas,
-      });
-      navigate(`/audits/${audit.id}/run`);
+      if (benchmarkMode) {
+        const validUrls = benchmarkUrls.filter((url) => url.trim() && isValidUrl(url));
+        const benchmark = await api.createBenchmark({
+          urls: validUrls,
+          scenarios: selectedScenarios,
+          personas: selectedPersonas,
+        });
+        navigate(`/benchmarks/${benchmark.id}`);
+      } else {
+        const audit = await api.createAudit({
+          target_url: targetUrl,
+          scenarios: selectedScenarios,
+          personas: selectedPersonas,
+        });
+        navigate(`/audits/${audit.id}/run`);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to start audit");
     } finally {
@@ -156,16 +291,88 @@ export function SubmitPage() {
 
         <div className="form-grid">
           <div className="field">
-            <label htmlFor="target-url">Target URL</label>
-            <input
-              id="target-url"
-              className="text-input"
-              type="url"
-              value={targetUrl}
-              onChange={(event) => setTargetUrl(event.target.value)}
-              placeholder="https://www.example.com"
-            />
+            <div className="benchmark-toggle-row">
+              <label className="benchmark-toggle-label">
+                <input
+                  type="checkbox"
+                  checked={benchmarkMode}
+                  onChange={toggleBenchmarkMode}
+                  className="benchmark-toggle-input"
+                  data-testid="benchmark-mode-toggle"
+                />
+                <span className="benchmark-toggle-text">Benchmark Mode</span>
+              </label>
+              <span className="benchmark-toggle-hint">
+                Compare {MIN_BENCHMARK_URLS}-{MAX_BENCHMARK_URLS} URLs against the same scenarios and personas
+              </span>
+            </div>
           </div>
+
+          {benchmarkMode ? (
+            <div className="field">
+              <label>Target URLs ({benchmarkUrls.length}/{MAX_BENCHMARK_URLS})</label>
+              <div className="benchmark-urls-container">
+                {benchmarkUrls.map((url, index) => (
+                  <div key={index} className="benchmark-url-row">
+                    <input
+                      className={`text-input benchmark-url-input ${urlErrors[index] ? "input-error" : ""}`}
+                      type="url"
+                      value={url}
+                      onChange={(event) => updateUrl(index, event.target.value)}
+                      placeholder={`https://www.example${index + 1}.com`}
+                      data-testid={`benchmark-url-input-${index}`}
+                    />
+                    {benchmarkUrls.length > MIN_BENCHMARK_URLS && (
+                      <button
+                        type="button"
+                        className="btn btn-icon btn-remove-url"
+                        onClick={() => removeUrl(index)}
+                        aria-label={`Remove URL ${index + 1}`}
+                        data-testid={`remove-url-${index}`}
+                      >
+                        ✕
+                      </button>
+                    )}
+                    {urlErrors[index] && (
+                      <span className="url-field-error" data-testid={`url-error-${index}`}>
+                        {urlErrors[index]}
+                      </span>
+                    )}
+                  </div>
+                ))}
+                {duplicateError && (
+                  <div className="url-duplicate-error" data-testid="duplicate-error">
+                    {duplicateError}
+                  </div>
+                )}
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-add-url"
+                  onClick={addUrl}
+                  disabled={benchmarkUrls.length >= MAX_BENCHMARK_URLS}
+                  data-testid="add-url-button"
+                >
+                  + Add URL
+                </button>
+                {benchmarkUrls.length >= MAX_BENCHMARK_URLS && (
+                  <span className="max-urls-hint">Maximum {MAX_BENCHMARK_URLS} URLs allowed</span>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="field">
+              <label htmlFor="target-url">Target URL</label>
+              <input
+                id="target-url"
+                className="text-input"
+                type="url"
+                value={targetUrl}
+                onChange={(event) => setTargetUrl(event.target.value)}
+                placeholder="https://www.example.com"
+                data-testid="target-url-input"
+              />
+            </div>
+          )}
 
           <div className="field">
             <label>Audit scenarios</label>
@@ -210,8 +417,14 @@ export function SubmitPage() {
           {error ? <div className="empty-state">{error}</div> : null}
 
           <div className="action-row">
-            <button className="btn btn-primary" type="button" disabled={submitting} onClick={startAudit}>
-              {submitting ? "Starting audit..." : "Start trust audit"}
+            <button
+              className="btn btn-primary"
+              type="button"
+              disabled={submitting}
+              onClick={startAudit}
+              data-testid="start-audit-button"
+            >
+              {submitting ? "Starting..." : benchmarkMode ? "Start benchmark" : "Start trust audit"}
             </button>
             <span className="muted">
               Default behavior stays fully runnable without credentials. Add Nova and browser env vars later to upgrade

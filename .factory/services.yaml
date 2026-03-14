@@ -3,6 +3,7 @@ commands:
   install_frontend: cd frontend && npm install
   test_backend: cd backend && .venv\Scripts\python.exe -m pytest tests/ -v --tb=short --durations=10
   test_frontend: cd frontend && npx vitest run
+  test_frontend_page: cd frontend && npx vitest run src/pages/SubmitPage.test.tsx
   lint_backend: cd backend && .venv\Scripts\python.exe -m ruff check app/
   lint_frontend: cd frontend && npm run lint
   format_backend: cd backend && .venv\Scripts\python.exe -m ruff format app/

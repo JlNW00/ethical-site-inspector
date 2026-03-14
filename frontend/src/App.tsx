@@ -6,6 +6,7 @@ import { PersonaDiffPage } from "./pages/PersonaDiffPage";
 import { ReportPage } from "./pages/ReportPage";
 import { RunPage } from "./pages/RunPage";
 import { SubmitPage } from "./pages/SubmitPage";
+import { BenchmarkPage } from "./pages/BenchmarkPage";
 
 export default function App() {
   return (
@@ -16,6 +17,7 @@ export default function App() {
       <Route path="/audits/:auditId/run" element={<RunPage />} />
       <Route path="/audits/:auditId/report" element={<ReportPage />} />
       <Route path="/audits/:auditId/diff" element={<PersonaDiffPage />} />
+      <Route path="/benchmarks/:benchmarkId" element={<BenchmarkPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
