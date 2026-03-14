@@ -7,8 +7,12 @@ Uses act() for navigation and act_get() with Pydantic schemas for structured ext
 
 from __future__ import annotations
 
+import contextlib
 import logging
+import shutil
+import tempfile
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from pathlib import Path
 from typing import Any, ClassVar
 from urllib.parse import urlparse
 
@@ -299,9 +303,12 @@ class NovaActAuditProvider(BrowserAuditProvider):
         else:
             summary["status"] = "completed"
 
+        # Video URLs are collected by scenario methods via progress callback
+        # For now, return empty dict (will be populated by orchestrator via events)
         return BrowserRunResult(
             observations=observations,
             summary=summary,
+            video_urls={},  # Will be populated via events in orchestrator
         )
 
     def _run_scenario_with_personas(
@@ -324,12 +331,13 @@ class NovaActAuditProvider(BrowserAuditProvider):
         with ThreadPoolExecutor(max_workers=min(self.max_workers, len(personas))) as executor:
             future_to_persona = {
                 executor.submit(
-                    self._run_single_persona,
+                    self._run_single_persona_with_progress,
                     audit_id,
                     target_url,
                     scenario,
                     persona,
                     nova_act,
+                    progress,
                 ): persona
                 for persona in personas
             }
@@ -406,12 +414,29 @@ class NovaActAuditProvider(BrowserAuditProvider):
 
         return scenario_method(audit_id, target_url, persona, nova_act)
 
+    def _run_single_persona_with_progress(
+        self,
+        audit_id: str,
+        target_url: str,
+        scenario: ScenarioType,
+        persona: PersonaType,
+        nova_act: Any,
+        progress: ProgressCallback,
+    ) -> JourneyObservation:
+        """Run a single scenario for a single persona using Nova Act with progress callback."""
+        scenario_method = getattr(self, f"_run_{scenario}_scenario", None)
+        if scenario_method is None:
+            raise ValueError(f"Unknown scenario: {scenario}")
+
+        return scenario_method(audit_id, target_url, persona, nova_act, progress)
+
     def _run_cookie_consent_scenario(
         self,
         audit_id: str,
         target_url: str,
         persona: PersonaType,
         nova_act: Any,
+        progress: ProgressCallback | None = None,
     ) -> JourneyObservation:
         """Run cookie consent scenario with Nova Act."""
         # NovaAct is imported at module level
@@ -424,13 +449,32 @@ class NovaActAuditProvider(BrowserAuditProvider):
         screenshot_paths: list[str] = []
         screenshot_urls: list[str] = []
         interacted_controls: list[str] = []
+        logs_directory: str | None = None
+        session_id: str | None = None
+
+        # Create temp directory for logs/videos
+        logs_directory = tempfile.mkdtemp(prefix=f"nova_act_{audit_id}_")
+
+        # Emit video recording event
+        if progress:
+            progress(
+                "video",
+                f"Recording browser session for cookie_consent/{persona}",
+                0,
+                "running",
+                {"scenario": "cookie_consent", "persona": persona, "audit_id": audit_id},
+            )
 
         with NovaAct(
             starting_page=target_url,
             headless=self.headless,
             tty=self.tty,
             go_to_url_timeout=self.timeout,
+            record_video=True,
+            logs_directory=logs_directory,
         ) as nova:
+            # Capture session_id for video extraction
+            session_id = getattr(nova, "session_id", None)
             # Initial screenshot
             self._capture_screenshot(
                 audit_id, nova, "cookie_consent", persona, "initial", screenshot_paths, screenshot_urls
@@ -568,7 +612,7 @@ class NovaActAuditProvider(BrowserAuditProvider):
                     },
                 )
 
-                return JourneyObservation(
+                observation = JourneyObservation(
                     scenario="cookie_consent",
                     persona=persona,
                     target_url=target_url,
@@ -605,7 +649,7 @@ class NovaActAuditProvider(BrowserAuditProvider):
                     },
                 )
 
-                return JourneyObservation(
+                observation = JourneyObservation(
                     scenario="cookie_consent",
                     persona=persona,
                     target_url=target_url,
@@ -613,12 +657,63 @@ class NovaActAuditProvider(BrowserAuditProvider):
                     evidence=evidence,
                 )
 
+        # Extract and save video after NovaAct context exits
+        video_url = self._extract_and_save_video(
+            audit_id, logs_directory, session_id, "cookie_consent", persona, progress
+        )
+        if video_url and progress:
+            progress(
+                "video",
+                f"Saved session video for cookie_consent/{persona}",
+                0,
+                "success",
+                {"scenario": "cookie_consent", "persona": persona, "video_url": video_url},
+            )
+
+        # Clean up temp directory
+        if logs_directory:
+            with contextlib.suppress(Exception):
+                shutil.rmtree(logs_directory)
+
+        return observation
+
+    def _extract_and_save_video(
+        self,
+        audit_id: str,
+        logs_directory: str | None,
+        session_id: str | None,
+        scenario: str,
+        persona: str,
+        progress: ProgressCallback | None,
+    ) -> str | None:
+        """Extract video from logs directory and save via StorageProvider."""
+        if not logs_directory or not session_id:
+            return None
+
+        # Video file path: {logs_directory}/{session_id}/session_video_tab-0.webm
+        video_file_path = Path(logs_directory) / session_id / "session_video_tab-0.webm"
+
+        if not video_file_path.exists():
+            logger.warning(f"Video file not found at {video_file_path}")
+            return None
+
+        try:
+            video_bytes = video_file_path.read_bytes()
+            key = f"videos/{audit_id}/{scenario}_{persona}.webm"
+            saved = self.storage.save_bytes(key, video_bytes, "video/webm")
+            logger.info(f"Saved video for {scenario}/{persona}: {saved.public_url}")
+            return saved.public_url
+        except Exception as e:
+            logger.error(f"Failed to extract/save video for {scenario}/{persona}: {e}")
+            return None
+
     def _run_checkout_flow_scenario(
         self,
         audit_id: str,
         target_url: str,
         persona: PersonaType,
         nova_act: Any,
+        progress: ProgressCallback | None = None,
     ) -> JourneyObservation:
         """Run checkout flow scenario with Nova Act."""
 
@@ -627,13 +722,33 @@ class NovaActAuditProvider(BrowserAuditProvider):
         screenshot_paths: list[str] = []
         screenshot_urls: list[str] = []
         interacted_controls: list[str] = []
+        logs_directory: str | None = None
+        session_id: str | None = None
+
+        # Create temp directory for logs/videos
+        logs_directory = tempfile.mkdtemp(prefix=f"nova_act_{audit_id}_")
+
+        # Emit video recording event
+        if progress:
+            progress(
+                "video",
+                f"Recording browser session for checkout_flow/{persona}",
+                0,
+                "running",
+                {"scenario": "checkout_flow", "persona": persona, "audit_id": audit_id},
+            )
 
         with NovaAct(
             starting_page=target_url,
             headless=self.headless,
             tty=self.tty,
             go_to_url_timeout=self.timeout,
+            record_video=True,
+            logs_directory=logs_directory,
         ) as nova:
+            # Capture session_id for video extraction
+            session_id = getattr(nova, "session_id", None)
+
             # Initial state
             self._capture_screenshot(
                 audit_id, nova, "checkout_flow", persona, "initial", screenshot_paths, screenshot_urls
@@ -747,7 +862,7 @@ class NovaActAuditProvider(BrowserAuditProvider):
                 },
             )
 
-            return JourneyObservation(
+            observation = JourneyObservation(
                 scenario="checkout_flow",
                 persona=persona,
                 target_url=target_url,
@@ -755,12 +870,35 @@ class NovaActAuditProvider(BrowserAuditProvider):
                 evidence=evidence,
             )
 
+        # Extract and save video after NovaAct context exits
+        video_url = self._extract_and_save_video(
+            audit_id, logs_directory, session_id, "checkout_flow", persona, progress
+        )
+        if video_url and progress:
+            progress(
+                "video",
+                f"Saved session video for checkout_flow/{persona}",
+                0,
+                "success",
+                {"scenario": "checkout_flow", "persona": persona, "video_url": video_url},
+            )
+
+        # Clean up temp directory
+        if logs_directory:
+            try:
+                shutil.rmtree(logs_directory)
+            except Exception as e:
+                logger.warning(f"Failed to clean up temp directory {logs_directory}: {e}")
+
+        return observation
+
     def _run_subscription_cancellation_scenario(
         self,
         audit_id: str,
         target_url: str,
         persona: PersonaType,
         nova_act: Any,
+        progress: ProgressCallback | None = None,
     ) -> JourneyObservation:
         """Run subscription cancellation scenario with Nova Act."""
 
@@ -769,13 +907,32 @@ class NovaActAuditProvider(BrowserAuditProvider):
         screenshot_paths: list[str] = []
         screenshot_urls: list[str] = []
         interacted_controls: list[str] = []
+        logs_directory: str | None = None
+        session_id: str | None = None
+
+        # Create temp directory for logs/videos
+        logs_directory = tempfile.mkdtemp(prefix=f"nova_act_{audit_id}_")
+
+        # Emit video recording event
+        if progress:
+            progress(
+                "video",
+                f"Recording browser session for subscription_cancellation/{persona}",
+                0,
+                "running",
+                {"scenario": "subscription_cancellation", "persona": persona, "audit_id": audit_id},
+            )
 
         with NovaAct(
             starting_page=target_url,
             headless=self.headless,
             tty=self.tty,
             go_to_url_timeout=self.timeout,
+            record_video=True,
+            logs_directory=logs_directory,
         ) as nova:
+            # Capture session_id for video extraction
+            session_id = getattr(nova, "session_id", None)
             # Initial state
             self._capture_screenshot(
                 audit_id, nova, "subscription_cancellation", persona, "initial", screenshot_paths, screenshot_urls
@@ -899,7 +1056,7 @@ class NovaActAuditProvider(BrowserAuditProvider):
                 },
             )
 
-            return JourneyObservation(
+            observation = JourneyObservation(
                 scenario="subscription_cancellation",
                 persona=persona,
                 target_url=target_url,
@@ -907,12 +1064,35 @@ class NovaActAuditProvider(BrowserAuditProvider):
                 evidence=evidence,
             )
 
+        # Extract and save video after NovaAct context exits
+        video_url = self._extract_and_save_video(
+            audit_id, logs_directory, session_id, "subscription_cancellation", persona, progress
+        )
+        if video_url and progress:
+            progress(
+                "video",
+                f"Saved session video for subscription_cancellation/{persona}",
+                0,
+                "success",
+                {"scenario": "subscription_cancellation", "persona": persona, "video_url": video_url},
+            )
+
+        # Clean up temp directory
+        if logs_directory:
+            try:
+                shutil.rmtree(logs_directory)
+            except Exception as e:
+                logger.warning(f"Failed to clean up temp directory {logs_directory}: {e}")
+
+        return observation
+
     def _run_account_deletion_scenario(
         self,
         audit_id: str,
         target_url: str,
         persona: PersonaType,
         nova_act: Any,
+        progress: ProgressCallback | None = None,
     ) -> JourneyObservation:
         """Run account deletion scenario with Nova Act."""
 
@@ -921,13 +1101,32 @@ class NovaActAuditProvider(BrowserAuditProvider):
         screenshot_paths: list[str] = []
         screenshot_urls: list[str] = []
         interacted_controls: list[str] = []
+        logs_directory: str | None = None
+        session_id: str | None = None
+
+        # Create temp directory for logs/videos
+        logs_directory = tempfile.mkdtemp(prefix=f"nova_act_{audit_id}_")
+
+        # Emit video recording event
+        if progress:
+            progress(
+                "video",
+                f"Recording browser session for account_deletion/{persona}",
+                0,
+                "running",
+                {"scenario": "account_deletion", "persona": persona, "audit_id": audit_id},
+            )
 
         with NovaAct(
             starting_page=target_url,
             headless=self.headless,
             tty=self.tty,
             go_to_url_timeout=self.timeout,
+            record_video=True,
+            logs_directory=logs_directory,
         ) as nova:
+            # Capture session_id for video extraction
+            session_id = getattr(nova, "session_id", None)
             # Initial state
             self._capture_screenshot(
                 audit_id, nova, "account_deletion", persona, "initial", screenshot_paths, screenshot_urls
@@ -1045,7 +1244,7 @@ class NovaActAuditProvider(BrowserAuditProvider):
                 },
             )
 
-            return JourneyObservation(
+            observation = JourneyObservation(
                 scenario="account_deletion",
                 persona=persona,
                 target_url=target_url,
@@ -1053,12 +1252,35 @@ class NovaActAuditProvider(BrowserAuditProvider):
                 evidence=evidence,
             )
 
+        # Extract and save video after NovaAct context exits
+        video_url = self._extract_and_save_video(
+            audit_id, logs_directory, session_id, "account_deletion", persona, progress
+        )
+        if video_url and progress:
+            progress(
+                "video",
+                f"Saved session video for account_deletion/{persona}",
+                0,
+                "success",
+                {"scenario": "account_deletion", "persona": persona, "video_url": video_url},
+            )
+
+        # Clean up temp directory
+        if logs_directory:
+            try:
+                shutil.rmtree(logs_directory)
+            except Exception as e:
+                logger.warning(f"Failed to clean up temp directory {logs_directory}: {e}")
+
+        return observation
+
     def _run_newsletter_signup_scenario(
         self,
         audit_id: str,
         target_url: str,
         persona: PersonaType,
         nova_act: Any,
+        progress: ProgressCallback | None = None,
     ) -> JourneyObservation:
         """Run newsletter signup scenario with Nova Act."""
 
@@ -1067,13 +1289,32 @@ class NovaActAuditProvider(BrowserAuditProvider):
         screenshot_paths: list[str] = []
         screenshot_urls: list[str] = []
         interacted_controls: list[str] = []
+        logs_directory: str | None = None
+        session_id: str | None = None
+
+        # Create temp directory for logs/videos
+        logs_directory = tempfile.mkdtemp(prefix=f"nova_act_{audit_id}_")
+
+        # Emit video recording event
+        if progress:
+            progress(
+                "video",
+                f"Recording browser session for newsletter_signup/{persona}",
+                0,
+                "running",
+                {"scenario": "newsletter_signup", "persona": persona, "audit_id": audit_id},
+            )
 
         with NovaAct(
             starting_page=target_url,
             headless=self.headless,
             tty=self.tty,
             go_to_url_timeout=self.timeout,
+            record_video=True,
+            logs_directory=logs_directory,
         ) as nova:
+            # Capture session_id for video extraction
+            session_id = getattr(nova, "session_id", None)
             # Initial state
             self._capture_screenshot(
                 audit_id, nova, "newsletter_signup", persona, "initial", screenshot_paths, screenshot_urls
@@ -1182,7 +1423,7 @@ class NovaActAuditProvider(BrowserAuditProvider):
                 },
             )
 
-            return JourneyObservation(
+            observation = JourneyObservation(
                 scenario="newsletter_signup",
                 persona=persona,
                 target_url=target_url,
@@ -1190,12 +1431,35 @@ class NovaActAuditProvider(BrowserAuditProvider):
                 evidence=evidence,
             )
 
+        # Extract and save video after NovaAct context exits
+        video_url = self._extract_and_save_video(
+            audit_id, logs_directory, session_id, "newsletter_signup", persona, progress
+        )
+        if video_url and progress:
+            progress(
+                "video",
+                f"Saved session video for newsletter_signup/{persona}",
+                0,
+                "success",
+                {"scenario": "newsletter_signup", "persona": persona, "video_url": video_url},
+            )
+
+        # Clean up temp directory
+        if logs_directory:
+            try:
+                shutil.rmtree(logs_directory)
+            except Exception as e:
+                logger.warning(f"Failed to clean up temp directory {logs_directory}: {e}")
+
+        return observation
+
     def _run_pricing_comparison_scenario(
         self,
         audit_id: str,
         target_url: str,
         persona: PersonaType,
         nova_act: Any,
+        progress: ProgressCallback | None = None,
     ) -> JourneyObservation:
         """Run pricing comparison scenario with Nova Act."""
 
@@ -1204,13 +1468,32 @@ class NovaActAuditProvider(BrowserAuditProvider):
         screenshot_paths: list[str] = []
         screenshot_urls: list[str] = []
         interacted_controls: list[str] = []
+        logs_directory: str | None = None
+        session_id: str | None = None
+
+        # Create temp directory for logs/videos
+        logs_directory = tempfile.mkdtemp(prefix=f"nova_act_{audit_id}_")
+
+        # Emit video recording event
+        if progress:
+            progress(
+                "video",
+                f"Recording browser session for pricing_comparison/{persona}",
+                0,
+                "running",
+                {"scenario": "pricing_comparison", "persona": persona, "audit_id": audit_id},
+            )
 
         with NovaAct(
             starting_page=target_url,
             headless=self.headless,
             tty=self.tty,
             go_to_url_timeout=self.timeout,
+            record_video=True,
+            logs_directory=logs_directory,
         ) as nova:
+            # Capture session_id for video extraction
+            session_id = getattr(nova, "session_id", None)
             # Initial state
             self._capture_screenshot(
                 audit_id, nova, "pricing_comparison", persona, "initial", screenshot_paths, screenshot_urls
@@ -1333,13 +1616,35 @@ class NovaActAuditProvider(BrowserAuditProvider):
                 },
             )
 
-            return JourneyObservation(
+            observation = JourneyObservation(
                 scenario="pricing_comparison",
                 persona=persona,
                 target_url=target_url,
                 final_url=nova.page.url if hasattr(nova, "page") else target_url,
                 evidence=evidence,
             )
+
+        # Extract and save video after NovaAct context exits
+        video_url = self._extract_and_save_video(
+            audit_id, logs_directory, session_id, "pricing_comparison", persona, progress
+        )
+        if video_url and progress:
+            progress(
+                "video",
+                f"Saved session video for pricing_comparison/{persona}",
+                0,
+                "success",
+                {"scenario": "pricing_comparison", "persona": persona, "video_url": video_url},
+            )
+
+        # Clean up temp directory
+        if logs_directory:
+            try:
+                shutil.rmtree(logs_directory)
+            except Exception as e:
+                logger.warning(f"Failed to clean up temp directory {logs_directory}: {e}")
+
+        return observation
 
     def _capture_screenshot(
         self,

@@ -2,9 +2,12 @@ from __future__ import annotations
 
 import contextlib
 import itertools
+import shutil
+import tempfile
 import time
 from abc import ABC, abstractmethod
 from collections.abc import Callable
+from pathlib import Path
 from urllib.parse import urljoin, urlparse
 
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
@@ -409,8 +412,13 @@ class PlaywrightAuditProvider(BrowserAuditProvider):
         progress: ProgressCallback,
     ) -> BrowserRunResult:
         observations: list[JourneyObservation] = []
+        video_urls: dict[str, str] = {}
         combinations = list(itertools.product(scenarios, personas))
         total = max(1, len(combinations))
+
+        # Create temp directory for video recording
+        video_temp_dir = tempfile.mkdtemp(prefix=f"playwright_videos_{audit_id}_")
+
         with sync_playwright() as playwright:
             browser = playwright.chromium.launch(headless=True)
             try:
@@ -422,10 +430,48 @@ class PlaywrightAuditProvider(BrowserAuditProvider):
                         "running",
                         {"scenario": scenario, "persona": persona},
                     )
-                    context = browser.new_context(**self._context_options(persona))
+
+                    # Emit video recording event
+                    progress(
+                        "video",
+                        f"Recording browser session for {scenario}/{persona}",
+                        0,
+                        "running",
+                        {"scenario": scenario, "persona": persona, "audit_id": audit_id},
+                    )
+
+                    # Create context with video recording
+                    context_options = self._context_options(persona)
+                    context_options["record_video_dir"] = video_temp_dir
+                    context_options["record_video_size"] = {"width": 1440, "height": 960}
+                    context = browser.new_context(**context_options)
                     page = context.new_page()
                     observation = self._run_scenario(audit_id, target_url, scenario, persona, page)
                     observations.append(observation)
+
+                    # Close context to ensure video is saved
+                    context.close()
+
+                    # Find and save the video file
+                    video_path = self._find_video_file(video_temp_dir)
+                    if video_path:
+                        video_key = f"videos/{audit_id}/{scenario}_{persona}.webm"
+                        try:
+                            video_bytes = video_path.read_bytes()
+                            saved = self.storage.save_bytes(video_key, video_bytes, "video/webm")
+                            video_urls[f"{scenario}_{persona}"] = saved.public_url
+                            progress(
+                                "video",
+                                f"Saved session video for {scenario}/{persona}",
+                                0,
+                                "success",
+                                {"scenario": scenario, "persona": persona, "video_url": saved.public_url},
+                            )
+                        except Exception as e:
+                            # Log but don't fail the audit if video saving fails
+                            import logging
+                            logging.getLogger(__name__).warning(f"Failed to save video for {scenario}/{persona}: {e}")
+
                     progress(
                         "evidence",
                         f"Captured browser evidence for {scenario.replace('_', ' ')} / {persona.replace('_', ' ')}",
@@ -438,9 +484,11 @@ class PlaywrightAuditProvider(BrowserAuditProvider):
                             "buttons": observation.evidence.button_labels[:3],
                         },
                     )
-                    context.close()
             finally:
                 browser.close()
+                # Clean up temp directory
+                with contextlib.suppress(Exception):
+                    shutil.rmtree(video_temp_dir)
 
         return BrowserRunResult(
             observations=observations,
@@ -452,7 +500,17 @@ class PlaywrightAuditProvider(BrowserAuditProvider):
                 "scenarios": scenarios,
                 "personas": personas,
             },
+            video_urls=video_urls if video_urls else None,
         )
+
+    def _find_video_file(self, video_dir: str) -> Path | None:
+        """Find the most recent video file in the directory."""
+        video_path = Path(video_dir)
+        video_files = list(video_path.glob("*.webm"))
+        if not video_files:
+            return None
+        # Return the most recently modified video file
+        return max(video_files, key=lambda p: p.stat().st_mtime)
 
     def _run_scenario(self, audit_id: str, target_url: str, scenario: str, persona: str, page) -> JourneyObservation:
         page.goto(target_url, wait_until="domcontentloaded", timeout=25_000)
