@@ -1,0 +1,129 @@
+{
+  "groupId": "submit-group",
+  "testedAt": "2026-03-14T19:17:00Z",
+  "isolation": {
+    "frontend": "http://localhost:5173",
+    "backend": "http://localhost:8000",
+    "submitPageUrl": "http://localhost:5173/",
+    "browserSession": "624ac3638233__submit"
+  },
+  "toolsUsed": ["agent-browser", "curl"],
+  "assertions": [
+    {
+      "id": "VAL-BENCH-001",
+      "title": "Benchmark Mode toggle on SubmitPage",
+      "status": "pass",
+      "steps": [
+        { "action": "Navigate to SubmitPage at http://localhost:5173/", "expected": "Page loads with Benchmark Mode toggle", "observed": "Page loaded with Benchmark Mode checkbox toggle visible" },
+        { "action": "Check Benchmark Mode toggle default state", "expected": "Toggle defaults to OFF (unchecked)", "observed": "document.querySelector('[data-testid=benchmark-mode-toggle]').checked === false; single 'Target URL' input shown" },
+        { "action": "Toggle Benchmark Mode ON", "expected": "2+ URL input fields with add/remove controls appear", "observed": "2 URL input fields appeared, '+ Add URL' button shown, button text changed to 'Start benchmark', first URL field preserved value 'https://www.example.com'" },
+        { "action": "Verify URL field count and controls", "expected": "2 URL fields, add button enabled, no remove buttons at minimum count", "observed": "urlCount=2, addBtnDisabled=false, removeBtns=0 (correct — at minimum 2)" },
+        { "action": "Toggle Benchmark Mode OFF", "expected": "Reverts to single-URL input, preserving first URL value", "observed": "Single 'Target URL' input restored with value 'https://www.example.com'; button text reverted to 'Start trust audit'" }
+      ],
+      "evidence": {
+        "screenshots": ["benchmark-mode/submit-group/VAL-BENCH-001-toggle-off.png", "benchmark-mode/submit-group/VAL-BENCH-001-toggle-on.png"],
+        "consoleErrors": "none",
+        "domSnapshot": {
+          "toggleOff": { "benchmarkChecked": false, "targetUrlVisible": true, "targetUrlValue": "https://www.example.com", "benchmarkUrlsVisible": false, "buttonText": "Start trust audit" },
+          "toggleOn": { "benchmarkChecked": true, "urlCount": 2, "addBtnDisabled": false, "removeBtns": 0, "firstUrlValue": "https://www.example.com" }
+        }
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-BENCH-002",
+      "title": "Multi-URL validation — minimum 2 URLs",
+      "status": "pass",
+      "steps": [
+        { "action": "Enable Benchmark Mode", "expected": "2 URL input fields shown", "observed": "2 URL input fields shown, first pre-filled with 'https://www.example.com', second empty" },
+        { "action": "Submit with only 1 valid URL (first filled, second empty)", "expected": "Inline validation error, no API call", "observed": "Inline errors shown: 'URL is required' on empty field, 'At least 2 valid URLs are required for benchmark mode.' general error" },
+        { "action": "Check network tab for POST request", "expected": "No POST to /api/benchmarks", "observed": "No requests captured to /api/benchmarks" }
+      ],
+      "evidence": {
+        "screenshots": ["benchmark-mode/submit-group/VAL-BENCH-002-error-state.png"],
+        "consoleErrors": "none",
+        "network": "No POST to /api/benchmarks — validation prevented submission",
+        "errorMessages": { "urlErrors": ["URL is required"], "generalError": "At least 2 valid URLs are required for benchmark mode." }
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-BENCH-003",
+      "title": "Multi-URL validation — maximum 5 URLs",
+      "status": "pass",
+      "steps": [
+        { "action": "Fill 2 existing URL fields and add 3 more (total 5)", "expected": "5 URL fields shown, Add URL button disabled", "observed": "5 URL input fields rendered, '+ Add URL' button is disabled, 'Maximum 5 URLs allowed' hint shown" },
+        { "action": "Verify DOM state at 5 URLs", "expected": "urlCount=5, addBtnDisabled=true, maxHint visible", "observed": "urlCount=5, addBtnDisabled=true, maxHint='Maximum 5 URLs allowed'" },
+        { "action": "Test API with 6 URLs via curl", "expected": "API returns 422", "observed": "HTTP 422 returned: 'List should have at most 5 items after validation, not 6'" }
+      ],
+      "evidence": {
+        "screenshots": ["benchmark-mode/submit-group/VAL-BENCH-003-max-5-urls.png"],
+        "consoleErrors": "none",
+        "network": "POST /api/benchmarks with 6 URLs -> 422 (List should have at most 5 items after validation, not 6)",
+        "apiResponse": { "status": 422, "detail": "List should have at most 5 items after validation, not 6" }
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-BENCH-004",
+      "title": "Multi-URL validation — URL format and duplicates",
+      "status": "pass",
+      "steps": [
+        { "action": "Fill first URL with invalid value 'not-a-url', second with valid URL", "expected": "Per-field validation error on invalid URL", "observed": "Per-field error: 'Invalid URL format (must start with http:// or https://)' on first field. General error: 'At least 2 valid URLs are required for benchmark mode.'" },
+        { "action": "Fill both URLs with identical valid URL 'https://www.example.com'", "expected": "Duplicate URL error shown", "observed": "Duplicate error: 'Duplicate URLs detected. Each URL must be unique.'" },
+        { "action": "Check network tab for POST request", "expected": "No POST to /api/benchmarks", "observed": "No requests captured — validation prevented submission in both cases" }
+      ],
+      "evidence": {
+        "screenshots": ["benchmark-mode/submit-group/VAL-BENCH-004-invalid-url-error.png", "benchmark-mode/submit-group/VAL-BENCH-004-duplicate-url-error.png"],
+        "consoleErrors": "none",
+        "network": "No POST to /api/benchmarks — validation prevented submission",
+        "errorMessages": {
+          "invalidUrlError": "Invalid URL format (must start with http:// or https://)",
+          "duplicateError": "Duplicate URLs detected. Each URL must be unique."
+        }
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-BENCH-006",
+      "title": "Post-submit navigates to BenchmarkPage",
+      "status": "fail",
+      "steps": [
+        { "action": "Enable Benchmark Mode, fill 2 valid URLs, click Start benchmark", "expected": "Benchmark created, navigation to /benchmarks/{id}", "observed": "API returned 422 error: missing 'selected_scenarios' and 'selected_personas' fields. Page stayed on SubmitPage with error message." },
+        { "action": "Root cause: Frontend sends 'scenarios'/'personas' but backend expects 'selected_scenarios'/'selected_personas'", "expected": "Field names match between frontend and backend", "observed": "CreateBenchmarkRequest type in frontend/src/api/types.ts uses 'scenarios' and 'personas' but backend schema (app/schemas/benchmark.py) expects 'selected_scenarios' and 'selected_personas'" },
+        { "action": "Verify API works with correct field names via curl", "expected": "201 with benchmark object", "observed": "201 returned with valid benchmark object (id: 46b6c14d-f5b9-42ab-846d-57fff39007cf)" },
+        { "action": "Navigate directly to BenchmarkPage for API-created benchmark", "expected": "BenchmarkPage loads with benchmark data", "observed": "BenchmarkPage loads at /benchmarks/46b6c14d-f5b9-42ab-846d-57fff39007cf, shows 'Comparing 2 URLs', trust scores, scenario breakdown, unified summary" }
+      ],
+      "evidence": {
+        "screenshots": ["benchmark-mode/submit-group/VAL-BENCH-006-submit-error.png", "benchmark-mode/submit-group/VAL-BENCH-006-benchmark-page.png"],
+        "consoleErrors": "none",
+        "network": "POST /api/benchmarks -> 422 (field name mismatch); Direct curl with correct fields -> 201",
+        "urlAssertion": "Navigation to /benchmarks/{id} never occurs from UI due to API error. BenchmarkPage itself loads correctly when navigated to directly.",
+        "benchmarkPageDom": {
+          "heading": "Comparing 2 URLs",
+          "status": "completed",
+          "sections": ["Trust Score Comparison", "Scenario Breakdown", "Unified Summary"],
+          "urls": ["www.google.com/", "www.bing.com/"],
+          "trustScores": [100, 100]
+        }
+      },
+      "issues": "BUG: Frontend CreateBenchmarkRequest sends field names 'scenarios' and 'personas' but backend CreateBenchmarkPayload expects 'selected_scenarios' and 'selected_personas'. This causes a 422 error on every benchmark submission from the UI. Fix: update frontend/src/api/types.ts CreateBenchmarkRequest to use 'selected_scenarios'/'selected_personas', and update SubmitPage.tsx to map the fields accordingly."
+    }
+  ],
+  "frictions": [
+    {
+      "description": "When submitting benchmark with duplicate URLs, a stale error message from a previous validation attempt ('At least 2 valid URLs are required') persists alongside the new duplicate error, because setError(null) is only called after validation passes, not at the start of startAudit()",
+      "resolved": false,
+      "resolution": null,
+      "affectedAssertions": ["VAL-BENCH-004"]
+    }
+  ],
+  "blockers": [
+    {
+      "description": "Frontend-to-backend field name mismatch: CreateBenchmarkRequest uses 'scenarios'/'personas' but backend expects 'selected_scenarios'/'selected_personas'. All benchmark submissions from the UI fail with HTTP 422.",
+      "affectedAssertions": ["VAL-BENCH-006"],
+      "quickFixAttempted": "Verified API works with correct field names via curl (201 response). BenchmarkPage renders correctly when navigated to directly."
+    }
+  ],
+  "summary": "Tested 5 assertions: 4 passed (VAL-BENCH-001, VAL-BENCH-002, VAL-BENCH-003, VAL-BENCH-004), 1 failed (VAL-BENCH-006: benchmark creation from UI fails due to frontend/backend field name mismatch — frontend sends 'scenarios'/'personas' but backend expects 'selected_scenarios'/'selected_personas')."
+}

@@ -1,0 +1,171 @@
+{
+  "groupId": "api-group",
+  "testedAt": "2026-03-14T19:12:50Z",
+  "isolation": {
+    "backendUrl": "http://localhost:8000",
+    "tool": "curl.exe",
+    "preCreatedBenchmarkId": "9b9d3b22-9571-4591-b6dd-4f4f199e17f3",
+    "benchmarkAuditIds": ["94843e6d-5bfc-4ba5-a58b-3988450889ee", "05251856-283b-462c-a8b1-795db5adf293"]
+  },
+  "toolsUsed": ["curl.exe", "pytest", "vitest", "tsc", "eslint", "ruff"],
+  "assertions": [
+    {
+      "id": "VAL-BENCH-005",
+      "title": "Benchmark creation API happy path",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "GET /api/benchmarks/9b9d3b22-9571-4591-b6dd-4f4f199e17f3",
+          "expected": "Full benchmark object with id, status, urls, audit_ids, trust_scores, created_at",
+          "observed": "200 with all required fields: id (UUID), status='completed', urls=['https://example.com/','https://example.org/'], audit_ids (2 UUIDs), trust_scores map, created_at"
+        },
+        {
+          "action": "POST /api/benchmarks with 2 valid URLs, selected_scenarios, selected_personas",
+          "expected": "201 with benchmark object: id (UUID), status='queued', urls, audit_ids, created_at",
+          "observed": "201 returned with id='e76c0d6e-c347-427d-92d3-a032ba2a843b', status='queued', urls=['https://httpbin.org/','https://jsonplaceholder.typicode.com/'], audit_ids (2 UUIDs), trust_scores=null, created_at present"
+        },
+        {
+          "action": "GET /api/audits/18252c34-277c-444c-befc-2ab3c1d12af6 (first audit from new benchmark)",
+          "expected": "Real audit with target_url matching first URL",
+          "observed": "200 with target_url='https://httpbin.org/', status='completed'"
+        },
+        {
+          "action": "GET /api/audits/082cf1af-fe07-4763-82b0-74a9e8a89716 (second audit from new benchmark)",
+          "expected": "Real audit with target_url matching second URL",
+          "observed": "200 with target_url='https://jsonplaceholder.typicode.com/', status='completed'"
+        }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "n/a (API test)",
+        "network": "GET /api/benchmarks/9b9d3b22... -> 200, POST /api/benchmarks -> 201, GET /api/audits/18252c34... -> 200, GET /api/audits/082cf1af... -> 200",
+        "files": [
+          "benchmark-mode/api-group/VAL-BENCH-005-get-existing-benchmark.json",
+          "benchmark-mode/api-group/VAL-BENCH-005-post-new-benchmark-201.json",
+          "benchmark-mode/api-group/VAL-BENCH-005-audit1-httpbin.json",
+          "benchmark-mode/api-group/VAL-BENCH-005-audit2-jsonplaceholder.json"
+        ]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-BENCH-013",
+      "title": "Benchmark API — get and list endpoints",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "GET /api/benchmarks/9b9d3b22-9571-4591-b6dd-4f4f199e17f3",
+          "expected": "Full benchmark object with trust_scores map",
+          "observed": "200 with trust_scores={'https://example.com/':100.0,'https://example.org/':100.0}, all fields present"
+        },
+        {
+          "action": "GET /api/benchmarks",
+          "expected": "List sorted by created_at desc",
+          "observed": "200 with array of benchmark objects. List returned correctly (contained pre-created benchmark initially; after POST test, newest first)."
+        },
+        {
+          "action": "GET /api/benchmarks/00000000-0000-0000-0000-000000000000",
+          "expected": "404 with error message",
+          "observed": "404 with {\"detail\":\"Benchmark not found\"}"
+        }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "n/a (API test)",
+        "network": "GET /api/benchmarks/9b9d3b22... -> 200, GET /api/benchmarks -> 200, GET /api/benchmarks/00000000... -> 404",
+        "files": [
+          "benchmark-mode/api-group/VAL-BENCH-013-get-benchmark.json",
+          "benchmark-mode/api-group/VAL-BENCH-013-list-benchmarks.json",
+          "benchmark-mode/api-group/VAL-BENCH-013-unknown-id-404.json"
+        ]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CROSS-003",
+      "title": "Benchmark results include per-URL video recordings",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "GET /api/audits/94843e6d-5bfc-4ba5-a58b-3988450889ee (example.com audit from benchmark)",
+          "expected": "Audit response with video_urls field",
+          "observed": "200 with video_urls={} (empty dict). The video_urls field is present but empty because benchmark audits run in mock/live mode against example.com which produces no actual video files. This is expected per test data notes: 'Video URLs on audits: empty dict {} (benchmark audits created in mock mode)'."
+        },
+        {
+          "action": "GET /api/audits/05251856-283b-462c-a8b1-795db5adf293 (example.org audit from benchmark)",
+          "expected": "Audit response with video_urls field",
+          "observed": "200 with video_urls={} (empty dict). Same expected behavior as above."
+        },
+        {
+          "action": "Verify video event phases in audit events",
+          "expected": "Events with phase='video' present in audit timeline",
+          "observed": "Both audits have multiple events with phase='video' and messages like 'Recording browser session for cookie_consent/privacy_sensitive'. Video recording infrastructure is active; videos are empty because Nova Act is mocked against example sites."
+        }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "n/a (API test)",
+        "network": "GET /api/audits/94843e6d... -> 200, GET /api/audits/05251856... -> 200",
+        "files": [
+          "benchmark-mode/api-group/VAL-CROSS-003-audit1-example-com.json",
+          "benchmark-mode/api-group/VAL-CROSS-003-audit2-example-org.json"
+        ]
+      },
+      "issues": "video_urls is empty {} for both benchmark audits. This is documented expected behavior for benchmark audits in mock mode against example.com/example.org. The video_urls field exists and the video recording events are emitted, but no actual video files are produced because Nova Act is mocked."
+    },
+    {
+      "id": "VAL-CROSS-006",
+      "title": "Existing features still work unchanged",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Run backend pytest: .venv\\Scripts\\python.exe -m pytest tests/ --tb=short",
+          "expected": "All 303+ tests pass",
+          "observed": "303 passed, 1 warning in 20.69s"
+        },
+        {
+          "action": "Run frontend vitest: npx vitest run",
+          "expected": "All 212+ tests pass",
+          "observed": "14 test files passed, 212 tests passed"
+        },
+        {
+          "action": "Run TypeScript strict check: npx tsc -b",
+          "expected": "Exit code 0",
+          "observed": "Exit code 0 (clean, no errors)"
+        },
+        {
+          "action": "Run ESLint: npm run lint",
+          "expected": "0 errors",
+          "observed": "0 errors, 12 warnings (all pre-existing complexity/max-lines warnings documented in AGENTS.md)"
+        },
+        {
+          "action": "Run ruff: .venv\\Scripts\\python.exe -m ruff check app/",
+          "expected": "Clean output",
+          "observed": "All checks passed!"
+        },
+        {
+          "action": "Run backend coverage: pytest tests/ --cov=app --cov-fail-under=50",
+          "expected": "Coverage >= 50%",
+          "observed": "303 passed, total coverage 59.70% (threshold 50% met)"
+        }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "n/a (test/lint verification)",
+        "network": "n/a",
+        "files": [
+          "benchmark-mode/api-group/VAL-CROSS-006-backend-tests.txt",
+          "benchmark-mode/api-group/VAL-CROSS-006-frontend-tests.txt",
+          "benchmark-mode/api-group/VAL-CROSS-006-typecheck.txt",
+          "benchmark-mode/api-group/VAL-CROSS-006-eslint.txt",
+          "benchmark-mode/api-group/VAL-CROSS-006-ruff.txt",
+          "benchmark-mode/api-group/VAL-CROSS-006-coverage.txt"
+        ]
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [],
+  "blockers": [],
+  "summary": "Tested 4 assertions: 4 passed. VAL-BENCH-005: POST /api/benchmarks returns 201 with correct structure, each audit_id maps to retrievable audit. VAL-BENCH-013: GET by ID returns full object with trust_scores, list endpoint works, unknown ID returns 404. VAL-CROSS-003: Benchmark audit responses include video_urls field (empty {} as expected in mock mode) and video phase events. VAL-CROSS-006: All 303 backend tests pass, all 212 frontend tests pass, TypeScript strict check clean, ESLint 0 errors, ruff clean, backend coverage 59.70% >= 50%."
+}

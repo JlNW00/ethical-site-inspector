@@ -1,0 +1,276 @@
+{
+  "groupId": "benchmark-page-group",
+  "testedAt": "2026-03-14T19:12:00Z",
+  "isolation": {
+    "frontend": "http://localhost:5173",
+    "backend": "http://localhost:8000",
+    "benchmarkId": "9b9d3b22-9571-4591-b6dd-4f4f199e17f3",
+    "auditIds": [
+      "94843e6d-5bfc-4ba5-a58b-3988450889ee",
+      "05251856-283b-462c-a8b1-795db5adf293"
+    ],
+    "browserSession": "624ac3638233__bench"
+  },
+  "toolsUsed": ["agent-browser", "curl.exe"],
+  "assertions": [
+    {
+      "id": "VAL-BENCH-007",
+      "title": "BenchmarkPage shows per-URL progress tracking",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Navigate to /benchmarks/9b9d3b22-9571-4591-b6dd-4f4f199e17f3",
+          "expected": "BenchmarkPage loads showing completed state with comparison view",
+          "observed": "BenchmarkPage loaded with 'Benchmark Results', 'Comparing 2 URLs', 'completed' status pill, and full comparison view displayed"
+        },
+        {
+          "action": "Verify comparison view is showing (completed state)",
+          "expected": "Trust Score Comparison section visible with URL cards",
+          "observed": "Trust Score Comparison section visible with example.com/ (100%) and example.org/ (100%) cards with ProgressMeter components and View Report links"
+        },
+        {
+          "action": "Verify polling mechanism exists in code",
+          "expected": "1.5s polling pattern in useEffect when status is running/queued",
+          "observed": "BenchmarkPage.tsx line ~93: `timer = window.setTimeout(fetchBenchmark, 1500)` — polls every 1.5s while status is 'running' or 'queued'. Stops polling when completed/failed. Per-URL progress section (data-testid='progress-section') renders ProgressMeter per URL during running state."
+        },
+        {
+          "action": "Verify per-URL progress rendering in code",
+          "expected": "Progress indicators per URL during running state",
+          "observed": "Code renders benchmark-progress-list with benchmark-progress-item per URL showing URL name and progress percentage with ProgressMeter. Aggregate progress shown in hero section."
+        },
+        {
+          "action": "Check BenchmarkPage.test.tsx for polling and progress tests",
+          "expected": "Tests confirm polling behavior",
+          "observed": "Tests 'polls every 1.5s while benchmark status is running', 'stops polling when completed', 'shows per-URL progress while benchmark is running', 'shows aggregate progress meter while running' all present and verify correct behavior"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "benchmark-mode/benchmark-page-group/VAL-BENCH-007-comparison-view.png"
+        ],
+        "consoleErrors": "none",
+        "network": "GET /api/benchmarks/{id} -> 200, GET /api/audits/{id} -> 200 (x2), GET /api/audits/{id}/findings -> 200 (x2)"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-BENCH-008",
+      "title": "BenchmarkPage shows side-by-side trust score comparison",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Verify Trust Score Comparison section visible",
+          "expected": "Section with heading 'Trust Score Comparison' displayed",
+          "observed": "Section with h2 'Trust Score Comparison' and subtitle 'URLs ranked by trust score, highest first. Delta shows the spread between best and worst.' visible"
+        },
+        {
+          "action": "Verify URLs ranked by trust score highest first",
+          "expected": "URLs displayed in descending trust score order",
+          "observed": "Both URLs at 100% so ordering is valid. DOM snapshot confirms: 'example.com/ 100%' then 'example.org/ 100%'. Code sorts with `.sort((a, b) => b.score - a.score)` confirming highest-first ordering."
+        },
+        {
+          "action": "Verify ProgressMeter components visible",
+          "expected": "Visual progress bars under each score",
+          "observed": "ProgressMeter gradient bars visible under each 100% score in screenshot. Code renders `<ProgressMeter value={score || 0} />` for each non-failed URL."
+        },
+        {
+          "action": "Verify delta indicator between best and worst scores",
+          "expected": "Delta badge showing point spread (0 for identical scores)",
+          "observed": "No delta badge shown because both scores are 100% (delta=0). Code only renders delta-badge when `scoreDelta > 0`. Test 'calculates correct delta indicator between best and worst scores' verifies delta=60 for (90,60,30) spread. This is correct behavior."
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "benchmark-mode/benchmark-page-group/VAL-BENCH-007-comparison-view.png",
+          "benchmark-mode/benchmark-page-group/VAL-BENCH-008-full-comparison.png"
+        ],
+        "consoleErrors": "none",
+        "network": "GET /api/benchmarks/{id} -> 200"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-BENCH-009",
+      "title": "BenchmarkPage shows scenario breakdown grid",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Verify Scenario Breakdown section visible",
+          "expected": "Grid with heading 'Scenario Breakdown'",
+          "observed": "Section with h2 'Scenario Breakdown' and subtitle 'Finding counts per scenario across all URLs. Rows are scenarios, columns are URLs.' visible"
+        },
+        {
+          "action": "Verify grid structure: rows=scenarios, columns=URLs",
+          "expected": "Header row with Scenario + URL columns, data rows with scenario names",
+          "observed": "Grid header: 'Scenario | example.com/ | example.org/'. Two data rows: 'Cookie Consent | 0 | 0' and 'Subscription Cancellation | 0 | 0'"
+        },
+        {
+          "action": "Verify cells with zero findings show '0' not blank",
+          "expected": "All zero-finding cells display '0'",
+          "observed": "All 4 cells display '0' (not blank). Code uses `scenarioGridData[scenario]?.[url] ?? 0` which defaults to 0. Screenshot confirms '0' visible in all cells."
+        },
+        {
+          "action": "Verify selected scenarios are shown",
+          "expected": "cookie_consent and subscription_cancellation rows present",
+          "observed": "Both selected scenarios rendered as 'Cookie Consent' and 'Subscription Cancellation' (titleized). Only selected scenarios shown — no N/A rows for unselected scenarios."
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "benchmark-mode/benchmark-page-group/VAL-BENCH-009-scenario-grid.png"
+        ],
+        "consoleErrors": "none",
+        "network": "GET /api/audits/{id} -> 200 (provides scenario_breakdown data)"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-BENCH-010",
+      "title": "BenchmarkPage shows unified summary",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Verify Unified Summary section visible",
+          "expected": "Section with heading 'Unified Summary'",
+          "observed": "Section with h2 'Unified Summary' and subtitle 'Key insights across all audited URLs.' visible"
+        },
+        {
+          "action": "Verify (a) URL with highest trust score named",
+          "expected": "Highest scoring URL identified",
+          "observed": "Card labeled 'HIGHEST SCORING' shows 'example.com/' with '100% trust score'"
+        },
+        {
+          "action": "Verify (b) URL with lowest trust score named",
+          "expected": "Lowest scoring URL identified",
+          "observed": "Card labeled 'LOWEST SCORING' shows 'example.org/' with '100% trust score'"
+        },
+        {
+          "action": "Verify (c) dark pattern family mentioned if findings exist",
+          "expected": "Pattern families listed or 'No patterns detected' if none",
+          "observed": "Card labeled 'COMMON PATTERNS' shows 'No patterns detected' — correct since both audits have 0 findings. Code renders pattern-badge elements when topPatterns.length > 0."
+        },
+        {
+          "action": "Verify (d) overall risk word displayed",
+          "expected": "One of: low, moderate, high, critical",
+          "observed": "Card labeled 'OVERALL RISK' shows 'Low' with 'Average trust score: 100%'. Risk word logic: avgScore >= 70 = 'low', 50-69 = 'moderate', 30-49 = 'high', < 30 = 'critical'."
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "benchmark-mode/benchmark-page-group/VAL-BENCH-010-unified-summary.png"
+        ],
+        "consoleErrors": "none",
+        "network": "Data derived from previously fetched audit and findings responses"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-BENCH-011",
+      "title": "Navigation from BenchmarkPage to individual audit reports",
+      "status": "fail",
+      "steps": [
+        {
+          "action": "Verify View Report links exist for each URL",
+          "expected": "View Report link per URL pointing to /audits/{id}/report",
+          "observed": "Two 'View Report' links found: (1) href='/audits/94843e6d-5bfc-4ba5-a58b-3988450889ee/report?benchmark=9b9d3b22-9571-4591-b6dd-4f4f199e17f3' (example.com), (2) href='/audits/05251856-283b-462c-a8b1-795db5adf293/report?benchmark=9b9d3b22-9571-4591-b6dd-4f4f199e17f3' (example.org)"
+        },
+        {
+          "action": "Click View Report for example.com audit",
+          "expected": "Navigate to /audits/94843e6d-5bfc-4ba5-a58b-3988450889ee/report",
+          "observed": "Successfully navigated to http://localhost:5173/audits/94843e6d-5bfc-4ba5-a58b-3988450889ee/report?benchmark=9b9d3b22-9571-4591-b6dd-4f4f199e17f3. ReportPage rendered correctly showing Trust Audit Report with 100/100 score."
+        },
+        {
+          "action": "Verify back link or breadcrumb on ReportPage returns to /benchmarks/{benchmarkId}",
+          "expected": "A 'Back to Benchmark' link pointing to /benchmarks/9b9d3b22-9571-4591-b6dd-4f4f199e17f3",
+          "observed": "NO 'Back to Benchmark' link found. ReportPage has: 'Open HTML report', 'Download PDF', 'Compare Personas', 'Back to run log', 'Back to History' — but no benchmark back link. ReportPage.tsx contains zero references to 'benchmark'. The ?benchmark= query param is passed in the URL but not consumed by ReportPage."
+        },
+        {
+          "action": "Verify browser back button returns to BenchmarkPage",
+          "expected": "Browser back navigates to BenchmarkPage",
+          "observed": "Browser back button successfully returned to /benchmarks/9b9d3b22-9571-4591-b6dd-4f4f199e17f3. However, this is browser history, not an explicit back link."
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "benchmark-mode/benchmark-page-group/VAL-BENCH-011-report-page.png",
+          "benchmark-mode/benchmark-page-group/VAL-BENCH-007-comparison-view.png"
+        ],
+        "consoleErrors": "none",
+        "network": "Navigation: BenchmarkPage -> ReportPage -> BenchmarkPage (via browser back)"
+      },
+      "issues": "ReportPage does not implement a 'Back to Benchmark' link or breadcrumb. The BenchmarkPage correctly passes ?benchmark={id} in the View Report link, but ReportPage.tsx does not read this query parameter and does not render a back-to-benchmark navigation element. The assertion requires 'A back link or breadcrumb on ReportPage returns to /benchmarks/{benchmarkId}' which is missing."
+    },
+    {
+      "id": "VAL-BENCH-012",
+      "title": "Partial audit failure in benchmark",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Check if error-badge CSS class exists in styles",
+          "expected": ".error-badge class defined in CSS",
+          "observed": ".error-badge class defined at index.css:1675 with display:inline-flex, padding, border-radius, background, font styling"
+        },
+        {
+          "action": "Check if trust-score-na CSS class exists in styles",
+          "expected": ".trust-score-na class defined for N/A display",
+          "observed": ".trust-score-na class defined at index.css:1705 with font-family Space Grotesk, 36px, bold"
+        },
+        {
+          "action": "Check BenchmarkPage.tsx code for partial failure handling",
+          "expected": "Code conditionally renders error badge and N/A for failed audits",
+          "observed": "Line ~328: `const isFailed = score === null && auditData?.status === 'failed'`. Line ~331: card gets 'failed' class when isFailed. Line ~336: `{isFailed && <span className=\"error-badge\">Error</span>}`. Lines ~339-340: renders `<div className=\"trust-score-na\">N/A</div>` when isFailed, otherwise renders score with ProgressMeter."
+        },
+        {
+          "action": "Check sortedUrls handles null scores (failed audits at end)",
+          "expected": "Failed audits sorted to end of list",
+          "observed": "Sort logic: null scores sorted after numeric scores with `if (a.score === null) return 1; if (b.score === null) return -1;`"
+        },
+        {
+          "action": "Check BenchmarkPage.test.tsx for partial failure test",
+          "expected": "Test exists verifying error badge and N/A rendering",
+          "observed": "Test 'shows error badge and N/A score for failed audits' at line 604 creates benchmark with trust_scores={failed-site: null, success-site: 75}, mock audit with status 'failed', and asserts: (1) error badge visible in comparison section, (2) N/A text visible for failed audit"
+        },
+        {
+          "action": "Verify benchmark status field has valid transitions",
+          "expected": "Valid statuses: queued, running, completed, failed",
+          "observed": "BenchmarkStatus type in types.ts: 'queued' | 'running' | 'completed' | 'failed'. Current benchmark status='completed' confirmed via API. BenchmarkPage renders status pill with class `status-${benchmark.status}`."
+        },
+        {
+          "action": "Check current DOM for error-badge (should not exist since no failures)",
+          "expected": "No error-badge in DOM for all-successful benchmark",
+          "observed": "document.querySelector('.error-badge') returned null — correct since both audits succeeded"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "benchmark-mode/benchmark-page-group/VAL-BENCH-008-full-comparison.png"
+        ],
+        "consoleErrors": "none",
+        "network": "GET /api/benchmarks/{id} -> 200 with status='completed' and trust_scores={example.com: 100.0, example.org: 100.0}"
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [
+    {
+      "description": "Both benchmark audits have 0 findings and empty scenario_breakdown arrays, making the scenario grid show all zeros and the summary show 'No patterns detected'. This limits visual verification of the grid and pattern family display, but code review confirms correct handling.",
+      "resolved": true,
+      "resolution": "Verified behavior via code review and unit test coverage in BenchmarkPage.test.tsx which uses mock data with non-zero findings",
+      "affectedAssertions": ["VAL-BENCH-009", "VAL-BENCH-010"]
+    },
+    {
+      "description": "Both trust scores are identical (100.0), so delta badge is not visible (only shown when scoreDelta > 0). Cannot visually verify ranking since all scores are equal.",
+      "resolved": true,
+      "resolution": "Code review confirms correct sort logic (highest first) and delta calculation. Unit test 'calculates correct delta indicator between best and worst scores' verifies delta=60 for (90,60,30) data.",
+      "affectedAssertions": ["VAL-BENCH-008"]
+    },
+    {
+      "description": "Cannot trigger partial audit failure in mock mode — all audits complete successfully. VAL-BENCH-012 verified through code and test review only.",
+      "resolved": true,
+      "resolution": "Verified via BenchmarkPage.tsx source code (error-badge rendering, N/A logic, sort handling) and BenchmarkPage.test.tsx unit test 'shows error badge and N/A score for failed audits'",
+      "affectedAssertions": ["VAL-BENCH-012"]
+    }
+  ],
+  "blockers": [],
+  "summary": "Tested 6 assertions: 5 passed, 1 failed. VAL-BENCH-011 failed because ReportPage does not implement a 'Back to Benchmark' link — the ?benchmark= query param is passed but not consumed by ReportPage.tsx. All other BenchmarkPage features work correctly: comparison view renders with trust scores and ProgressMeter (VAL-BENCH-008), scenario breakdown grid shows proper data with '0' not blank (VAL-BENCH-009), unified summary shows all required elements (VAL-BENCH-010), polling/progress mechanism exists in code (VAL-BENCH-007), and partial failure handling is properly implemented with error-badge and N/A rendering (VAL-BENCH-012)."
+}

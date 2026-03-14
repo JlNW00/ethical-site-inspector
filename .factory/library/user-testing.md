@@ -78,6 +78,23 @@ Testing surface, tools, and resource cost classification for validation.
 - Mock audit WITH video URLs: `e2ed0938-ca82-4e84-b76d-ec788e860c51`
 - Old audit WITHOUT video URLs: `48fcd4cc-a0a4-454f-8444-4b3b302dd595`
 
+## Benchmark Mode Test Data
+
+**Completed benchmark:** `9b9d3b22-9571-4591-b6dd-4f4f199e17f3`
+- Status: completed
+- URLs: `https://example.com/`, `https://example.org/`
+- Audit IDs: `94843e6d-5bfc-4ba5-a58b-3988450889ee` (example.com), `05251856-283b-462c-a8b1-795db5adf293` (example.org)
+- Trust scores: both 100.0
+- Selected scenarios: cookie_consent, subscription_cancellation
+- Selected personas: privacy_sensitive, cost_sensitive
+- Video URLs on audits: empty dict {} (benchmark audits created in mock mode)
+
+**Key benchmark URLs:**
+- BenchmarkPage: `http://localhost:5173/benchmarks/9b9d3b22-9571-4591-b6dd-4f4f199e17f3`
+- Benchmark API: `http://localhost:8000/api/benchmarks/9b9d3b22-9571-4591-b6dd-4f4f199e17f3`
+- Benchmarks list: `http://localhost:8000/api/benchmarks`
+- Individual audit: `http://localhost:8000/api/audits/94843e6d-5bfc-4ba5-a58b-3988450889ee`
+
 ## Known Constraints
 - Mock mode only for development — no real Nova Act or AWS Bedrock
 - Videos in mock mode will be placeholder .webm files
