@@ -83,8 +83,8 @@ describe("parseVideoUrls", () => {
 
   it("parses all valid video URLs", () => {
     const videoUrls = {
-      "cookie_consent_privacy_sensitive": "/videos/1.webm",
-      "checkout_flow_cost_sensitive": "/videos/2.webm",
+      cookie_consent_privacy_sensitive: "/videos/1.webm",
+      checkout_flow_cost_sensitive: "/videos/2.webm",
     };
 
     const result = parseVideoUrls(videoUrls, scenarios, personas);
@@ -105,9 +105,9 @@ describe("parseVideoUrls", () => {
 
   it("filters out invalid keys", () => {
     const videoUrls = {
-      "cookie_consent_privacy_sensitive": "/videos/valid.webm",
-      "unknown_scenario_cost_sensitive": "/videos/invalid.webm",
-      "cookie_consent_unknown_persona": "/videos/invalid2.webm",
+      cookie_consent_privacy_sensitive: "/videos/valid.webm",
+      unknown_scenario_cost_sensitive: "/videos/invalid.webm",
+      cookie_consent_unknown_persona: "/videos/invalid2.webm",
     };
 
     const result = parseVideoUrls(videoUrls, scenarios, personas);
@@ -121,7 +121,7 @@ describe("parseVideoUrls", () => {
     const complexPersonas = ["privacy_sensitive", "exit_intent"];
 
     const videoUrls = {
-      "newsletter_signup_exit_intent": "/videos/exit.webm",
+      newsletter_signup_exit_intent: "/videos/exit.webm",
     };
 
     const result = parseVideoUrls(videoUrls, complexScenarios, complexPersonas);

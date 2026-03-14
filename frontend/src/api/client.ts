@@ -1,4 +1,11 @@
-import type { Audit, CreateAuditRequest, FindingsResponse, Readiness, Benchmark, CreateBenchmarkRequest } from "./types";
+import type {
+  Audit,
+  CreateAuditRequest,
+  FindingsResponse,
+  Readiness,
+  Benchmark,
+  CreateBenchmarkRequest,
+} from "./types";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
 

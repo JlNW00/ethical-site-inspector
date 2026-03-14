@@ -64,10 +64,7 @@ export function HistoryPage() {
 
     async function load() {
       try {
-        const [auditsData, benchmarksData] = await Promise.all([
-          api.getAudits(),
-          api.getBenchmarks(),
-        ]);
+        const [auditsData, benchmarksData] = await Promise.all([api.getAudits(), api.getBenchmarks()]);
         if (!cancelled) {
           setAudits(auditsData);
           setBenchmarks(benchmarksData);
@@ -112,7 +109,8 @@ export function HistoryPage() {
         return matchesStatus && matchesUrl;
       } else {
         // For benchmarks, search in URLs array
-        const matchesUrl = urlSearch === "" || item.data.urls.some((u) => u.toLowerCase().includes(urlSearch.toLowerCase()));
+        const matchesUrl =
+          urlSearch === "" || item.data.urls.some((u) => u.toLowerCase().includes(urlSearch.toLowerCase()));
         return matchesStatus && matchesUrl;
       }
     });
@@ -191,8 +189,8 @@ export function HistoryPage() {
           <div className="brand-kicker">Audit History</div>
           <h1>View and manage past audits</h1>
           <p className="hero-copy">
-            Browse previous audits and benchmarks, filter by status, search by URL, rerun previous configurations, or compare results
-            side-by-side.
+            Browse previous audits and benchmarks, filter by status, search by URL, rerun previous configurations, or
+            compare results side-by-side.
           </p>
           <div className="hero-pills">
             <span className="signal-pill">{audits.length} audits</span>
@@ -206,7 +204,9 @@ export function HistoryPage() {
             {latestActivity ? formatTimestamp(latestActivity.updated_at).split(",")[0] : "--"}
           </div>
           <div className="hero-score-subtitle">
-            {latestActivity ? `Last updated ${relativeTime(latestActivity.updated_at ?? "")}` : "No activity recorded yet"}
+            {latestActivity
+              ? `Last updated ${relativeTime(latestActivity.updated_at ?? "")}`
+              : "No activity recorded yet"}
           </div>
         </div>
       </section>
@@ -222,7 +222,9 @@ export function HistoryPage() {
               className="btn btn-secondary"
               onClick={handleCompare}
               disabled={!compareEnabled}
-              title={compareEnabled ? "Compare selected audits" : "Select exactly 2 audits to compare (benchmarks excluded)"}
+              title={
+                compareEnabled ? "Compare selected audits" : "Select exactly 2 audits to compare (benchmarks excluded)"
+              }
             >
               Compare ({selectedAuditIds.length}/2)
             </button>
@@ -393,17 +395,21 @@ export function HistoryPage() {
                             <span className="metric-value" style={{ fontSize: "24px" }}>
                               {benchmark.urls.length}
                             </span>
-                            <span className="muted">{benchmark.urls.slice(0, 3).join(", ")}
+                            <span className="muted">
+                              {benchmark.urls.slice(0, 3).join(", ")}
                               {benchmark.urls.length > 3 ? ` +${benchmark.urls.length - 3} more` : ""}
                             </span>
                           </div>
                           <div className="audit-metric">
                             <span className="metric-label">Completed Audits</span>
                             <span className="metric-value" style={{ fontSize: "24px" }}>
-                              {benchmark.audit_ids.filter((id) => {
-                                const audit = audits.find((a) => a.id === id);
-                                return audit?.status === "completed";
-                              }).length} / {benchmark.audit_ids.length}
+                              {
+                                benchmark.audit_ids.filter((id) => {
+                                  const audit = audits.find((a) => a.id === id);
+                                  return audit?.status === "completed";
+                                }).length
+                              }{" "}
+                              / {benchmark.audit_ids.length}
                             </span>
                           </div>
                           <div className="audit-metric">

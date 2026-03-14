@@ -74,7 +74,6 @@ export interface Audit {
   events: AuditEvent[];
 }
 
-
 export interface PersonaComparison {
   persona: string;
   headline: string;

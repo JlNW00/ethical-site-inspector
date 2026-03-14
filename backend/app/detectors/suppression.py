@@ -196,7 +196,11 @@ def calculate_confidence(
         EvidenceType,
     )
 
-    base_confidence = EVIDENCE_TYPE_CONFIDENCE.get(cast(EvidenceType, evidence_type), 0.50) if evidence_type in EVIDENCE_TYPES else 0.50
+    base_confidence = (
+        EVIDENCE_TYPE_CONFIDENCE.get(cast(EvidenceType, evidence_type), 0.50)
+        if evidence_type in EVIDENCE_TYPES
+        else 0.50
+    )
 
     # Nova AI evidence gets high confidence
     if evidence_type == "nova_ai" or has_ai_evidence:

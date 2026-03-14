@@ -49,8 +49,6 @@ const personaOptions = [
   },
 ] as const;
 
-
-
 const MAX_BENCHMARK_URLS = 5;
 const MIN_BENCHMARK_URLS = 2;
 
@@ -289,7 +287,9 @@ export function SubmitPage() {
 
           {benchmarkMode ? (
             <div className="field">
-              <label>Target URLs ({benchmarkUrls.length}/{MAX_BENCHMARK_URLS})</label>
+              <label>
+                Target URLs ({benchmarkUrls.length}/{MAX_BENCHMARK_URLS})
+              </label>
               <div className="benchmark-urls-container">
                 {benchmarkUrls.map((url, index) => (
                   <div key={index} className="benchmark-url-row">

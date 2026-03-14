@@ -156,11 +156,7 @@ export function PersonaDiffPage() {
       // Collect video URLs for this persona using proper key parsing
       const personaVideos: string[] = [];
       if (audit.video_urls) {
-        const parsedVideos = parseVideoUrls(
-          audit.video_urls,
-          audit.selected_scenarios,
-          audit.selected_personas,
-        );
+        const parsedVideos = parseVideoUrls(audit.video_urls, audit.selected_scenarios, audit.selected_personas);
         for (const video of parsedVideos) {
           if (video.persona === persona) {
             personaVideos.push(video.url);
@@ -489,12 +485,7 @@ export function PersonaDiffPage() {
               {persona.videoUrls.length > 0 && (
                 <div className="video-link-container">
                   {persona.videoUrls.length === 1 ? (
-                    <a
-                      href={persona.videoUrls[0]}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="video-link"
-                    >
+                    <a href={persona.videoUrls[0]} target="_blank" rel="noopener noreferrer" className="video-link">
                       🎬 Watch session
                     </a>
                   ) : (

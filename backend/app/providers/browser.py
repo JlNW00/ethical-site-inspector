@@ -693,7 +693,9 @@ class PlaywrightAuditProvider(BrowserAuditProvider):
         # Return the most recently modified video file
         return max(video_files, key=lambda p: p.stat().st_mtime)
 
-    def _run_scenario(self, audit_id: str, target_url: str, scenario: str, persona: str, page: Any) -> JourneyObservation:
+    def _run_scenario(
+        self, audit_id: str, target_url: str, scenario: str, persona: str, page: Any
+    ) -> JourneyObservation:
         page.goto(target_url, wait_until="domcontentloaded", timeout=25_000)
         page.wait_for_timeout(1_000)
         activity_log = ["Loaded target URL"]
@@ -1266,7 +1268,9 @@ class PlaywrightAuditProvider(BrowserAuditProvider):
         values = [float(item["value"]) for item in price_points]
         return round(values[-1] - values[0], 2)
 
-    def _append_checkout_offer_state(self, page: Any, offer: dict[str, Any], state_snapshots: list[dict[str, Any]]) -> None:
+    def _append_checkout_offer_state(
+        self, page: Any, offer: dict[str, Any], state_snapshots: list[dict[str, Any]]
+    ) -> None:
         offer_prices = extract_prices_from_text(offer["text"], limit=4)
         offer_state = {
             "label": "offer_selection",
@@ -1283,7 +1287,9 @@ class PlaywrightAuditProvider(BrowserAuditProvider):
         }
         state_snapshots.append(offer_state)
 
-    def _append_checkout_hotel_state(self, page: Any, hotel: dict[str, Any], state_snapshots: list[dict[str, Any]]) -> None:
+    def _append_checkout_hotel_state(
+        self, page: Any, hotel: dict[str, Any], state_snapshots: list[dict[str, Any]]
+    ) -> None:
         hotel_state = {
             "label": "detail_selection",
             "state_type": "detail",

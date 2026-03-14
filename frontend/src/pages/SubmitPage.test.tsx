@@ -49,7 +49,7 @@ describe("SubmitPage", () => {
       render(
         <MemoryRouter>
           <SubmitPage />
-        </MemoryRouter>
+        </MemoryRouter>,
       );
 
       const toggle = screen.getByTestId("benchmark-mode-toggle");
@@ -61,7 +61,7 @@ describe("SubmitPage", () => {
       render(
         <MemoryRouter>
           <SubmitPage />
-        </MemoryRouter>
+        </MemoryRouter>,
       );
 
       expect(screen.getByTestId("target-url-input")).toBeInTheDocument();
@@ -72,7 +72,7 @@ describe("SubmitPage", () => {
       render(
         <MemoryRouter>
           <SubmitPage />
-        </MemoryRouter>
+        </MemoryRouter>,
       );
 
       const toggle = screen.getByTestId("benchmark-mode-toggle");
@@ -87,7 +87,7 @@ describe("SubmitPage", () => {
       render(
         <MemoryRouter>
           <SubmitPage />
-        </MemoryRouter>
+        </MemoryRouter>,
       );
 
       // Enable benchmark mode
@@ -110,7 +110,7 @@ describe("SubmitPage", () => {
       render(
         <MemoryRouter>
           <SubmitPage />
-        </MemoryRouter>
+        </MemoryRouter>,
       );
 
       // Uncheck some scenarios before toggle
@@ -137,7 +137,7 @@ describe("SubmitPage", () => {
       render(
         <MemoryRouter>
           <SubmitPage />
-        </MemoryRouter>
+        </MemoryRouter>,
       );
 
       const toggle = screen.getByTestId("benchmark-mode-toggle");
@@ -151,7 +151,7 @@ describe("SubmitPage", () => {
       render(
         <MemoryRouter>
           <SubmitPage />
-        </MemoryRouter>
+        </MemoryRouter>,
       );
 
       const toggle = screen.getByTestId("benchmark-mode-toggle");
@@ -174,7 +174,7 @@ describe("SubmitPage", () => {
       render(
         <MemoryRouter>
           <SubmitPage />
-        </MemoryRouter>
+        </MemoryRouter>,
       );
 
       const toggle = screen.getByTestId("benchmark-mode-toggle");
@@ -199,7 +199,7 @@ describe("SubmitPage", () => {
       render(
         <MemoryRouter>
           <SubmitPage />
-        </MemoryRouter>
+        </MemoryRouter>,
       );
 
       const toggle = screen.getByTestId("benchmark-mode-toggle");
@@ -216,7 +216,7 @@ describe("SubmitPage", () => {
       render(
         <MemoryRouter>
           <SubmitPage />
-        </MemoryRouter>
+        </MemoryRouter>,
       );
 
       const toggle = screen.getByTestId("benchmark-mode-toggle");
@@ -240,7 +240,7 @@ describe("SubmitPage", () => {
       render(
         <MemoryRouter>
           <SubmitPage />
-        </MemoryRouter>
+        </MemoryRouter>,
       );
 
       const toggle = screen.getByTestId("benchmark-mode-toggle");
@@ -264,7 +264,7 @@ describe("SubmitPage", () => {
       render(
         <MemoryRouter>
           <SubmitPage />
-        </MemoryRouter>
+        </MemoryRouter>,
       );
 
       const toggle = screen.getByTestId("benchmark-mode-toggle");
@@ -291,7 +291,7 @@ describe("SubmitPage", () => {
       render(
         <MemoryRouter>
           <SubmitPage />
-        </MemoryRouter>
+        </MemoryRouter>,
       );
 
       const toggle = screen.getByTestId("benchmark-mode-toggle");
@@ -323,7 +323,7 @@ describe("SubmitPage", () => {
       render(
         <MemoryRouter>
           <SubmitPage />
-        </MemoryRouter>
+        </MemoryRouter>,
       );
 
       // Ensure single mode
@@ -346,12 +346,15 @@ describe("SubmitPage", () => {
     });
 
     it("calls createBenchmark with correct field names and navigates to benchmark page", async () => {
-      mockCreateBenchmark.mockResolvedValue({ id: "bench-456", urls: ["https://example1.com", "https://example2.com"] });
+      mockCreateBenchmark.mockResolvedValue({
+        id: "bench-456",
+        urls: ["https://example1.com", "https://example2.com"],
+      });
 
       render(
         <MemoryRouter>
           <SubmitPage />
-        </MemoryRouter>
+        </MemoryRouter>,
       );
 
       // Enable benchmark mode
@@ -384,7 +387,7 @@ describe("SubmitPage", () => {
       render(
         <MemoryRouter>
           <SubmitPage />
-        </MemoryRouter>
+        </MemoryRouter>,
       );
 
       // Enable benchmark mode
@@ -414,7 +417,7 @@ describe("SubmitPage", () => {
       render(
         <MemoryRouter>
           <SubmitPage />
-        </MemoryRouter>
+        </MemoryRouter>,
       );
 
       const startButton = screen.getByTestId("start-audit-button");
@@ -432,7 +435,7 @@ describe("SubmitPage", () => {
       render(
         <MemoryRouter>
           <SubmitPage />
-        </MemoryRouter>
+        </MemoryRouter>,
       );
 
       const startButton = screen.getByTestId("start-audit-button");
@@ -449,7 +452,7 @@ describe("SubmitPage", () => {
       render(
         <MemoryRouter>
           <SubmitPage />
-        </MemoryRouter>
+        </MemoryRouter>,
       );
 
       // First submission fails
@@ -481,7 +484,7 @@ describe("SubmitPage", () => {
       render(
         <MemoryRouter>
           <SubmitPage />
-        </MemoryRouter>
+        </MemoryRouter>,
       );
 
       // Submit audit
@@ -500,7 +503,7 @@ describe("SubmitPage", () => {
       render(
         <MemoryRouter>
           <SubmitPage />
-        </MemoryRouter>
+        </MemoryRouter>,
       );
 
       // Look for scenario section by the heading text
@@ -519,7 +522,7 @@ describe("SubmitPage", () => {
       render(
         <MemoryRouter>
           <SubmitPage />
-        </MemoryRouter>
+        </MemoryRouter>,
       );
 
       // Uncheck all scenarios (by clicking all checkboxes in the scenario section)
@@ -546,20 +549,22 @@ describe("SubmitPage", () => {
       render(
         <MemoryRouter>
           <SubmitPage />
-        </MemoryRouter>
+        </MemoryRouter>,
       );
 
       // Get all checkboxes (both scenarios and personas)
       // First, get all persona checkboxes (they come after scenario checkboxes in DOM order)
       const allCheckboxes = screen.getAllByRole("checkbox");
       // Filter to only persona checkboxes by looking at their labels
-      const personaCheckboxes = allCheckboxes.filter(cb => {
+      const personaCheckboxes = allCheckboxes.filter((cb) => {
         const label = cb.closest("label");
         if (!label) return false;
         const labelText = label.textContent || "";
-        return labelText.includes("Privacy Sensitive") || 
-               labelText.includes("Cost Sensitive") || 
-               labelText.includes("Exit Intent");
+        return (
+          labelText.includes("Privacy Sensitive") ||
+          labelText.includes("Cost Sensitive") ||
+          labelText.includes("Exit Intent")
+        );
       });
 
       // Uncheck all persona checkboxes

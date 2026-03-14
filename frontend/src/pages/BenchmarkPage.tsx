@@ -50,9 +50,7 @@ export function BenchmarkPage() {
               try {
                 const audit = await api.getAudit(auditId);
                 const events = audit.events || [];
-                const progress = events.length > 0
-                  ? Math.max(...events.map((e) => e.progress))
-                  : 0;
+                const progress = events.length > 0 ? Math.max(...events.map((e) => e.progress)) : 0;
                 return { auditId, progress, status: audit.status };
               } catch {
                 return { auditId, progress: 0, status: "unknown" };
@@ -155,8 +153,6 @@ export function BenchmarkPage() {
     return Math.max(...scores) - Math.min(...scores);
   }, [benchmark]);
 
-
-
   // Get all unique scenarios across audits
   const allScenarios = useMemo(() => {
     const scenarios = new Set<string>();
@@ -177,9 +173,7 @@ export function BenchmarkPage() {
       sortedUrls.forEach(({ url }) => {
         const auditData = audits[url];
         if (auditData) {
-          const breakdown = auditData.audit.metrics?.scenario_breakdown?.find(
-            (b) => b.scenario === scenario
-          );
+          const breakdown = auditData.audit.metrics?.scenario_breakdown?.find((b) => b.scenario === scenario);
           grid[scenario][url] = breakdown?.finding_count ?? 0;
         } else {
           grid[scenario][url] = 0;
@@ -264,9 +258,7 @@ export function BenchmarkPage() {
           <div className="hero-score">
             <div className="hero-score-label">Aggregate Progress</div>
             <div className="hero-score-value">{aggregateProgress}%</div>
-            <div className="hero-score-subtitle">
-              Polling for updates every 1.5 seconds
-            </div>
+            <div className="hero-score-subtitle">Polling for updates every 1.5 seconds</div>
             <div style={{ marginTop: 18 }}>
               <ProgressMeter value={aggregateProgress} />
             </div>
@@ -280,9 +272,7 @@ export function BenchmarkPage() {
           <div className="section-header">
             <div>
               <h2 className="section-title">Per-URL Progress</h2>
-              <p className="section-subtitle">
-                Live progress for each URL being audited.
-              </p>
+              <p className="section-subtitle">Live progress for each URL being audited.</p>
             </div>
           </div>
           <div className="benchmark-progress-list">
@@ -316,7 +306,9 @@ export function BenchmarkPage() {
               </div>
               {scoreDelta > 0 && (
                 <div className="delta-badge" data-testid="delta-badge">
-                  <span className="delta-value" data-testid="delta-value">{scoreDelta}</span>
+                  <span className="delta-value" data-testid="delta-value">
+                    {scoreDelta}
+                  </span>
                   <span className="delta-label">point spread</span>
                 </div>
               )}
@@ -382,9 +374,7 @@ export function BenchmarkPage() {
               </div>
               {allScenarios.map((scenario) => (
                 <div key={scenario} className="scenario-grid-row">
-                  <div className="scenario-grid-cell scenario-name">
-                    {titleize(scenario)}
-                  </div>
+                  <div className="scenario-grid-cell scenario-name">{titleize(scenario)}</div>
                   {sortedUrls.map(({ url }) => (
                     <div key={url} className="scenario-grid-cell finding-count">
                       {scenarioGridData[scenario]?.[url] ?? 0}
@@ -401,32 +391,22 @@ export function BenchmarkPage() {
               <div className="section-header">
                 <div>
                   <h2 className="section-title">Unified Summary</h2>
-                  <p className="section-subtitle">
-                    Key insights across all audited URLs.
-                  </p>
+                  <p className="section-subtitle">Key insights across all audited URLs.</p>
                 </div>
               </div>
 
               <div className="summary-grid">
                 <div className="summary-card">
                   <div className="summary-card-label">Highest Scoring</div>
-                  <div className="summary-card-value">
-                    {summaryStats.highest.url.replace(/^https?:\/\//, "")}
-                  </div>
-                  <div className="summary-card-sub">
-                    {summaryStats.highest.score}% trust score
-                  </div>
+                  <div className="summary-card-value">{summaryStats.highest.url.replace(/^https?:\/\//, "")}</div>
+                  <div className="summary-card-sub">{summaryStats.highest.score}% trust score</div>
                 </div>
 
                 <div className="summary-card">
                   <div className="summary-card-label">Lowest Scoring</div>
-                  <div className="summary-card-value">
-                    {summaryStats.lowest.url.replace(/^https?:\/\//, "")}
-                  </div>
+                  <div className="summary-card-value">{summaryStats.lowest.url.replace(/^https?:\/\//, "")}</div>
                   <div className="summary-card-sub">
-                    {summaryStats.lowest.score !== null
-                      ? `${summaryStats.lowest.score}% trust score`
-                      : "Audit failed"}
+                    {summaryStats.lowest.score !== null ? `${summaryStats.lowest.score}% trust score` : "Audit failed"}
                   </div>
                 </div>
 
@@ -450,9 +430,7 @@ export function BenchmarkPage() {
                   <div className={`summary-card-risk risk-${summaryStats.riskWord}`}>
                     {titleize(summaryStats.riskWord)}
                   </div>
-                  <div className="summary-card-sub">
-                    Average trust score: {Math.round(summaryStats.avgScore)}%
-                  </div>
+                  <div className="summary-card-sub">Average trust score: {Math.round(summaryStats.avgScore)}%</div>
                 </div>
               </div>
             </section>

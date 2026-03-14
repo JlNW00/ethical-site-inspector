@@ -648,8 +648,8 @@ describe("ReportPage", () => {
       selected_scenarios: ["cookie_consent", "checkout_flow"],
       selected_personas: ["privacy_sensitive", "cost_sensitive"],
       video_urls: {
-        "cookie_consent_privacy_sensitive": "/artifacts/videos/cookie_privacy.webm",
-        "checkout_flow_cost_sensitive": "/artifacts/videos/checkout_cost.webm",
+        cookie_consent_privacy_sensitive: "/artifacts/videos/cookie_privacy.webm",
+        checkout_flow_cost_sensitive: "/artifacts/videos/checkout_cost.webm",
       },
     });
 
@@ -710,7 +710,7 @@ describe("ReportPage", () => {
       selected_scenarios: ["cookie_consent"],
       selected_personas: ["privacy_sensitive"],
       video_urls: {
-        "cookie_consent_privacy_sensitive": "/artifacts/videos/cookie_privacy.webm",
+        cookie_consent_privacy_sensitive: "/artifacts/videos/cookie_privacy.webm",
       },
     });
 
@@ -734,7 +734,7 @@ describe("ReportPage", () => {
     const audit = createMockAudit({
       id: "audit-123",
       video_urls: {
-        "cookie_consent_privacy_sensitive": "/broken/video.webm",
+        cookie_consent_privacy_sensitive: "/broken/video.webm",
       },
     });
 
@@ -763,9 +763,9 @@ describe("ReportPage", () => {
       selected_scenarios: ["cookie_consent", "checkout_flow"],
       selected_personas: ["privacy_sensitive", "cost_sensitive"],
       video_urls: {
-        "cookie_consent_privacy_sensitive": "/videos/1.webm",
-        "cookie_consent_cost_sensitive": "/videos/2.webm",
-        "checkout_flow_privacy_sensitive": "/videos/3.webm",
+        cookie_consent_privacy_sensitive: "/videos/1.webm",
+        cookie_consent_cost_sensitive: "/videos/2.webm",
+        checkout_flow_privacy_sensitive: "/videos/3.webm",
       },
     });
 

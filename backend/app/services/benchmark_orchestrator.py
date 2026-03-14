@@ -20,7 +20,9 @@ class BenchmarkOrchestrator:
     A benchmark spawns individual audits per URL and aggregates their results.
     """
 
-    def __init__(self, session_factory: Callable[[], Session], audit_orchestrator: AuditOrchestrator | None = None) -> None:
+    def __init__(
+        self, session_factory: Callable[[], Session], audit_orchestrator: AuditOrchestrator | None = None
+    ) -> None:
         self.session_factory = session_factory
         self.audit_orchestrator = audit_orchestrator or AuditOrchestrator(session_factory)
 
@@ -152,6 +154,7 @@ class BenchmarkOrchestrator:
 
             # Use mypy-compatible cast to handle the float return type
             import time as _time
+
             _time.sleep(poll_interval)
             elapsed += poll_interval
 

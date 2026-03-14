@@ -315,7 +315,9 @@ class AuditOrchestrator:
         return audit
 
     @staticmethod
-    def _build_metrics(summary: dict[str, Any], observations: list[Any], finding_models: list[Finding]) -> dict[str, Any]:
+    def _build_metrics(
+        summary: dict[str, Any], observations: list[Any], finding_models: list[Finding]
+    ) -> dict[str, Any]:
         site_host = observations[0].evidence.metadata.get("site_host") if observations else None
         evidence_origin_label = summary.get("evidence_origin_label", "Captured from site")
         persona_buckets: dict[str, dict[str, Any]] = defaultdict(
@@ -503,7 +505,9 @@ class AuditOrchestrator:
         return result
 
     @staticmethod
-    def _merge_unique_prices(first: list[dict[str, Any]], second: list[dict[str, Any]], limit: int = 4) -> list[dict[str, Any]]:
+    def _merge_unique_prices(
+        first: list[dict[str, Any]], second: list[dict[str, Any]], limit: int = 4
+    ) -> list[dict[str, Any]]:
         result: list[dict[str, Any]] = []
         seen: set[tuple[str, float]] = set()
         for item in first + second:

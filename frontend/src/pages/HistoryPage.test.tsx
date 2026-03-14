@@ -375,7 +375,9 @@ describe("HistoryPage", () => {
   describe("Benchmark Integration", () => {
     it("renders benchmarks with badge and URL count", async () => {
       const audits = [createMockAudit({ id: "audit-1" })];
-      const benchmarks = [createMockBenchmark({ id: "bench-1", urls: ["https://site1.com", "https://site2.com", "https://site3.com"] })];
+      const benchmarks = [
+        createMockBenchmark({ id: "bench-1", urls: ["https://site1.com", "https://site2.com", "https://site3.com"] }),
+      ];
       mockGetAudits.mockResolvedValue(audits);
       mockGetBenchmarks.mockResolvedValue(benchmarks);
 
@@ -434,10 +436,7 @@ describe("HistoryPage", () => {
     });
 
     it("shows benchmark count in hero pills", async () => {
-      const audits = [
-        createMockAudit({ id: "audit-1" }),
-        createMockAudit({ id: "audit-2" }),
-      ];
+      const audits = [createMockAudit({ id: "audit-1" }), createMockAudit({ id: "audit-2" })];
       const benchmarks = [
         createMockBenchmark({ id: "bench-1" }),
         createMockBenchmark({ id: "bench-2" }),
@@ -483,9 +482,7 @@ describe("HistoryPage", () => {
         const rows = screen.queryAllByTestId("benchmark-row");
         // There should be only 1 benchmark visible (the completed one)
         // Note: The audit with status "completed" may or may not be shown depending on implementation
-        const completedRows = rows.filter(row => 
-          row.textContent?.toLowerCase().includes("completed")
-        );
+        const completedRows = rows.filter((row) => row.textContent?.toLowerCase().includes("completed"));
         expect(completedRows.length).toBeGreaterThanOrEqual(1);
       });
     });
@@ -515,10 +512,7 @@ describe("HistoryPage", () => {
     });
 
     it("excludes benchmarks from compare selection", async () => {
-      const audits = [
-        createMockAudit({ id: "audit-1" }),
-        createMockAudit({ id: "audit-2" }),
-      ];
+      const audits = [createMockAudit({ id: "audit-1" }), createMockAudit({ id: "audit-2" })];
       const benchmarks = [createMockBenchmark({ id: "bench-1" })];
       mockGetAudits.mockResolvedValue(audits);
       mockGetBenchmarks.mockResolvedValue(benchmarks);
@@ -532,10 +526,10 @@ describe("HistoryPage", () => {
 
       // Get checkboxes from audit rows only (not benchmark rows)
       const auditRows = screen.getAllByTestId("audit-row");
-      const auditCheckboxes = auditRows.map(row => 
-        row.querySelector('input[type="checkbox"]') as HTMLInputElement
-      ).filter(Boolean);
-      
+      const auditCheckboxes = auditRows
+        .map((row) => row.querySelector('input[type="checkbox"]') as HTMLInputElement)
+        .filter(Boolean);
+
       // Select two audits
       fireEvent.click(auditCheckboxes[0]);
       fireEvent.click(auditCheckboxes[1]);
@@ -549,12 +543,8 @@ describe("HistoryPage", () => {
     });
 
     it("sorts history items by created_at (newest first)", async () => {
-      const audits = [
-        createMockAudit({ id: "audit-1", created_at: "2026-03-13T09:00:00Z" }),
-      ];
-      const benchmarks = [
-        createMockBenchmark({ id: "bench-1", created_at: "2026-03-13T12:00:00Z" }),
-      ];
+      const audits = [createMockAudit({ id: "audit-1", created_at: "2026-03-13T09:00:00Z" })];
+      const benchmarks = [createMockBenchmark({ id: "bench-1", created_at: "2026-03-13T12:00:00Z" })];
       mockGetAudits.mockResolvedValue(audits);
       mockGetBenchmarks.mockResolvedValue(benchmarks);
 
@@ -602,7 +592,10 @@ describe("HistoryPage", () => {
     it("displays URL list and count in benchmark card", async () => {
       const audits = [createMockAudit({ id: "audit-1" })];
       const benchmarks = [
-        createMockBenchmark({ id: "bench-1", urls: ["https://site1.com", "https://site2.com", "https://site3.com", "https://site4.com"] }),
+        createMockBenchmark({
+          id: "bench-1",
+          urls: ["https://site1.com", "https://site2.com", "https://site3.com", "https://site4.com"],
+        }),
       ];
       mockGetAudits.mockResolvedValue(audits);
       mockGetBenchmarks.mockResolvedValue(benchmarks);

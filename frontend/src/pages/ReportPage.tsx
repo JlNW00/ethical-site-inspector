@@ -68,10 +68,7 @@ function trimText(value: string, limit = 80) {
 
 function hasRegulatoryFindings(findings: Finding[]): boolean {
   return findings.some(
-    (finding) =>
-      !finding.suppressed &&
-      finding.regulatory_categories &&
-      finding.regulatory_categories.length > 0
+    (finding) => !finding.suppressed && finding.regulatory_categories && finding.regulatory_categories.length > 0,
   );
 }
 
@@ -202,12 +199,7 @@ function VideoPlayer({ url, scenario, persona }: VideoPlayerProps) {
             <span className="video-error-text">Video unavailable</span>
           </div>
         ) : (
-          <video
-            className="video-player"
-            controls
-            preload="metadata"
-            onError={handleError}
-          >
+          <video className="video-player" controls preload="metadata" onError={handleError}>
             <source src={url} type="video/webm" />
             <track kind="captions" src="" label="No captions available" />
             Your browser does not support the video tag.
@@ -243,18 +235,11 @@ function VideoSection({ videoUrls, scenarios, personas }: VideoSectionProps) {
       {hasVideos ? (
         <div className="video-grid">
           {videos.map((video) => (
-            <VideoPlayer
-              key={video.key}
-              url={video.url}
-              scenario={video.scenario}
-              persona={video.persona}
-            />
+            <VideoPlayer key={video.key} url={video.url} scenario={video.scenario} persona={video.persona} />
           ))}
         </div>
       ) : (
-        <div className="video-empty-state">
-          No recordings available
-        </div>
+        <div className="video-empty-state">No recordings available</div>
       )}
     </section>
   );

@@ -592,9 +592,9 @@ describe("PersonaDiffPage", () => {
       selected_scenarios: ["cookie_consent", "checkout_flow"],
       selected_personas: ["privacy_sensitive", "cost_sensitive"],
       video_urls: {
-        "cookie_consent_privacy_sensitive": "/videos/cookie_privacy.webm",
-        "checkout_flow_privacy_sensitive": "/videos/checkout_privacy.webm",
-        "cookie_consent_cost_sensitive": "/videos/cookie_cost.webm",
+        cookie_consent_privacy_sensitive: "/videos/cookie_privacy.webm",
+        checkout_flow_privacy_sensitive: "/videos/checkout_privacy.webm",
+        cookie_consent_cost_sensitive: "/videos/cookie_cost.webm",
       },
     });
 
@@ -622,9 +622,9 @@ describe("PersonaDiffPage", () => {
       selected_scenarios: ["cookie_consent", "checkout_flow", "newsletter_signup"],
       selected_personas: ["privacy_sensitive"],
       video_urls: {
-        "cookie_consent_privacy_sensitive": "/videos/1.webm",
-        "checkout_flow_privacy_sensitive": "/videos/2.webm",
-        "newsletter_signup_privacy_sensitive": "/videos/3.webm",
+        cookie_consent_privacy_sensitive: "/videos/1.webm",
+        checkout_flow_privacy_sensitive: "/videos/2.webm",
+        newsletter_signup_privacy_sensitive: "/videos/3.webm",
       },
     });
 
@@ -690,8 +690,8 @@ describe("PersonaDiffPage", () => {
       selected_scenarios: ["cookie_consent", "newsletter_signup"],
       selected_personas: ["privacy_sensitive", "exit_intent"],
       video_urls: {
-        "cookie_consent_privacy_sensitive": "/videos/cookie_privacy.webm",
-        "newsletter_signup_exit_intent": "/videos/newsletter_exit.webm",
+        cookie_consent_privacy_sensitive: "/videos/cookie_privacy.webm",
+        newsletter_signup_exit_intent: "/videos/newsletter_exit.webm",
       },
     });
 

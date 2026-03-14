@@ -59,7 +59,9 @@ def build_rule_findings(observation: JourneyObservation) -> list[RuleFindingDraf
             matched_findings[pattern_family] = draft
             return
 
-        if SEVERITY_RANK.get(cast("SeverityType", draft.severity), 1) > SEVERITY_RANK.get(cast("SeverityType", existing.severity), 1):
+        if SEVERITY_RANK.get(cast("SeverityType", draft.severity), 1) > SEVERITY_RANK.get(
+            cast("SeverityType", existing.severity), 1
+        ):
             existing.severity = draft.severity
         if len(draft.evidence_excerpt) > len(existing.evidence_excerpt):
             existing.evidence_excerpt = draft.evidence_excerpt
@@ -369,7 +371,9 @@ def _merge_unique(first: list[str], second: list[str], limit: int = 6) -> list[s
     return result
 
 
-def _merge_price_points(first: list[dict[str, Any]], second: list[dict[str, Any]], limit: int = 4) -> list[dict[str, Any]]:
+def _merge_price_points(
+    first: list[dict[str, Any]], second: list[dict[str, Any]], limit: int = 4
+) -> list[dict[str, Any]]:
     result: list[dict[str, Any]] = []
     seen: set[tuple[str, float]] = set()
     for item in first + second:

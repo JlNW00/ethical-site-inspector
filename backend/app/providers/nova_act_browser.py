@@ -438,6 +438,7 @@ class NovaActAuditProvider(BrowserAuditProvider):
     ) -> JourneyObservation:
         """Run a single scenario for a single persona using Nova Act with progress callback."""
         from collections.abc import Callable
+
         scenario_method: Callable[..., JourneyObservation] | None = getattr(self, f"_run_{scenario}_scenario", None)
         if scenario_method is None:
             raise ValueError(f"Unknown scenario: {scenario}")

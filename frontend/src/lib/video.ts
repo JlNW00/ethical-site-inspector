@@ -34,11 +34,7 @@ export interface ParsedVideoKey {
  * // Returns: { scenario: "cookie_consent", persona: "privacy_sensitive" }
  * ```
  */
-export function parseVideoKey(
-  key: string,
-  scenarios: string[],
-  personas: string[],
-): ParsedVideoKey | null {
+export function parseVideoKey(key: string, scenarios: string[], personas: string[]): ParsedVideoKey | null {
   // Try all possible splits: for each known scenario, check if key starts with it
   for (const scenario of scenarios) {
     // Key should be "{scenario}_{persona}"

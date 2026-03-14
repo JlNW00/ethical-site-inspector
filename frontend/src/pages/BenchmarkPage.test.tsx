@@ -159,7 +159,7 @@ describe("BenchmarkPage", () => {
 
   it("polls every 1.5s while benchmark status is running", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
-    
+
     const runningBenchmark = createMockBenchmark({
       id: "benchmark-123",
       status: "running",
@@ -240,9 +240,15 @@ describe("BenchmarkPage", () => {
 
     await waitFor(() => {
       // Look for the status pill specifically by class name, not the error state title
-      expect(screen.getByText((content, element) => {
-        return !!(element?.classList?.contains("signal-pill") && element?.classList?.contains("status-failed") && content === "failed");
-      })).toBeInTheDocument();
+      expect(
+        screen.getByText((content, element) => {
+          return !!(
+            element?.classList?.contains("signal-pill") &&
+            element?.classList?.contains("status-failed") &&
+            content === "failed"
+          );
+        }),
+      ).toBeInTheDocument();
     });
 
     // Should not poll again
@@ -251,7 +257,7 @@ describe("BenchmarkPage", () => {
 
   it("shows per-URL progress while benchmark is running", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
-    
+
     const runningBenchmark = createMockBenchmark({
       id: "benchmark-123",
       status: "running",
@@ -263,7 +269,15 @@ describe("BenchmarkPage", () => {
       target_url: "https://example.com",
       status: "running",
       events: [
-        { id: 1, phase: "browser", status: "running", message: "Running cookie consent", progress: 50, details: {}, created_at: "2026-03-13T10:00:00Z" },
+        {
+          id: 1,
+          phase: "browser",
+          status: "running",
+          message: "Running cookie consent",
+          progress: 50,
+          details: {},
+          created_at: "2026-03-13T10:00:00Z",
+        },
       ],
     });
 
@@ -272,7 +286,15 @@ describe("BenchmarkPage", () => {
       target_url: "https://test.com",
       status: "running",
       events: [
-        { id: 2, phase: "browser", status: "running", message: "Running checkout flow", progress: 30, details: {}, created_at: "2026-03-13T10:00:00Z" },
+        {
+          id: 2,
+          phase: "browser",
+          status: "running",
+          message: "Running checkout flow",
+          progress: 30,
+          details: {},
+          created_at: "2026-03-13T10:00:00Z",
+        },
       ],
     });
 
@@ -326,10 +348,7 @@ describe("BenchmarkPage", () => {
       risk_level: "high",
     });
 
-    mockGetAudit
-      .mockResolvedValueOnce(highAudit)
-      .mockResolvedValueOnce(mediumAudit)
-      .mockResolvedValueOnce(lowAudit);
+    mockGetAudit.mockResolvedValueOnce(highAudit).mockResolvedValueOnce(mediumAudit).mockResolvedValueOnce(lowAudit);
 
     mockGetFindings.mockResolvedValue({ audit_id: "", findings: [] });
 
@@ -371,9 +390,27 @@ describe("BenchmarkPage", () => {
         evidence_origin_label: "Mock",
         persona_comparison: [],
         scenario_breakdown: [
-          { scenario: "cookie_consent", headline: "Cookie", risk_level: "high", finding_count: 3, dominant_patterns: [] },
-          { scenario: "checkout_flow", headline: "Checkout", risk_level: "moderate", finding_count: 2, dominant_patterns: [] },
-          { scenario: "newsletter_signup", headline: "Newsletter", risk_level: "low", finding_count: 0, dominant_patterns: [] },
+          {
+            scenario: "cookie_consent",
+            headline: "Cookie",
+            risk_level: "high",
+            finding_count: 3,
+            dominant_patterns: [],
+          },
+          {
+            scenario: "checkout_flow",
+            headline: "Checkout",
+            risk_level: "moderate",
+            finding_count: 2,
+            dominant_patterns: [],
+          },
+          {
+            scenario: "newsletter_signup",
+            headline: "Newsletter",
+            risk_level: "low",
+            finding_count: 0,
+            dominant_patterns: [],
+          },
         ],
       },
     });
@@ -389,9 +426,27 @@ describe("BenchmarkPage", () => {
         evidence_origin_label: "Mock",
         persona_comparison: [],
         scenario_breakdown: [
-          { scenario: "cookie_consent", headline: "Cookie", risk_level: "medium", finding_count: 1, dominant_patterns: [] },
-          { scenario: "checkout_flow", headline: "Checkout", risk_level: "low", finding_count: 0, dominant_patterns: [] },
-          { scenario: "newsletter_signup", headline: "Newsletter", risk_level: "low", finding_count: 3, dominant_patterns: [] },
+          {
+            scenario: "cookie_consent",
+            headline: "Cookie",
+            risk_level: "medium",
+            finding_count: 1,
+            dominant_patterns: [],
+          },
+          {
+            scenario: "checkout_flow",
+            headline: "Checkout",
+            risk_level: "low",
+            finding_count: 0,
+            dominant_patterns: [],
+          },
+          {
+            scenario: "newsletter_signup",
+            headline: "Newsletter",
+            risk_level: "low",
+            finding_count: 3,
+            dominant_patterns: [],
+          },
         ],
       },
     });
@@ -494,9 +549,7 @@ describe("BenchmarkPage", () => {
       createMockFinding({ id: "f1", pattern_family: "manipulative_design" }),
       createMockFinding({ id: "f2", pattern_family: "manipulative_design" }),
     ];
-    const findingsB = [
-      createMockFinding({ id: "f3", pattern_family: "obstruction" }),
-    ];
+    const findingsB = [createMockFinding({ id: "f3", pattern_family: "obstruction" })];
 
     mockGetFindings.mockResolvedValueOnce({ audit_id: "audit-a", findings: findingsA });
     mockGetFindings.mockResolvedValueOnce({ audit_id: "audit-b", findings: findingsB });
@@ -662,7 +715,7 @@ describe("BenchmarkPage", () => {
 
   it("shows aggregate progress meter while running", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
-    
+
     const runningBenchmark = createMockBenchmark({
       id: "benchmark-123",
       status: "running",
@@ -673,7 +726,15 @@ describe("BenchmarkPage", () => {
       id: "audit-1",
       status: "running",
       events: [
-        { id: 1, phase: "browser", status: "running", message: "Running", progress: 60, details: {}, created_at: "2026-03-13T10:00:00Z" },
+        {
+          id: 1,
+          phase: "browser",
+          status: "running",
+          message: "Running",
+          progress: 60,
+          details: {},
+          created_at: "2026-03-13T10:00:00Z",
+        },
       ],
     });
 
@@ -681,7 +742,15 @@ describe("BenchmarkPage", () => {
       id: "audit-2",
       status: "running",
       events: [
-        { id: 2, phase: "browser", status: "running", message: "Running", progress: 40, details: {}, created_at: "2026-03-13T10:00:00Z" },
+        {
+          id: 2,
+          phase: "browser",
+          status: "running",
+          message: "Running",
+          progress: 40,
+          details: {},
+          created_at: "2026-03-13T10:00:00Z",
+        },
       ],
     });
 
@@ -716,10 +785,7 @@ describe("BenchmarkPage", () => {
     const auditC = createMockAudit({ id: "audit-c", target_url: "https://site-c.com", trust_score: 30 });
 
     mockGetBenchmark.mockResolvedValue(completedBenchmark);
-    mockGetAudit
-      .mockResolvedValueOnce(auditA)
-      .mockResolvedValueOnce(auditB)
-      .mockResolvedValueOnce(auditC);
+    mockGetAudit.mockResolvedValueOnce(auditA).mockResolvedValueOnce(auditB).mockResolvedValueOnce(auditC);
     mockGetFindings.mockResolvedValue({ audit_id: "", findings: [] });
 
     renderBenchmarkPage();
@@ -752,8 +818,20 @@ describe("BenchmarkPage", () => {
         evidence_origin_label: "Mock",
         persona_comparison: [],
         scenario_breakdown: [
-          { scenario: "cookie_consent", headline: "Cookie", risk_level: "high", finding_count: 2, dominant_patterns: [] },
-          { scenario: "checkout_flow", headline: "Checkout", risk_level: "low", finding_count: 0, dominant_patterns: [] },
+          {
+            scenario: "cookie_consent",
+            headline: "Cookie",
+            risk_level: "high",
+            finding_count: 2,
+            dominant_patterns: [],
+          },
+          {
+            scenario: "checkout_flow",
+            headline: "Checkout",
+            risk_level: "low",
+            finding_count: 0,
+            dominant_patterns: [],
+          },
         ],
       },
     });
