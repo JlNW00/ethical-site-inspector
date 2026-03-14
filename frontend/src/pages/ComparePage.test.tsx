@@ -37,6 +37,7 @@ const mockAuditA: Audit = {
   selected_scenarios: ["checkout_flow", "cookie_consent"],
   selected_personas: ["privacy_sensitive"],
   report_public_url: null,
+  video_urls: null,
   metrics: {
     finding_count: 8,
     observation_count: 12,
@@ -88,6 +89,7 @@ const mockAuditB: Audit = {
   selected_scenarios: ["checkout_flow", "cookie_consent"],
   selected_personas: ["privacy_sensitive"],
   report_public_url: null,
+  video_urls: null,
   metrics: {
     finding_count: 15,
     observation_count: 22,

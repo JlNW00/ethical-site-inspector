@@ -38,6 +38,7 @@ const createMockAudit = (overrides: Partial<Audit> = {}): Audit => ({
   selected_scenarios: ["cookie_consent"],
   selected_personas: ["privacy_sensitive"],
   report_public_url: null,
+  video_urls: null,
   metrics: {
     finding_count: 5,
   },
