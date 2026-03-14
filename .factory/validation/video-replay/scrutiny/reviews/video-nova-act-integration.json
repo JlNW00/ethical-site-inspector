@@ -1,0 +1,69 @@
+{
+  "featureId": "video-nova-act-integration",
+  "reviewedAt": "2026-03-14T09:15:00.000Z",
+  "commitId": "4b21729156e930842b3ac9842d1eee7790764f6d",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "The implementation correctly wires video recording into all 6 NovaActAuditProvider scenario methods and into PlaywrightAuditProvider. However, NovaActAuditProvider.run_audit() returns video_urls={} (hardcoded empty dict) instead of collecting the video URLs that were extracted and saved in the individual scenario methods. This means the BrowserRunResult never carries video URLs back to the orchestrator for NovaAct-based audits, directly violating feature requirement (3): 'Collect all video URLs and set them on the audit's video_urls dict.' The PlaywrightAuditProvider correctly collects and returns video_urls. Additionally, there is an inline 'import logging' inside an exception handler in browser.py instead of using a module-level logger, and inconsistent cleanup patterns across scenario methods.",
+    "issues": [
+      {
+        "file": "backend/app/providers/nova_act_browser.py",
+        "line": 311,
+        "severity": "blocking",
+        "description": "video_urls is hardcoded to empty dict: `video_urls={},  # Will be populated via events in orchestrator`. The individual scenario methods (_run_cookie_consent_scenario etc.) extract videos via _extract_and_save_video() and emit progress events with the URLs, but these URLs are never collected back into the BrowserRunResult returned by run_audit(). The comment says 'will be populated by orchestrator via events' but no such orchestrator logic exists, and the feature description explicitly requires collecting video URLs on the audit's video_urls dict. In contrast, PlaywrightAuditProvider correctly accumulates video_urls in a local dict and returns it. The NovaActAuditProvider should similarly collect video URLs — e.g., by having _run_single_persona_with_progress or scenario methods return video URLs alongside JourneyObservation, or by using a thread-safe dict shared across the ThreadPoolExecutor."
+      },
+      {
+        "file": "backend/app/providers/browser.py",
+        "line": 472,
+        "severity": "non_blocking",
+        "description": "Inline `import logging` inside an exception handler (`import logging; logging.getLogger(__name__).warning(...)`). The module has no top-level `import logging` or module-level logger. This is inconsistent with nova_act_browser.py which properly uses `logger = logging.getLogger(__name__)` at module level. Should add a module-level logger and use it here."
+      },
+      {
+        "file": "backend/app/providers/nova_act_browser.py",
+        "line": 685,
+        "severity": "non_blocking",
+        "description": "Inconsistent cleanup patterns: cookie_consent scenario uses `contextlib.suppress(Exception)` for shutil.rmtree cleanup, while checkout_flow, subscription_cancellation, account_deletion, newsletter_signup, and pricing_comparison use try/except with logger.warning. Should be consistent — preferably all use contextlib.suppress to match the cookie_consent pattern."
+      },
+      {
+        "file": "backend/app/providers/nova_act_browser.py",
+        "line": 402,
+        "severity": "non_blocking",
+        "description": "Dead code: _run_single_persona() (old method without progress parameter) is defined but never called. _run_scenario_with_personas() now exclusively calls _run_single_persona_with_progress(). The old method should be removed to avoid confusion."
+      },
+      {
+        "file": "backend/app/providers/nova_act_browser.py",
+        "line": 456,
+        "severity": "non_blocking",
+        "description": "Massive code duplication: ~30 lines of identical video recording boilerplate (create temp dir, emit event, pass record_video=True to NovaAct, extract video, emit success event, cleanup) are copy-pasted across all 6 scenario methods. This could be extracted into a decorator or wrapper method to reduce duplication and maintenance burden."
+      },
+      {
+        "file": "backend/tests/test_video_recording.py",
+        "line": 73,
+        "severity": "non_blocking",
+        "description": "Test test_nova_act_constructor_called_with_record_video only verifies constructor parameters (record_video=True, logs_directory) but does NOT verify that result.video_urls is populated. Given the blocking issue above where video_urls is always empty, this gap in test coverage means the bug went undetected."
+      },
+      {
+        "file": "backend/tests/test_video_recording.py",
+        "line": 154,
+        "severity": "non_blocking",
+        "description": "Test test_playwright_context_options_include_record_video only checks that _context_options returns a dict. It doesn't verify that record_video_dir or record_video_size are added to the context options during run_audit(). This is a shallow test that doesn't verify the actual video recording integration."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "Worker added an inline `import logging` inside an exception handler in browser.py (line 472) instead of using a module-level logger. The AGENTS.md says 'Use structlog for logging — never log secrets' but browser.py and nova_act_browser.py use stdlib logging, not structlog. The convention about which logging library to use seems inconsistently applied across the codebase.",
+      "evidence": "backend/app/providers/browser.py:472 — `import logging; logging.getLogger(__name__).warning(...)` inside except block. Compare with nova_act_browser.py:12 which has `logger = logging.getLogger(__name__)` at module level."
+    },
+    {
+      "area": "conventions",
+      "observation": "The AGENTS.md documents Nova Act video recording details (logs_directory, record_video, output path format) which was helpful for this feature. However, it doesn't document the pattern for collecting video URLs from parallel thread execution back to the main result, which is the source of the blocking bug.",
+      "evidence": "AGENTS.md 'Nova Act Video Recording Details' section covers SDK usage but not the data flow pattern for returning video URLs from threaded scenario methods."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "The video recording integration is mostly well-implemented: all 6 NovaAct scenario methods and the Playwright provider correctly set up recording, extract videos, save via StorageProvider, and emit progress events. However, there is one blocking issue: NovaActAuditProvider.run_audit() returns video_urls={} (hardcoded empty), so video URLs extracted in scenario methods are never returned to the orchestrator via BrowserRunResult. The PlaywrightAuditProvider correctly returns video_urls. Tests pass but don't cover the video_urls population gap on the NovaAct side. Non-blocking issues include dead code (_run_single_persona), inconsistent cleanup patterns, inline import logging, heavy code duplication, and shallow Playwright video tests."
+}

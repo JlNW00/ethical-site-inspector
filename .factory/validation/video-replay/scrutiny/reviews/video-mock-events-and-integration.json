@@ -1,0 +1,51 @@
+{
+  "featureId": "video-mock-events-and-integration",
+  "reviewedAt": "2026-03-14T08:42:00.000Z",
+  "commitId": "71428c6",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "This feature added 595 lines of integration tests in a single new file (test_mock_video_events_integration.py) with 14 test cases. No production code was modified — the MockBrowserAuditProvider already emitted phase='video' events from the prior 'video-backend-model-and-mock' feature, and the frontend video player with preload='metadata' was implemented in the prior 'video-frontend-player' feature. The tests comprehensively verify: (1) video phase event emission with descriptive messages, (2) scenario/persona details in events, (3) full orchestrator flow with DB persistence, (4) video_urls persisted on audit model, (5) API response contract for RunPage and ReportPage. Test structure is well-organized into four test classes covering unit, integration, API response, and frontend contract verification.",
+    "issues": [
+      {
+        "file": "backend/tests/test_mock_video_events_integration.py",
+        "line": 319,
+        "severity": "non_blocking",
+        "description": "Tests pass `video_urls=None` to AuditCreateRequest (e.g., line 319, 353, 397, etc.), but AuditCreateRequest does not have a video_urls field. Pydantic v2 silently ignores extra fields by default, so this doesn't cause failures, but it's misleading — it implies video_urls is a create-time parameter rather than a server-generated field."
+      },
+      {
+        "file": "backend/tests/test_mock_video_events_integration.py",
+        "line": 266,
+        "severity": "non_blocking",
+        "description": "test_mock_video_events_emit_in_progress_then_complete only checks for 'running' status events but never asserts 'success' status, despite the test name suggesting it verifies a running→complete progression. The MockBrowserAuditProvider only emits 'running' status for video events (no separate 'success' event per scenario), so the test name is misleading."
+      },
+      {
+        "file": "backend/tests/test_mock_video_events_integration.py",
+        "line": 328,
+        "severity": "non_blocking",
+        "description": "Multiple integration tests use time.sleep(0.5) and time.sleep(0.8) for synchronization with the async audit runner thread. This is fragile and could cause flaky tests under load or on slow CI machines. A more robust approach would be to poll for audit completion status."
+      },
+      {
+        "file": "backend/tests/test_mock_video_events_integration.py",
+        "line": 66,
+        "severity": "non_blocking",
+        "description": "mock_audit_orchestrator_with_stubs fixture creates a temp directory via tempfile.mkdtemp() but never cleans it up. Should use a pytest tmp_path fixture or add cleanup in a try/finally block."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "The handoff reports commitId as '7b3c743' but the actual commit for this feature is '71428c6'. The reported commitId matches the parent commit (the prior feature's commit). This is a metadata recording error in the handoff/transcript. Worker may have recorded the base commit rather than the feature commit.",
+      "evidence": "Handoff JSON shows commitId: '7b3c743'. git log shows 71428c6 is the actual commit adding test_mock_video_events_integration.py, and 7b3c743 is its parent (the video-frontend-player commit)."
+    },
+    {
+      "area": "conventions",
+      "observation": "The backend-dev skill procedure says to write tests first (TDD Red Phase) and then implement code. This feature recognized the implementation was already complete from prior features, so it only wrote tests. While pragmatic, the skill procedure doesn't have guidance for 'verification-only' features where no production code changes are needed.",
+      "evidence": "Skill SKILL.md says '### 2. Write Tests First (TDD Red Phase)' and '### 3. Implement (TDD Green Phase)'. The worker skipped step 3 entirely since the behavior was already implemented."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Feature passes review. The commit adds 14 well-structured integration tests verifying the mock video events flow end-to-end. No production code was changed — the tests validate behavior already implemented by prior features (video-backend-model-and-mock and video-frontend-player). Four non-blocking issues identified: (1) tests pass spurious video_urls=None to AuditCreateRequest, (2) one test name is misleading about what it actually verifies, (3) time.sleep-based synchronization is fragile, (4) temp directory not cleaned up. The feature fulfills its validation requirement VAL-CROSS-001 by verifying the cross-cutting integration of video events through the full mock audit flow."
+}

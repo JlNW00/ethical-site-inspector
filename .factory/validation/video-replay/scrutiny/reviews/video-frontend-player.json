@@ -1,0 +1,73 @@
+{
+  "featureId": "video-frontend-player",
+  "reviewedAt": "2026-03-14T09:00:00.000Z",
+  "commitId": "7b3c743",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "The video replay UI is structurally complete (types, VideoSection/VideoPlayer components, CSS, tests) but contains a critical parsing bug in both ReportPage and PersonaDiffPage. The `parseVideoUrls` function splits video_urls keys (format: '{scenario}_{persona}', e.g. 'cookie_consent_privacy_sensitive') using `split(/[_-]/)`, which incorrectly splits on every underscore. This means multi-word scenario/persona names are truncated to their first word (e.g. 'cookie' instead of 'cookie_consent'). On ReportPage, video card labels show incorrect names. On PersonaDiffPage, the same bug means videos are NEVER matched to personas (parts[1]='consent' !== 'privacy_sensitive'), so the 'Watch session' links never appear. The tests pass only because `getAllByText('Cookie Consent')` matches hero pills rendered from `selected_scenarios`, not the actual video card labels.",
+    "issues": [
+      {
+        "file": "frontend/src/pages/ReportPage.tsx",
+        "line": 172,
+        "severity": "blocking",
+        "description": "parseVideoUrls splits key by /[_-]/ which breaks multi-word scenario/persona names. For key 'cookie_consent_privacy_sensitive', parts=['cookie','consent','privacy','sensitive'], so scenario='cookie' and persona='consent'. Video cards display wrong labels ('Cookie' / 'Consent' instead of 'Cookie Consent' / 'Privacy Sensitive'). The separator between scenario and persona is ambiguous since '_' is used both within names and as the separator. Fix requires cross-referencing with audit.selected_scenarios/selected_personas or using a different parsing strategy."
+      },
+      {
+        "file": "frontend/src/pages/PersonaDiffPage.tsx",
+        "line": 161,
+        "severity": "blocking",
+        "description": "Same split(/[_-]/) bug as ReportPage. For key 'cookie_consent_privacy_sensitive', parts[1]='consent' which never equals persona names like 'privacy_sensitive'. Result: personaVideos is always empty, so 'Watch session' links NEVER appear on PersonaDiffPage. The feature requirement 'add video player per persona' is non-functional."
+      },
+      {
+        "file": "frontend/src/pages/ReportPage.test.tsx",
+        "line": 622,
+        "severity": "blocking",
+        "description": "Test 'renders Session Recordings section when video_urls is present' uses getAllByText('Cookie Consent') which matches hero pills from selected_scenarios, not the video card labels. This masks the parseVideoUrls parsing bug. The video cards actually show 'Cookie' and 'Consent'. Test should use within() or getByTestId to scope assertions to the video section specifically."
+      },
+      {
+        "file": "frontend/src/pages/PersonaDiffPage.test.tsx",
+        "line": 0,
+        "severity": "blocking",
+        "description": "No tests exist for PersonaDiffPage video link rendering. Feature description requires 'Write Vitest tests' and expectedBehavior includes 'PersonaDiffPage shows video player or link per persona when available', but no test verifies this. Missing tests for: video link visible when video_urls present, no link when video_urls null, correct href on video link."
+      },
+      {
+        "file": "frontend/src/api/types.ts",
+        "line": 75,
+        "severity": "non_blocking",
+        "description": "Extra blank line added after Audit interface closing brace. Cosmetic issue only."
+      },
+      {
+        "file": "backend/server.err",
+        "line": 0,
+        "severity": "non_blocking",
+        "description": "Commit 2157f98 includes changes to backend/server.err, backend/server.log, frontend/frontend.err, frontend/frontend.log. These server log files should not be committed to the repository. They should be in .gitignore."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "The video_urls key format '{scenario}_{persona}' (e.g. 'cookie_consent_privacy_sensitive') is ambiguous because underscores appear both within scenario/persona names and as the separator. AGENTS.md and the mission docs don't document an authoritative parsing strategy. Both the backend (browser.py:99) and frontend need to agree on how to parse these keys. A convention should specify either: (a) use a different separator like '::' or '|', or (b) document that frontend must cross-reference audit.selected_scenarios/personas to find the split point.",
+      "evidence": "backend/app/providers/browser.py:99 uses f\"{scenario}_{persona}\" as key. frontend/src/pages/ReportPage.tsx:172 uses split(/[_-]/) which fails for multi-word names."
+    },
+    {
+      "area": "conventions",
+      "observation": "Server log files (backend/server.err, backend/server.log, frontend/frontend.err, frontend/frontend.log) are not in .gitignore, causing them to be accidentally committed. AGENTS.md should note these files must not be committed, or they should be added to .gitignore.",
+      "evidence": "Commit 2157f98 includes diffs for backend/server.err, backend/server.log, frontend/frontend.err, frontend/frontend.log"
+    },
+    {
+      "area": "skills",
+      "observation": "Worker skipped manual browser verification (Step 6 in frontend-dev skill) stating 'all automated tests pass and feature was already working'. However, the automated tests were misleading (assertions matched hero pills, not video labels). The manual verification step would have caught the incorrect video card labels. The skill's Step 6 should emphasize that manual verification is mandatory even when tests pass, especially for UI rendering correctness.",
+      "evidence": "Handoff skillFeedback.deviations: 'Skipped browser verification since all automated tests pass and feature was already working'. Yet parseVideoUrls displays 'Cookie'/'Consent' instead of 'Cookie Consent'/'Privacy Sensitive'."
+    },
+    {
+      "area": "skills",
+      "observation": "Worker discovered the feature was already implemented from a prior session (d71626fa) but only fixed TypeScript compilation errors. The worker did not re-review the prior implementation for correctness. The frontend-dev skill should include a step for reviewing existing implementations when the feature is found to be pre-built.",
+      "evidence": "Handoff: 'Discovered feature was already fully implemented, only needed to fix TypeScript errors in test files'. Prior commit 2157f98 contained the parsing bug."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "FAIL — The video-frontend-player feature has a critical parsing bug. The `parseVideoUrls` function in ReportPage.tsx and the persona matching logic in PersonaDiffPage.tsx both use `split(/[_-]/)` to parse video_urls keys of format '{scenario}_{persona}'. Since scenario and persona names themselves contain underscores (e.g. 'cookie_consent', 'privacy_sensitive'), this splits incorrectly — showing wrong labels on ReportPage video cards and causing PersonaDiffPage video links to never appear at all. The tests pass only because assertions match text from other page elements (hero pills), not the video section. No PersonaDiffPage video tests exist. Recommend fixing the key parsing to cross-reference `audit.selected_scenarios` and `audit.selected_personas` (or changing the backend key separator), adding scoped test assertions, and adding PersonaDiffPage video tests."
+}

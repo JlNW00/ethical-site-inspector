@@ -1,0 +1,56 @@
+{
+  "featureId": "video-backend-model-and-mock",
+  "reviewedAt": "2026-03-14T08:50:00.000Z",
+  "commitId": "4c1b6a5",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The feature is well-implemented and covers all five requirements: (1) Alembic migration adds nullable JSON column video_urls to audits, (2) AuditRead schema includes video_urls: dict[str, str] | None, (3) MockBrowserAuditProvider generates valid WebM placeholder files with proper EBML headers and saves them via StorageProvider, (4) AuditOrchestrator._run_audit_internal() persists video_urls from BrowserRunResult at the completion block, (5) 10 tests cover model, provider, orchestrator, API, and file format. The implementation follows existing patterns (ABC provider pattern, layered architecture, Pydantic schemas). The BrowserRunResult dataclass correctly adds an optional video_urls field with None default for backwards compatibility. The mock WebM bytes constant is a valid EBML header structure. The migration is clean with proper upgrade/downgrade. No blocking issues found.",
+    "issues": [
+      {
+        "file": "backend/tests/test_video_recording.py",
+        "line": 79,
+        "severity": "non_blocking",
+        "description": "TestVideoUrlsInMockProvider.test_mock_provider_generates_video_urls uses a hardcoded path './data/test_storage' for LocalStorageProvider instead of using a temporary directory. This creates side effects on disk (leftover test files). Other tests in the same file correctly use tempfile.TemporaryDirectory. Same issue at line 100 (test_mock_provider_generates_videos_for_all_combinations)."
+      },
+      {
+        "file": "backend/tests/test_video_recording.py",
+        "line": 174,
+        "severity": "non_blocking",
+        "description": "TestVideoUrlsInOrchestrator.test_orchestrator_persists_video_urls mocks the browser provider to return an empty observations list (mock_result.observations = []), which means the orchestrator's _build_metrics, _build_summary, _score_audit code paths see no observations. This doesn't test the realistic flow where observations and video_urls coexist. The test still validates the core requirement (video_urls persistence), but a more robust test would use a real MockBrowserAuditProvider or include dummy observations."
+      },
+      {
+        "file": "backend/app/providers/browser.py",
+        "line": 60,
+        "severity": "non_blocking",
+        "description": "The MOCK_WEBM_BYTES constant is 37 bytes and represents only the EBML header without a Segment element. While this is sufficient as a placeholder (and the test correctly checks for the EBML header prefix), a real WebM player would not play this file. This is acceptable for mock mode but worth noting if mock videos are ever expected to be playable in a browser <video> element."
+      },
+      {
+        "file": "backend/scripts/verify_backfill.py",
+        "line": 1,
+        "severity": "non_blocking",
+        "description": "This script was included in the commit but is unrelated to the video recording feature — it verifies backfill results for regulatory categories. Likely a leftover from a previous development session that got staged accidentally."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "The worker used LocalStorageProvider with a hardcoded path './data/test_storage' in some tests instead of tempfile.TemporaryDirectory(). AGENTS.md doesn't document a testing convention for storage providers. Other tests in the same file correctly use temp directories. A convention note about always using temp directories in tests to avoid disk side effects would help future workers.",
+      "evidence": "backend/tests/test_video_recording.py lines 79, 100 use './data/test_storage', while lines 130, 289 correctly use tempfile.TemporaryDirectory()"
+    },
+    {
+      "area": "conventions",
+      "observation": "The commit includes an unrelated file (backend/scripts/verify_backfill.py) that was likely leftover from a previous session. AGENTS.md doesn't mention commit hygiene guidelines about reviewing staged files before committing.",
+      "evidence": "git show 4c1b6a5 --stat shows verify_backfill.py (100 lines) which is a regulatory_categories backfill verification script unrelated to video recording"
+    },
+    {
+      "area": "skills",
+      "observation": "The worker followed the backend-dev skill procedure correctly: read feature spec, explored existing code, implemented changes in the documented order (models → schemas → providers → orchestrator), wrote tests, ran full test suite, ran ruff. The skill feedback confirms followedProcedure=true with no deviations.",
+      "evidence": "Transcript skeleton shows ordered reads of model, schema, provider, orchestrator files before implementation. Handoff verification shows 263 tests passing, ruff clean."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Feature video-backend-model-and-mock is correctly implemented. All five requirements are met: Alembic migration (nullable JSON column), AuditRead schema update, MockBrowserAuditProvider generates WebM placeholders via StorageProvider, BrowserRunResult includes video_urls, and AuditOrchestrator persists video_urls. 10 tests cover model columns, mock provider output, orchestrator persistence, API responses, and file format validation. Non-blocking issues include hardcoded test paths in 2 tests and an unrelated script included in the commit. No blocking issues. PASS."
+}
