@@ -22,9 +22,10 @@ Use for features that involve:
 ### 1. Understand the Feature
 - Read the feature description, preconditions, expectedBehavior, and verificationSteps from features.json
 - Read `AGENTS.md` for coding conventions and boundaries
-- Read `.factory/library/architecture.md` for frontend patterns
+- Read `.factory/library/architecture.md` and any relevant `.factory/library/` files for patterns
 - Check the existing page/component you're extending (read the full file)
 - Check `src/api/types.ts` and `src/api/client.ts` for current API types
+- **IMPORTANT: If the feature was already partially implemented by a prior worker, do NOT assume it is correct.** Review the existing implementation against the feature spec and validation assertions before making changes. Prior implementations may contain bugs.
 
 ### 2. Write Tests First (TDD Red Phase)
 - Create or update test file: `src/pages/<Page>.test.tsx` or `src/components/<Component>.test.tsx`
@@ -60,7 +61,8 @@ Use for features that involve:
 - Fix any issues introduced by your changes
 - Zero tolerance for TypeScript errors
 
-### 6. Manual Verification with agent-browser
+### 6. Manual Verification with agent-browser (MANDATORY)
+**This step is MANDATORY even when all automated tests pass.** Tests can match text from unrelated page elements and mask bugs. UI rendering correctness (labels, layout, visibility) requires visual verification.
 - Start both servers (backend on 8000, frontend on 5173)
 - Use agent-browser to navigate to the page you built/modified
 - Verify:
