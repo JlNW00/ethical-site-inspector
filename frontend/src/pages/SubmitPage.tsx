@@ -34,16 +34,6 @@ const scenarioOptions = [
   },
 ] as const;
 
-// Display labels for scenarios (maps backend value to display name)
-const scenarioDisplayLabels: Record<string, string> = {
-  cookie_consent: "Cookie Consent",
-  checkout_flow: "Checkout Flow",
-  subscription_cancellation: "Cancellation Flow",
-  account_deletion: "Account Deletion",
-  newsletter_signup: "Newsletter Signup",
-  pricing_comparison: "Pricing Comparison",
-};
-
 const personaOptions = [
   {
     value: "privacy_sensitive",

@@ -517,16 +517,25 @@ describe("SubmitPage", () => {
         </MemoryRouter>
       );
 
-      // Uncheck all personas (by clicking all checkboxes in the persona section)
-      const personaSection = screen.getByText(/Personas/i).closest(".field");
-      if (personaSection) {
-        const checkboxes = personaSection.querySelectorAll('input[type="checkbox"]');
-        checkboxes.forEach((checkbox) => {
-          if ((checkbox as HTMLInputElement).checked) {
-            fireEvent.click(checkbox);
-          }
-        });
-      }
+      // Get all checkboxes (both scenarios and personas)
+      // First, get all persona checkboxes (they come after scenario checkboxes in DOM order)
+      const allCheckboxes = screen.getAllByRole("checkbox");
+      // Filter to only persona checkboxes by looking at their labels
+      const personaCheckboxes = allCheckboxes.filter(cb => {
+        const label = cb.closest("label");
+        if (!label) return false;
+        const labelText = label.textContent || "";
+        return labelText.includes("Privacy Sensitive") || 
+               labelText.includes("Cost Sensitive") || 
+               labelText.includes("Exit Intent");
+      });
+
+      // Uncheck all persona checkboxes
+      personaCheckboxes.forEach((checkbox) => {
+        if ((checkbox as HTMLInputElement).checked) {
+          fireEvent.click(checkbox);
+        }
+      });
 
       // Submit
       const startButton = screen.getByTestId("start-audit-button");
