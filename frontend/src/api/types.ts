@@ -129,7 +129,7 @@ export interface Benchmark {
   status: BenchmarkStatus;
   urls: string[];
   audit_ids: string[];
-  trust_scores: Record<string, number> | null;
+  trust_scores: Record<string, number | null> | null;
   created_at: string;
   updated_at: string;
 }

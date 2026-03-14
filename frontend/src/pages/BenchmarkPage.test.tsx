@@ -241,7 +241,7 @@ describe("BenchmarkPage", () => {
     await waitFor(() => {
       // Look for the status pill specifically by class name, not the error state title
       expect(screen.getByText((content, element) => {
-        return element?.classList?.contains("signal-pill") && element?.classList?.contains("status-failed") && content === "failed";
+        return !!(element?.classList?.contains("signal-pill") && element?.classList?.contains("status-failed") && content === "failed");
       })).toBeInTheDocument();
     });
 
