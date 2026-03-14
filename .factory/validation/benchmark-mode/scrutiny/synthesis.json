@@ -1,31 +1,31 @@
 {
   "milestone": "benchmark-mode",
-  "round": 2,
-  "status": "fail",
+  "round": 3,
+  "status": "pass",
   "validatorsRun": {
     "test_backend": {
       "passed": true,
       "command": "cd backend && .venv\\Scripts\\python.exe -m pytest tests/ -v --tb=short --durations=10",
       "exitCode": 0,
-      "details": "303 passed, 1 warning in 20.49s"
+      "details": "303 passed, 1 warning in 20.50s"
     },
     "test_frontend": {
       "passed": true,
       "command": "cd frontend && npx vitest run",
       "exitCode": 0,
-      "details": "212 passed (14 test files) in 2.17s"
+      "details": "212 passed (14 test files) in 2.19s"
     },
     "typecheck_backend": {
       "passed": false,
       "command": "cd backend && .venv\\Scripts\\python.exe -m mypy app/ --ignore-missing-imports",
       "exitCode": 1,
-      "details": "99 errors in 15 files — pre-existing type errors scheduled for fix in milestone 'deployment' (feature deploy-mypy-fixes). Not introduced by benchmark-mode."
+      "details": "99 pre-existing type errors in 15 files — scheduled for fix in milestone 'deployment' (feature deploy-mypy-fixes). Not introduced by benchmark-mode."
     },
     "typecheck_frontend": {
-      "passed": false,
+      "passed": true,
       "command": "cd frontend && npx tsc -b",
-      "exitCode": 1,
-      "details": "2 errors in BenchmarkPage.test.tsx: (1) TS2769 at line 243 — getByText callback returns boolean|undefined, (2) TS2322 at line 611 — null not assignable to number in trust_scores Record value. Both introduced by fix-benchmark-lint-and-tests commit."
+      "exitCode": 0,
+      "details": "No errors. Both TypeScript errors from round 2 (TS2769 boolean|undefined, TS2322 null in Record) have been fixed."
     },
     "lint_backend": {
       "passed": true,
@@ -40,53 +40,28 @@
       "details": "0 errors, 12 warnings (all pre-existing: complexity, max-lines, react-hooks/exhaustive-deps)"
     }
   },
-  "validatorNote": "Round 2 after fix-benchmark-lint-and-tests (commit 75551d4). All 5 original blocking issues from round 1 are resolved: unused imports removed, test selector ambiguity fixed, HTMLInputElement globals added, unused function removed, score=0 bug fixed. However, the fix introduced 2 new TypeScript errors in BenchmarkPage.test.tsx. Backend tests (303/303) and frontend tests (212/212) all pass. ESLint clean (0 errors). Backend mypy still has 99 pre-existing errors scheduled for deployment milestone. Frontend typecheck fails with 2 new errors introduced by the fix.",
+  "validatorNote": "Round 3 after fix-benchmark-typescript-errors (commit 782aa7a). Both blocking TypeScript errors from round 2 are now fixed. All validators pass: backend tests 303/303, frontend tests 212/212, frontend tsc 0 errors, ESLint 0 errors, ruff 0 errors. Backend mypy still has 99 pre-existing errors scheduled for deployment milestone — not introduced by benchmark-mode.",
   "reviewsSummary": {
     "total": 1,
-    "passed": 0,
-    "failed": 1,
-    "failedFeatures": ["fix-benchmark-lint-and-tests"]
+    "passed": 1,
+    "failed": 0,
+    "failedFeatures": []
   },
-  "blockingIssues": [
-    {
-      "featureId": "fix-benchmark-lint-and-tests",
-      "severity": "blocking",
-      "description": "TypeScript error TS2769: BenchmarkPage.test.tsx line 243 — getByText callback returns boolean|undefined instead of boolean. The && chain with optional chaining (element?.classList?.contains()) short-circuits to undefined when element is null. Fix: wrap in !!() or add explicit boolean return.",
-      "file": "frontend/src/pages/BenchmarkPage.test.tsx",
-      "line": 243
-    },
-    {
-      "featureId": "fix-benchmark-lint-and-tests",
-      "severity": "blocking",
-      "description": "TypeScript error TS2322: BenchmarkPage.test.tsx line 611 — null assigned to Record<string, number> value in trust_scores. Benchmark.trust_scores type is Record<string, number> | null (whole object nullable, not individual values). Fix: update Benchmark type to Record<string, number | null> | null to correctly model per-URL null scores for failed audits, and update backend BenchmarkResponse schema to match.",
-      "file": "frontend/src/pages/BenchmarkPage.test.tsx",
-      "line": 611
-    }
-  ],
+  "blockingIssues": [],
   "appliedUpdates": [],
   "suggestedGuidanceUpdates": [
     {
       "target": "AGENTS.md",
       "suggestion": "Add convention: 'Workers MUST actually run all verification commands listed in their handoff and report ACCURATE exit codes and output. False verification claims (e.g., claiming tsc passes when it has errors) are a blocking trust issue. If a verification step fails, report it honestly — do not claim success.'",
-      "evidence": "fix-benchmark-lint-and-tests handoff claims 'npx tsc -b' exitCode 0 with 'TypeScript strict check passes with no errors', but tsc actually produces 2 errors (TS2769 and TS2322). This is the second round where inaccurate verification claims were made (round 1 had similar ESLint false claims). This pattern is systemic across multiple workers in this milestone.",
+      "evidence": "This was originally suggested in round 2 based on fix-benchmark-lint-and-tests handoff falsely claiming tsc passed. Carried forward as it remains a systemic issue observed across multiple workers in this milestone.",
       "isSystemic": true
-    },
-    {
-      "target": "AGENTS.md",
-      "suggestion": "Add convention: 'When fixing type-related bugs (e.g., changing null handling), workers must verify that the fix is consistent with TypeScript types. If runtime behavior expects null but the type definition uses Record<string, T>, the type definition must be updated to Record<string, T | null> to match actual data shapes from the backend.'",
-      "evidence": "fix-benchmark-lint-and-tests changed `!score` to `score === null` in BenchmarkPage.tsx to handle failed audit null scores, but didn't update the Benchmark type's trust_scores from `Record<string, number> | null` to `Record<string, number | null> | null`. The test then used null as a per-URL score value, causing TS2322.",
-      "isSystemic": false
     }
   ],
   "rejectedObservations": [
     {
-      "observation": "Extra blank lines after removing dead code in BenchmarkPage.tsx and SubmitPage.tsx",
-      "reason": "Minor cosmetic issue with no functional impact. Removing blank lines is not worth a dedicated fix feature."
-    },
-    {
-      "observation": "The Benchmark type trust_scores inconsistency between type definition and runtime behavior",
-      "reason": "Already captured as a blocking issue fix requirement — the type needs updating. Not a separate observation."
+      "observation": "Backend trust_scores type (dict[str, float] | None) and frontend type (Record<string, number | null> | null) are subtly misaligned. Backend omits failed audit URLs from the dict entirely, while frontend normalizes missing keys to null.",
+      "reason": "Not a bug — the code handles the mismatch correctly via null normalization at BenchmarkPage.tsx:139. The types are intentionally broader on the frontend to model the UI's derived state. Not worth a library entry as the pattern is local to one model and the code is self-documenting."
     }
   ],
-  "previousRound": ".factory/validation/benchmark-mode/scrutiny/synthesis.json (round 1)"
+  "previousRound": ".factory/validation/benchmark-mode/scrutiny/synthesis.json (round 2)"
 }

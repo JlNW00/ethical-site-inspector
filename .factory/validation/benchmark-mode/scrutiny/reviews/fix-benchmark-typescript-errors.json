@@ -1,0 +1,28 @@
+{
+  "featureId": "fix-benchmark-typescript-errors",
+  "reviewedAt": "2026-03-14T19:58:00.000Z",
+  "commitId": "782aa7a",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The fix correctly addresses both TypeScript errors identified in the prior review of fix-benchmark-lint-and-tests. Change 1 (BenchmarkPage.test.tsx line 243): wraps the getByText callback return in !!() to convert boolean|undefined to boolean — this is the standard fix for optional chaining in boolean contexts. Change 2 (types.ts): updates Benchmark.trust_scores from Record<string, number> | null to Record<string, number | null> | null — this correctly models the frontend's internal data flow where missing keys are normalized to null via the ?? null fallback at BenchmarkPage.tsx line 139. Both changes are minimal, targeted, and correct.",
+    "issues": [
+      {
+        "file": "frontend/src/api/types.ts",
+        "line": 132,
+        "severity": "non_blocking",
+        "description": "Minor backend/frontend type divergence: backend BenchmarkRead schema defines trust_scores as dict[str, float] | None (individual values always float, failed audits omitted from dict), while frontend now defines Record<string, number | null> | null (individual values can be null). This works because BenchmarkPage.tsx line 139 normalizes missing keys to null via ?? null, but the frontend type is broader than what the backend actually sends. Not blocking — the code handles it correctly — but worth documenting to prevent future confusion."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "Backend Benchmark trust_scores type (dict[str, float] | None) and frontend type (Record<string, number | null> | null) are subtly misaligned. Backend omits failed audit URLs from the dict entirely, while frontend normalizes missing keys to null at BenchmarkPage.tsx:139. Both approaches work together, but the mismatch could confuse future developers who expect the types to mirror each other exactly.",
+      "evidence": "backend/app/schemas/benchmark.py:73 — trust_scores: dict[str, float] | None. frontend/src/api/types.ts:132 — trust_scores: Record<string, number | null> | null. backend/app/services/benchmark_orchestrator.py:113 — only adds to trust_scores when trust_score is not None (failed audits omitted). frontend/src/pages/BenchmarkPage.tsx:139 — score: benchmark.trust_scores?.[url] ?? null (normalizes missing keys to null)."
+    }
+  ],
+  "addressesFailureFrom": ".factory/validation/benchmark-mode/scrutiny/reviews/fix-benchmark-lint-and-tests.json",
+  "summary": "PASS. The fix commit (782aa7a) precisely addresses both blocking TypeScript errors from the prior review of fix-benchmark-lint-and-tests: (1) TS2769 at BenchmarkPage.test.tsx line 243 fixed by wrapping optional-chaining && chain in !!() to ensure boolean return type, and (2) TS2322 at line 611 fixed by updating Benchmark.trust_scores type in types.ts from Record<string, number> | null to Record<string, number | null> | null. The worker followed procedure correctly: read the relevant files, made targeted edits, verified with tsc (0 errors), vitest (212 tests pass), and ESLint (0 errors). The transcript shows a clean, focused workflow with no wasted steps. Only non-blocking observation: the frontend trust_scores type is now slightly broader than the backend schema, but the code handles this correctly via null normalization."
+}
