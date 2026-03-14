@@ -1,0 +1,52 @@
+{
+  "flowId": "bench-fix-flow",
+  "testedAt": "2026-03-14T19:58:00Z",
+  "isolation": {
+    "appUrl": "http://localhost:5173",
+    "backendApi": "http://localhost:8000",
+    "browserSession": "592cea9f69ce__bench-fix"
+  },
+  "toolsUsed": ["agent-browser"],
+  "assertions": {
+    "VAL-BENCH-006": {
+      "status": "pass",
+      "evidence": "Created a FRESH benchmark via SubmitPage UI with benchmark mode enabled. Entered 2 URLs (https://example.com and https://example.org), all scenarios and personas selected by default. Clicked 'Start benchmark'. After submission, URL changed to /benchmarks/581b2549-2836-4318-9675-a59e0cf729f3 (NOT /audits/*/run). BenchmarkPage loaded showing 'Comparing 2 URLs' heading, both URLs with progress indicators (example.com 100%, example.org 40% initially), and status 'running'. After ~5s, benchmark completed showing trust scores (100% each), scenario breakdown grid, and unified summary. The field name fix (selected_scenarios/selected_personas) is confirmed working — benchmark creation succeeded without 422 error.",
+      "screenshots": [
+        "submit-form-before.png",
+        "VAL-BENCH-006-benchmark-page-loading.png",
+        "VAL-BENCH-006-benchmark-page-completed.png"
+      ],
+      "steps": [
+        {"action": "Navigate to http://localhost:5173", "expected": "SubmitPage loads", "observed": "SubmitPage loaded with Benchmark Mode checkbox"},
+        {"action": "Enable Benchmark Mode toggle", "expected": "Multi-URL fields appear", "observed": "Two URL input fields appeared with placeholder text"},
+        {"action": "Fill URL 1: https://example.com, URL 2: https://example.org", "expected": "Fields populated", "observed": "Fields populated correctly"},
+        {"action": "Click 'Start benchmark'", "expected": "Navigate to /benchmarks/{id}", "observed": "Navigated to /benchmarks/581b2549-2836-4318-9675-a59e0cf729f3"},
+        {"action": "Verify BenchmarkPage content", "expected": "Shows benchmark URLs and status", "observed": "Shows 'Comparing 2 URLs', both URLs with progress, status 'running' then 'completed'"}
+      ],
+      "consoleErrors": "none",
+      "urlAssertion": "http://localhost:5173/benchmarks/581b2549-2836-4318-9675-a59e0cf729f3"
+    },
+    "VAL-BENCH-011": {
+      "status": "pass",
+      "evidence": "From completed BenchmarkPage, clicked 'View Report' link for example.com. Navigated to /audits/1a3a601f-978f-4bb5-90f8-39ab766e3748/report?benchmark=581b2549-2836-4318-9675-a59e0cf729f3. ReportPage loaded with 'Back to Benchmark' link visible in the navigation links section (alongside 'Back to run log' and 'Back to History'). Clicked 'Back to Benchmark' link. Successfully returned to /benchmarks/581b2549-2836-4318-9675-a59e0cf729f3. Full round-trip navigation confirmed: BenchmarkPage → ReportPage → BenchmarkPage.",
+      "screenshots": [
+        "VAL-BENCH-011-report-page-with-back-link.png",
+        "VAL-BENCH-011-report-page-full.png",
+        "VAL-BENCH-011-back-to-benchmark.png"
+      ],
+      "steps": [
+        {"action": "Click 'View Report' for example.com on BenchmarkPage", "expected": "Navigate to /audits/{id}/report", "observed": "Navigated to /audits/1a3a601f-978f-4bb5-90f8-39ab766e3748/report?benchmark=581b2549-2836-4318-9675-a59e0cf729f3"},
+        {"action": "Verify 'Back to Benchmark' link on ReportPage", "expected": "Back link present", "observed": "'Back to Benchmark' link found in interactive snapshot at ref @e8"},
+        {"action": "Click 'Back to Benchmark' link", "expected": "Return to /benchmarks/{id}", "observed": "Returned to /benchmarks/581b2549-2836-4318-9675-a59e0cf729f3"}
+      ],
+      "consoleErrors": "none",
+      "urlAssertions": {
+        "reportPage": "http://localhost:5173/audits/1a3a601f-978f-4bb5-90f8-39ab766e3748/report?benchmark=581b2549-2836-4318-9675-a59e0cf729f3",
+        "backToBenchmark": "http://localhost:5173/benchmarks/581b2549-2836-4318-9675-a59e0cf729f3"
+      }
+    }
+  },
+  "frictions": [],
+  "blockers": [],
+  "summary": "Tested 2 assertions: 2 passed. VAL-BENCH-006 (post-submit navigates to BenchmarkPage) confirmed — fresh benchmark created via UI with correct field names, navigated to /benchmarks/{id}. VAL-BENCH-011 (navigation from BenchmarkPage to ReportPage and back) confirmed — View Report link navigates to /audits/{id}/report with benchmark query param, Back to Benchmark link returns to /benchmarks/{id}. No console errors observed."
+}

@@ -1,53 +1,20 @@
 {
   "milestone": "benchmark-mode",
-  "round": 1,
-  "status": "fail",
+  "round": 2,
+  "status": "pass",
   "assertionsSummary": {
-    "total": 19,
-    "passed": 16,
-    "failed": 2,
-    "blocked": 1
+    "total": 2,
+    "passed": 2,
+    "failed": 0,
+    "blocked": 0
   },
   "passedAssertions": [
-    "VAL-BENCH-001",
-    "VAL-BENCH-002",
-    "VAL-BENCH-003",
-    "VAL-BENCH-004",
-    "VAL-BENCH-005",
-    "VAL-BENCH-007",
-    "VAL-BENCH-008",
-    "VAL-BENCH-009",
-    "VAL-BENCH-010",
-    "VAL-BENCH-012",
-    "VAL-BENCH-013",
-    "VAL-CROSS-003",
-    "VAL-CROSS-005",
-    "VAL-CROSS-006",
-    "VAL-CROSS-008",
-    "VAL-CROSS-009"
+    "VAL-BENCH-006",
+    "VAL-BENCH-011"
   ],
-  "failedAssertions": [
-    {
-      "id": "VAL-BENCH-006",
-      "reason": "Frontend CreateBenchmarkRequest sends field names 'scenarios'/'personas' but backend expects 'selected_scenarios'/'selected_personas'. All benchmark submissions from the UI fail with HTTP 422. Fix: update frontend/src/api/types.ts CreateBenchmarkRequest and SubmitPage.tsx to use 'selected_scenarios'/'selected_personas'."
-    },
-    {
-      "id": "VAL-BENCH-011",
-      "reason": "ReportPage does not implement a 'Back to Benchmark' link. BenchmarkPage correctly passes ?benchmark={id} in View Report links but ReportPage.tsx does not consume this query parameter and renders no back-to-benchmark navigation element. Fix: read benchmark query param in ReportPage and conditionally render 'Back to Benchmark' link."
-    }
-  ],
-  "blockedAssertions": [
-    {
-      "id": "VAL-CROSS-007",
-      "blockedBy": "regulatory-pdf milestone not yet implemented. Compliance PDF endpoint (GET /api/audits/{id}/report/compliance-pdf) returns 404. This assertion requires the regulatory-pdf milestone to be complete."
-    }
-  ],
-  "appliedUpdates": [
-    {
-      "target": "user-testing.md",
-      "description": "Added 'Benchmark Mode Test Data' section with pre-created benchmark ID, audit IDs, trust scores, and key URLs for benchmark testing.",
-      "source": "setup"
-    }
-  ],
-  "previousRound": null
+  "failedAssertions": [],
+  "blockedAssertions": [],
+  "appliedUpdates": [],
+  "notes": "Round 2 re-test of 2 failed assertions from round 1. VAL-CROSS-007 (blocked by regulatory-pdf) was moved to regulatory-pdf milestone per orchestrator and excluded from this round. Both previously-failed assertions now pass after fix-benchmark-field-names-and-backlink. Fresh benchmark was created via SubmitPage UI confirming the field name fix (no 422 error). Back to Benchmark link confirmed on ReportPage.",
+  "previousRound": ".factory/validation/benchmark-mode/user-testing/synthesis-round1.json"
 }
