@@ -491,7 +491,7 @@ class MockBrowserAuditProvider(BrowserAuditProvider):
                 "activity_log": ["Bundle upsell surfaced on exit", "Final price increased after bundle insertion"],
                 "image_notes": ["Exit-intent upsell overlays checkout", "Bundled upsell increases final amount"],
             },
-            ("cancellation_flow", "privacy_sensitive"): {
+            ("subscription_cancellation", "privacy_sensitive"): {
                 "accent": "#be123c",
                 "button_labels": ["Pause instead", "Talk to support", "Continue to cancellation"],
                 "checkbox_states": {"Keep product updates": True},
@@ -519,7 +519,7 @@ class MockBrowserAuditProvider(BrowserAuditProvider):
                     "Support detour blocks direct cancel action",
                 ],
             },
-            ("cancellation_flow", "cost_sensitive"): {
+            ("subscription_cancellation", "cost_sensitive"): {
                 "accent": "#b45309",
                 "button_labels": ["Keep my discount", "Cancel anyway", "Chat with billing"],
                 "checkbox_states": {"Resume later reminders": True},
@@ -535,7 +535,7 @@ class MockBrowserAuditProvider(BrowserAuditProvider):
                 "activity_log": ["Discount retention card inserted", "Billing chat callout shown before final exit"],
                 "image_notes": ["Retention discount prioritizes staying", "Billing chat detour adds more friction"],
             },
-            ("cancellation_flow", "exit_intent"): {
+            ("subscription_cancellation", "exit_intent"): {
                 "accent": "#4338ca",
                 "button_labels": ["Stay enrolled", "No thanks, lose my benefits", "Pause plan"],
                 "checkbox_states": {"Email me a comeback offer": True},
@@ -550,6 +550,176 @@ class MockBrowserAuditProvider(BrowserAuditProvider):
                 "friction_indicators": ["Retention copy guilting the user", "Extra step present"],
                 "activity_log": ["Confirmshaming copy observed", "Pause option repeated after user chose cancel"],
                 "image_notes": ["Confirmshaming label used for cancellation", "Pause plan offered again after opt-out"],
+            },
+            ("account_deletion", "privacy_sensitive"): {
+                "accent": "#be185d",
+                "button_labels": ["Delete my account", "Deactivate instead", "Download my data first"],
+                "checkbox_states": {"I understand my data will be removed": False},
+                "price_points": [],
+                "text_snippets": [
+                    "Before deleting, consider deactivating your account instead. Deletion is permanent and cannot be undone.",
+                    "The direct deletion path requires multiple confirmation steps and offers alternatives at each stage.",
+                ],
+                "headings": ["Delete account", "Are you sure?"],
+                "page_title": "Account deletion",
+                "dom_excerpt": "<section class='deletion'><button>Delete my account</button><a>Deactivate instead</a></section>",
+                "step_count": 5,
+                "friction_indicators": [
+                    "Extra confirmation steps required",
+                    "Retention copy guilting the user",
+                ],
+                "activity_log": [
+                    "Account settings reached",
+                    "Deletion option found under advanced settings",
+                    "Multiple confirmation dialogs presented",
+                ],
+                "image_notes": [
+                    "Deletion option buried in advanced settings",
+                    "Multiple confirmation steps before deletion",
+                ],
+            },
+            ("account_deletion", "cost_sensitive"): {
+                "accent": "#a16207",
+                "button_labels": ["Delete account", "Keep my rewards", "Contact support to delete"],
+                "checkbox_states": {"Keep loyalty points": True},
+                "price_points": [],
+                "text_snippets": [
+                    "You will lose all accumulated rewards and loyalty points if you proceed with account deletion.",
+                ],
+                "headings": ["Account deletion", "Your rewards balance"],
+                "page_title": "Account deletion - rewards warning",
+                "dom_excerpt": "<div class='rewards-warning'>You will lose all rewards</div>",
+                "step_count": 4,
+                "friction_indicators": ["Retention copy guilting the user", "Support detour likely required"],
+                "activity_log": ["Rewards loss warning displayed", "Support contact suggested before deletion"],
+                "image_notes": ["Rewards loss warning shown prominently", "Support detour suggested before final deletion"],
+            },
+            ("account_deletion", "exit_intent"): {
+                "accent": "#5b21b6",
+                "button_labels": ["Confirm deletion", "No, keep my account", "Pause account instead"],
+                "checkbox_states": {"Send me a reactivation link": True},
+                "price_points": [],
+                "text_snippets": [
+                    "Are you sure you want to leave? Your account and all associated data will be permanently removed.",
+                ],
+                "headings": ["Confirm deletion", "We're sorry to see you go"],
+                "page_title": "Confirm account deletion",
+                "dom_excerpt": "<div class='confirm-delete'><button>Confirm deletion</button></div>",
+                "step_count": 5,
+                "friction_indicators": ["Retention copy guilting the user", "Extra step present"],
+                "activity_log": ["Exit-intent modal triggered during deletion", "Pause option offered as alternative"],
+                "image_notes": ["Guilt-trip copy shown on deletion confirmation", "Pause alternative offered on exit"],
+            },
+            ("newsletter_signup", "privacy_sensitive"): {
+                "accent": "#0369a1",
+                "button_labels": ["Subscribe", "No thanks", "Manage email preferences"],
+                "checkbox_states": {"Receive partner offers": True, "Product updates": True},
+                "price_points": [],
+                "text_snippets": [
+                    "Subscribe to stay updated. By signing up you also agree to receive offers from our partners.",
+                    "The opt-out for partner offers is pre-selected and bundled with the primary newsletter signup.",
+                ],
+                "headings": ["Stay in the loop", "Email preferences"],
+                "page_title": "Newsletter signup",
+                "dom_excerpt": "<form class='newsletter'><input type='checkbox' checked name='partner-offers'/></form>",
+                "step_count": 2,
+                "friction_indicators": ["Pre-selected partner offers bundled with signup"],
+                "activity_log": [
+                    "Newsletter form detected",
+                    "Pre-checked partner offers checkbox found",
+                ],
+                "image_notes": [
+                    "Newsletter form bundles partner offers",
+                    "Pre-selected checkboxes on signup form",
+                ],
+            },
+            ("newsletter_signup", "cost_sensitive"): {
+                "accent": "#ca8a04",
+                "button_labels": ["Sign up for deals", "Skip", "Unsubscribe anytime"],
+                "checkbox_states": {"Weekly deals digest": True},
+                "price_points": [],
+                "text_snippets": [
+                    "Sign up now to get exclusive deals and price drop alerts delivered to your inbox.",
+                ],
+                "headings": ["Exclusive deals", "Price drop alerts"],
+                "page_title": "Deal alerts signup",
+                "dom_excerpt": "<div class='deal-signup'>Sign up for exclusive deals</div>",
+                "step_count": 2,
+                "friction_indicators": ["Discount incentive tied to email signup"],
+                "activity_log": ["Deal-focused newsletter prompt surfaced", "Skip option visually de-emphasized"],
+                "image_notes": ["Deal incentive attached to signup", "Skip option is secondary"],
+            },
+            ("newsletter_signup", "exit_intent"): {
+                "accent": "#6d28d9",
+                "button_labels": ["Subscribe before you go", "No thanks, I'll miss out", "Maybe later"],
+                "checkbox_states": {"Marketing emails": True},
+                "price_points": [],
+                "text_snippets": [
+                    "Don't miss out on important updates! Subscribe before you leave.",
+                ],
+                "headings": ["Before you go", "Don't miss out"],
+                "page_title": "Exit-intent newsletter prompt",
+                "dom_excerpt": "<div class='exit-newsletter'>Subscribe before you go</div>",
+                "step_count": 2,
+                "friction_indicators": ["Retention copy guilting the user"],
+                "activity_log": ["Exit-intent newsletter modal triggered", "Confirmshaming decline copy detected"],
+                "image_notes": ["Exit-intent newsletter popup", "Guilt-trip decline label used"],
+            },
+            ("pricing_comparison", "privacy_sensitive"): {
+                "accent": "#047857",
+                "button_labels": ["View pricing", "Compare plans", "Sign in for member pricing"],
+                "checkbox_states": {},
+                "price_points": [{"label": "Basic plan", "value": 9.99}, {"label": "Pro plan", "value": 29.99}],
+                "text_snippets": [
+                    "Sign in to see exclusive member pricing. Guest users see standard rates only.",
+                    "Pricing tiers require account creation to compare all features.",
+                ],
+                "headings": ["Pricing plans", "Member-only pricing"],
+                "page_title": "Pricing comparison",
+                "dom_excerpt": "<div class='pricing'><div class='plan'>Basic $9.99</div><div class='plan'>Pro $29.99</div></div>",
+                "step_count": 3,
+                "friction_indicators": ["Account required to view full pricing"],
+                "activity_log": [
+                    "Pricing page loaded",
+                    "Member-only pricing gate detected",
+                    "Feature comparison partially hidden",
+                ],
+                "image_notes": [
+                    "Pricing page gates full comparison behind sign-in",
+                    "Member pricing differs from guest pricing",
+                ],
+            },
+            ("pricing_comparison", "cost_sensitive"): {
+                "accent": "#b91c1c",
+                "button_labels": ["Select plan", "See all features", "Annual billing save 20%"],
+                "checkbox_states": {"Annual billing": False},
+                "price_points": [{"label": "Monthly", "value": 19.99}, {"label": "Annual (per month)", "value": 15.99}],
+                "text_snippets": [
+                    "Save 20% with annual billing. Monthly pricing shown by default while annual savings require toggling.",
+                ],
+                "headings": ["Choose your plan", "Save with annual billing"],
+                "page_title": "Plan comparison",
+                "dom_excerpt": "<div class='plan-toggle'>Monthly | Annual (save 20%)</div>",
+                "step_count": 3,
+                "friction_indicators": ["Default pricing favors more expensive option"],
+                "activity_log": ["Pricing page loaded with monthly default", "Annual toggle reveals lower price"],
+                "image_notes": ["Monthly pricing shown by default", "Annual savings require explicit toggle"],
+            },
+            ("pricing_comparison", "exit_intent"): {
+                "accent": "#7e22ce",
+                "button_labels": ["Keep browsing plans", "Leave comparison", "Get a custom quote"],
+                "checkbox_states": {},
+                "price_points": [{"label": "Starter", "value": 4.99}, {"label": "Enterprise", "value": 99.99}],
+                "text_snippets": [
+                    "Still deciding? Our team can create a custom plan tailored to your needs.",
+                ],
+                "headings": ["Custom pricing", "Still deciding?"],
+                "page_title": "Pricing - custom quote prompt",
+                "dom_excerpt": "<div class='custom-quote'>Get a custom quote</div>",
+                "step_count": 2,
+                "friction_indicators": ["Exit-intent triggers custom quote prompt"],
+                "activity_log": ["Exit-intent on pricing page detected", "Custom quote prompt surfaced"],
+                "image_notes": ["Exit-intent pricing prompt", "Custom quote CTA appears on exit"],
             },
         }
         return catalog[(scenario, persona)]
@@ -1071,7 +1241,7 @@ class PlaywrightAuditProvider(BrowserAuditProvider):
                     {"type": "click", "keywords": ["details", "policies", "cancellation"], "label": "exit_review"},
                 ],
             },
-            "cancellation_flow": {
+            "subscription_cancellation": {
                 "privacy_sensitive": [
                     {"type": "click", "keywords": ["manage", "account", "support"], "label": "account_entry"},
                     {"type": "click", "keywords": ["cancel", "unsubscribe"], "label": "cancel_entry"},
@@ -1083,6 +1253,45 @@ class PlaywrightAuditProvider(BrowserAuditProvider):
                 "exit_intent": [
                     {"type": "click", "keywords": ["cancel", "unsubscribe", "manage"], "label": "cancel_entry"},
                     {"type": "click", "keywords": ["pause", "keep", "stay"], "label": "retention_state"},
+                ],
+            },
+            "account_deletion": {
+                "privacy_sensitive": [
+                    {"type": "click", "keywords": ["account", "settings", "privacy"], "label": "settings_entry"},
+                    {"type": "click", "keywords": ["delete", "remove", "close account"], "label": "delete_entry"},
+                ],
+                "cost_sensitive": [
+                    {"type": "click", "keywords": ["account", "settings", "profile"], "label": "settings_entry"},
+                    {"type": "click", "keywords": ["delete", "remove", "close account"], "label": "delete_entry"},
+                ],
+                "exit_intent": [
+                    {"type": "click", "keywords": ["delete", "remove", "close account"], "label": "delete_entry"},
+                    {"type": "click", "keywords": ["deactivate", "pause", "keep"], "label": "retention_state"},
+                ],
+            },
+            "newsletter_signup": {
+                "privacy_sensitive": [
+                    {"type": "click", "keywords": ["newsletter", "subscribe", "email"], "label": "signup_form"},
+                    {"type": "click", "keywords": ["preferences", "settings", "manage"], "label": "manage_prefs"},
+                ],
+                "cost_sensitive": [
+                    {"type": "click", "keywords": ["deals", "subscribe", "sign up"], "label": "signup_form"},
+                ],
+                "exit_intent": [
+                    {"type": "click", "keywords": ["no thanks", "skip", "dismiss"], "label": "dismiss_signup"},
+                ],
+            },
+            "pricing_comparison": {
+                "privacy_sensitive": [
+                    {"type": "click", "keywords": ["pricing", "plans", "compare"], "label": "pricing_entry"},
+                    {"type": "click", "keywords": ["details", "features", "compare"], "label": "compare_features"},
+                ],
+                "cost_sensitive": [
+                    {"type": "click", "keywords": ["pricing", "plans", "compare"], "label": "pricing_entry"},
+                    {"type": "click", "keywords": ["annual", "save", "discount"], "label": "toggle_billing"},
+                ],
+                "exit_intent": [
+                    {"type": "click", "keywords": ["pricing", "plans"], "label": "pricing_entry"},
                 ],
             },
         }
@@ -1151,10 +1360,35 @@ class PlaywrightAuditProvider(BrowserAuditProvider):
                     )
                 )
             return False
-        if scenario == "cancellation_flow":
+        if scenario == "subscription_cancellation":
             return label != "initial" and bool(
                 buttons
                 or any(term in combined for term in ("cancel", "unsubscribe", "manage", "pause", "billing", "support"))
+            )
+        if scenario == "account_deletion":
+            return label != "initial" and bool(
+                buttons
+                or any(
+                    term in combined
+                    for term in ("delete", "remove", "close account", "deactivate", "account", "settings", "privacy")
+                )
+            )
+        if scenario == "newsletter_signup":
+            return label != "initial" and bool(
+                buttons
+                or any(
+                    term in combined
+                    for term in ("newsletter", "subscribe", "sign up", "email", "updates", "marketing", "opt")
+                )
+            )
+        if scenario == "pricing_comparison":
+            return label != "initial" and bool(
+                buttons
+                or prices
+                or any(
+                    term in combined
+                    for term in ("pricing", "plan", "compare", "tier", "annual", "monthly", "discount")
+                )
             )
         return False
 
@@ -1246,10 +1480,24 @@ class PlaywrightAuditProvider(BrowserAuditProvider):
                 for term in ("charges may apply", "damage deposit", "availability")
             ):
                 indicators.append("Checkout details surfaced deeper in the journey")
-        elif scenario == "cancellation_flow":
+        elif scenario == "subscription_cancellation":
             indicators.extend(guess_friction(text_snippets, button_labels, headings))
             if any("support" in control.lower() for control in interacted_controls):
                 indicators.append("Support detour likely required")
+        elif scenario == "account_deletion":
+            indicators.extend(guess_friction(text_snippets, button_labels, headings))
+            if any("support" in control.lower() or "contact" in control.lower() for control in interacted_controls):
+                indicators.append("Support detour likely required")
+        elif scenario == "newsletter_signup":
+            if any(
+                "partner" in control.lower() or "bundled" in control.lower() for control in interacted_controls
+            ):
+                indicators.append("Bundled consent detected in signup")
+        elif scenario == "pricing_comparison":
+            if any(
+                "sign in" in control.lower() or "account" in control.lower() for control in interacted_controls
+            ):
+                indicators.append("Account required to view full pricing")
         elif scenario == "cookie_consent":
             if any(
                 "settings" in control.lower() or "preferences" in control.lower() for control in interacted_controls
