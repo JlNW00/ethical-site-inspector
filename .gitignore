@@ -3,6 +3,9 @@
 __pycache__/
 *.pyc
 backend/.env
+
+# SSH keys
+*.pem
 backend/.pytest_cache/
 
 # Node

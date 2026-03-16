@@ -142,23 +142,11 @@ Resources:
     Properties:
       Domain: vpc
 
-  NatGateway2EIP:
-    Type: AWS::EC2::EIP
-    DependsOn: InternetGatewayAttachment
-    Properties:
-      Domain: vpc
-
   NatGateway1:
     Type: AWS::EC2::NatGateway
     Properties:
       AllocationId: !GetAtt NatGateway1EIP.AllocationId
       SubnetId: !Ref PublicSubnet1
-
-  NatGateway2:
-    Type: AWS::EC2::NatGateway
-    Properties:
-      AllocationId: !GetAtt NatGateway2EIP.AllocationId
-      SubnetId: !Ref PublicSubnet2
 
   PublicRouteTable:
     Type: AWS::EC2::RouteTable
@@ -209,26 +197,11 @@ Resources:
       SubnetId: !Ref PrivateSubnet1
       RouteTableId: !Ref PrivateRouteTable1
 
-  PrivateRouteTable2:
-    Type: AWS::EC2::RouteTable
-    Properties:
-      VpcId: !Ref VPC
-      Tags:
-        - Key: Name
-          Value: !Sub '${EnvironmentName} Private Routes (AZ2)'
-
-  DefaultPrivateRoute2:
-    Type: AWS::EC2::Route
-    Properties:
-      RouteTableId: !Ref PrivateRouteTable2
-      DestinationCidrBlock: 0.0.0.0/0
-      NatGatewayId: !Ref NatGateway2
-
   PrivateSubnet2RouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       SubnetId: !Ref PrivateSubnet2
-      RouteTableId: !Ref PrivateRouteTable2
+      RouteTableId: !Ref PrivateRouteTable1
 
   # ---------------------------------------------------------------------------
   # Security Groups
@@ -236,7 +209,6 @@ Resources:
   ALBSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupName: !Sub '${EnvironmentName}-alb-sg'
       GroupDescription: Security group for Application Load Balancer
       VpcId: !Ref VPC
       SecurityGroupIngress:
@@ -257,9 +229,14 @@ Resources:
   EC2SecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupName: !Sub '${EnvironmentName}-ec2-sg'
       GroupDescription: Security group for EC2 application server
       VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+          Description: Allow SSH from anywhere
       Tags:
         - Key: Name
           Value: !Sub '${EnvironmentName}-ec2-sg'
@@ -277,7 +254,6 @@ Resources:
   RDSSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupName: !Sub '${EnvironmentName}-rds-sg'
       GroupDescription: Security group for RDS PostgreSQL
       VpcId: !Ref VPC
       Tags:
@@ -314,8 +290,7 @@ Resources:
               - GET
               - HEAD
             AllowedOrigins:
-              - !Sub 'http://${ALB.DNSName}'
-              - !If [CreateDnsRecord, !Sub 'https://${DomainName}', !Ref 'AWS::NoValue']
+              - '*'
             MaxAge: 3600
       Tags:
         - Key: Name
@@ -347,7 +322,6 @@ Resources:
   DBSubnetGroup:
     Type: AWS::RDS::DBSubnetGroup
     Properties:
-      DBSubnetGroupName: !Sub '${EnvironmentName}-db-subnet-group'
       DBSubnetGroupDescription: Subnet group for RDS PostgreSQL
       SubnetIds:
         - !Ref PrivateSubnet1
@@ -359,7 +333,6 @@ Resources:
       DBInstanceIdentifier: !Sub '${EnvironmentName}-postgres'
       DBName: ethicalinspector
       Engine: postgres
-      EngineVersion: '15.4'
       DBInstanceClass: !Ref DBInstanceClass
       AllocatedStorage: !Ref DBAllocatedStorage
       StorageType: gp2
@@ -370,7 +343,7 @@ Resources:
       DBSubnetGroupName: !Ref DBSubnetGroup
       MultiAZ: false
       PubliclyAccessible: false
-      BackupRetentionPeriod: 7
+      BackupRetentionPeriod: 0
       DeleteAutomatedBackups: true
       DeletionProtection: false
       Tags:
@@ -413,7 +386,7 @@ Resources:
           dnf update -y
           
           # Install required packages
-          dnf install -y python3 python3-pip python3-venv nginx git postgresql15
+          dnf install -y python3 python3-pip python3-venv git postgresql15
           
           # Install Node.js 20
           curl -fsSL https://rpm.nodesource.com/setup_20.x | bash -
@@ -438,10 +411,6 @@ Resources:
           # Run database migrations (will be done after code deployment)
           # alembic upgrade head
           
-          # Set up nginx
-          systemctl enable nginx
-          systemctl start nginx
-          
           # Set up systemd service for the backend
           cat > /etc/systemd/system/ethicalsiteinspector.service << 'EOF'
           [Unit]
@@ -452,7 +421,7 @@ Resources:
           Type=exec
           User=ec2-user
           WorkingDirectory=/opt/ethicalsiteinspector/backend
-          ExecStart=/opt/ethicalsiteinspector/backend/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000
+          ExecStart=/opt/ethicalsiteinspector/backend/.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000
           Restart=always
           RestartSec=5
           EnvironmentFile=/opt/ethicalsiteinspector/.env
@@ -473,7 +442,6 @@ Resources:
   EC2Role:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: !Sub '${EnvironmentName}-ec2-role'
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -482,7 +450,7 @@ Resources:
               Service: ec2.amazonaws.com
             Action: sts:AssumeRole
       ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
         - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
       Policies:
         - PolicyName: SecretsManagerAccess
@@ -497,7 +465,6 @@ Resources:
   EC2InstanceProfile:
     Type: AWS::IAM::InstanceProfile
     Properties:
-      InstanceProfileName: !Sub '${EnvironmentName}-ec2-profile'
       Roles:
         - !Ref EC2Role
 
@@ -535,17 +502,14 @@ Resources:
       UnhealthyThresholdCount: 3
       HealthCheckTimeoutSeconds: 5
       HealthCheckIntervalSeconds: 30
-      SuccessCode: '200'
+      Matcher:
+        HttpCode: '200'
+      Targets:
+        - Id: !Ref EC2Instance
+          Port: 8000
       Tags:
         - Key: Name
           Value: !Sub '${EnvironmentName}-tg'
-
-  ALBTargetGroupAttachment:
-    Type: AWS::ElasticLoadBalancingV2::TargetGroupAttachment
-    Properties:
-      TargetGroupArn: !Ref ALBTargetGroup
-      TargetId: !Ref EC2Instance
-      Port: 8000
 
   HTTPListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
