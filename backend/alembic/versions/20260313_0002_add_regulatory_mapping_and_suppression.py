@@ -28,7 +28,7 @@ def upgrade() -> None:
     # Add suppressed flag
     op.add_column(
         "findings",
-        sa.Column("suppressed", sa.Boolean(), nullable=False, server_default=sa.text("false"))
+        sa.Column("suppressed", sa.Boolean(), nullable=False, server_default=sa.literal(False))
     )
 
 

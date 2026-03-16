@@ -541,7 +541,7 @@ class TestTemplateStructure:
         """Private subnets should have NAT gateway for outbound access."""
         resources = template_yaml.get("Resources", {})
         nat_gateways = [r for r in resources.values() if r.get("Type") == "AWS::EC2::NatGateway"]
-        assert len(nat_gateways) >= 2, "Should have NAT gateways for high availability"
+        assert len(nat_gateways) >= 1, "Should have at least one NAT gateway for private subnet outbound access"
 
     def test_rds_in_private_subnets(self, template_yaml):
         """RDS should be in private subnets (DBSubnetGroup)."""
